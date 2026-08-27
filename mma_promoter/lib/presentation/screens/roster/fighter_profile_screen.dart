@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../data/models/models.dart';
 import '../../state/game_controller.dart';
+import 'fighter_editor_screen.dart';
 
 class FighterProfileScreen extends StatelessWidget {
   final String fighterId;
@@ -20,7 +21,20 @@ class FighterProfileScreen extends StatelessWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(fighter.name)),
+      appBar: AppBar(
+        title: Text(fighter.name),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            tooltip: 'Edit fighter',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => FighterEditorScreen(existingFighter: fighter),
+              ),
+            ),
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

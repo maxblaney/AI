@@ -5,12 +5,16 @@ sign fighters, build fight cards, run events, and manage the books. You
 never fight — you manage the business and creative direction of the
 promotion.
 
-This is the **v1 vertical slice**: one weight class, a generated talent
-pool, sign/release, event booking, fight simulation, finances, and two
-random event types (injuries, contract disputes). Everything else in the
-original design doc (multiple weight classes, rivalries, sponsors, staff,
-title belts, media deals, org tier progression beyond the data model) is
-intentionally out of scope for now.
+This is the **v1 vertical slice, extended**: all 8 real weight classes, a
+generated talent pool with nationality-matched names, roster
+filter/sort, create-from-scratch and edit-stats for any fighter,
+sign/release, event booking (with a real venue picked from a fixed list
+and a player-set ticket price), fight simulation, finances, a choice of
+starting cash/reputation tier at new-game setup, and two random event
+types (injuries, contract disputes). Everything else in the original
+design doc (rivalries, sponsors, staff, title belts, media deals, org
+tier progression beyond the data model) is intentionally out of scope
+for now.
 
 ## Stack
 
@@ -87,6 +91,37 @@ cd build/web && python3 -m http.server 8765
 This is a preview path, not a target platform — the real deliverable is
 the native mobile app with real persistence.
 
+## Game systems
+
+- **Weight classes**: `WeightClass` has the real 8 divisions (Flyweight
+  125 → Heavyweight 265). The starting roster spreads fighters across all
+  of them, and fights can only be booked between fighters in the same
+  division (see `event_booking_screen.dart`'s locked-class dropdowns).
+- **Venues**: `Venue` is a fixed list of 7 real locations (Regional USA up
+  to New York/Manchester), each with its own capacity and rental cost —
+  no abstract "tier" anymore. See `lib/data/models/enums.dart`.
+- **Ticket pricing**: set per-event at booking time, pre-filled with a
+  suggested price per venue. Pricing above the suggestion softens
+  attendance demand, pricing below it boosts demand (mild elasticity
+  curve in `EventFinanceCalculator`).
+- **PPV eligibility**: tied to the org's reputation tier (National/
+  International only), not the venue — a small promotion doesn't get a
+  PPV deal just by renting a big room.
+- **New-game setup**: `NewGameScreen` — name your promotion and pick a
+  starting tier (Local $10k / Regional $100k / National $1M /
+  International $10M), which sets opening cash and fanbase. Replaces the
+  old silent auto-seed; `GameController.needsNewGame` gates it.
+- **Roster filter/sort**: `RosterScreen` filters by nationality, weight
+  class and style, and sorts by name/age/weight class/wins/popularity —
+  same controls on both the signed roster and the talent pool.
+- **Create/edit fighters**: `FighterEditorScreen` is shared by both —
+  create drops a brand-new fighter into the talent pool; edit preserves
+  id/record/contract and lets you change name, age, nationality, weight
+  class, style, the 5 core stats, and popularity.
+- **Nationality-matched names**: fighter names are generated from
+  per-nationality name pools (`roster_seed.dart`), so a Brazilian fighter
+  gets a Brazilian-sounding name, not a randomly-assembled mismatch.
+
 ## Architecture
 
 ```
@@ -137,13 +172,19 @@ split along (e.g. a dedicated `RosterController`).
 
 ## What's next (post-MVP, not built yet)
 
-- Multiple weight classes and a bigger talent pool per class
+- Real contract negotiation — right now signing is you unilaterally
+  setting terms; there's no counter-offer, no leverage from a win streak,
+  no agent. The only two-way negotiation is the reactive contract-dispute
+  random event.
+- Morale affecting anything mechanical — it's tracked and displayed but
+  doesn't currently feed into fight performance, injury odds, or dispute
+  odds.
 - Rivalries/storylines that feed into hype and ticket sales
 - Sponsors, staff hiring, media deals
 - Title belts and championship lineage
-- Org tier progression unlocking bigger venues/sponsors (the data model
-  has `ReputationTier` and reputation points; nothing currently gates
-  content behind them)
+- Reputation tier progression during play — `ReputationTier` is fixed at
+  new-game setup and tracked via `reputationPoints`, but nothing currently
+  promotes an org from e.g. Regional to National as points accumulate.
 - More random event types (positive drug tests, callouts, poaching, media
   controversies, weigh-in incidents — the `RandomEventType` enum already
   has slots for these)

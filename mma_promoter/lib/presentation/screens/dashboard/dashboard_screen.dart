@@ -112,7 +112,7 @@ class _EventTile extends StatelessWidget {
           color: event.isCompleted ? Colors.green : null,
         ),
         title: Text(event.name),
-        subtitle: Text('$dateStr · ${event.venueTier.label}'),
+        subtitle: Text('$dateStr · ${event.venue.label}'),
         trailing: event.isCompleted
             ? Text('${event.netProfit >= 0 ? '+' : ''}\$${event.netProfit}')
             : const Icon(Icons.chevron_right),

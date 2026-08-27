@@ -1647,12 +1647,19 @@ class $EventsTable extends Events with TableInfo<$EventsTable, EventRow> {
   late final GeneratedColumn<DateTime> date = GeneratedColumn<DateTime>(
       'date', aliasedName, false,
       type: DriftSqlType.dateTime, requiredDuringInsert: true);
-  static const VerificationMeta _venueTierMeta =
-      const VerificationMeta('venueTier');
+  static const VerificationMeta _venueMeta = const VerificationMeta('venue');
   @override
-  late final GeneratedColumn<String> venueTier = GeneratedColumn<String>(
-      'venue_tier', aliasedName, false,
+  late final GeneratedColumn<String> venue = GeneratedColumn<String>(
+      'venue', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _ticketPriceMeta =
+      const VerificationMeta('ticketPrice');
+  @override
+  late final GeneratedColumn<int> ticketPrice = GeneratedColumn<int>(
+      'ticket_price', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(50));
   static const VerificationMeta _statusMeta = const VerificationMeta('status');
   @override
   late final GeneratedColumn<String> status = GeneratedColumn<String>(
@@ -1713,7 +1720,8 @@ class $EventsTable extends Events with TableInfo<$EventsTable, EventRow> {
         id,
         name,
         date,
-        venueTier,
+        venue,
+        ticketPrice,
         status,
         promotionBudgetSpent,
         attendance,
@@ -1749,11 +1757,17 @@ class $EventsTable extends Events with TableInfo<$EventsTable, EventRow> {
     } else if (isInserting) {
       context.missing(_dateMeta);
     }
-    if (data.containsKey('venue_tier')) {
-      context.handle(_venueTierMeta,
-          venueTier.isAcceptableOrUnknown(data['venue_tier']!, _venueTierMeta));
+    if (data.containsKey('venue')) {
+      context.handle(
+          _venueMeta, venue.isAcceptableOrUnknown(data['venue']!, _venueMeta));
     } else if (isInserting) {
-      context.missing(_venueTierMeta);
+      context.missing(_venueMeta);
+    }
+    if (data.containsKey('ticket_price')) {
+      context.handle(
+          _ticketPriceMeta,
+          ticketPrice.isAcceptableOrUnknown(
+              data['ticket_price']!, _ticketPriceMeta));
     }
     if (data.containsKey('status')) {
       context.handle(_statusMeta,
@@ -1804,8 +1818,10 @@ class $EventsTable extends Events with TableInfo<$EventsTable, EventRow> {
           .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
       date: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}date'])!,
-      venueTier: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}venue_tier'])!,
+      venue: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}venue'])!,
+      ticketPrice: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}ticket_price'])!,
       status: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
       promotionBudgetSpent: attachedDatabase.typeMapping.read(
@@ -1833,7 +1849,8 @@ class EventRow extends DataClass implements Insertable<EventRow> {
   final String id;
   final String name;
   final DateTime date;
-  final String venueTier;
+  final String venue;
+  final int ticketPrice;
   final String status;
   final int promotionBudgetSpent;
   final int attendance;
@@ -1845,7 +1862,8 @@ class EventRow extends DataClass implements Insertable<EventRow> {
       {required this.id,
       required this.name,
       required this.date,
-      required this.venueTier,
+      required this.venue,
+      required this.ticketPrice,
       required this.status,
       required this.promotionBudgetSpent,
       required this.attendance,
@@ -1859,7 +1877,8 @@ class EventRow extends DataClass implements Insertable<EventRow> {
     map['id'] = Variable<String>(id);
     map['name'] = Variable<String>(name);
     map['date'] = Variable<DateTime>(date);
-    map['venue_tier'] = Variable<String>(venueTier);
+    map['venue'] = Variable<String>(venue);
+    map['ticket_price'] = Variable<int>(ticketPrice);
     map['status'] = Variable<String>(status);
     map['promotion_budget_spent'] = Variable<int>(promotionBudgetSpent);
     map['attendance'] = Variable<int>(attendance);
@@ -1875,7 +1894,8 @@ class EventRow extends DataClass implements Insertable<EventRow> {
       id: Value(id),
       name: Value(name),
       date: Value(date),
-      venueTier: Value(venueTier),
+      venue: Value(venue),
+      ticketPrice: Value(ticketPrice),
       status: Value(status),
       promotionBudgetSpent: Value(promotionBudgetSpent),
       attendance: Value(attendance),
@@ -1893,7 +1913,8 @@ class EventRow extends DataClass implements Insertable<EventRow> {
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       date: serializer.fromJson<DateTime>(json['date']),
-      venueTier: serializer.fromJson<String>(json['venueTier']),
+      venue: serializer.fromJson<String>(json['venue']),
+      ticketPrice: serializer.fromJson<int>(json['ticketPrice']),
       status: serializer.fromJson<String>(json['status']),
       promotionBudgetSpent:
           serializer.fromJson<int>(json['promotionBudgetSpent']),
@@ -1911,7 +1932,8 @@ class EventRow extends DataClass implements Insertable<EventRow> {
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
       'date': serializer.toJson<DateTime>(date),
-      'venueTier': serializer.toJson<String>(venueTier),
+      'venue': serializer.toJson<String>(venue),
+      'ticketPrice': serializer.toJson<int>(ticketPrice),
       'status': serializer.toJson<String>(status),
       'promotionBudgetSpent': serializer.toJson<int>(promotionBudgetSpent),
       'attendance': serializer.toJson<int>(attendance),
@@ -1926,7 +1948,8 @@ class EventRow extends DataClass implements Insertable<EventRow> {
           {String? id,
           String? name,
           DateTime? date,
-          String? venueTier,
+          String? venue,
+          int? ticketPrice,
           String? status,
           int? promotionBudgetSpent,
           int? attendance,
@@ -1938,7 +1961,8 @@ class EventRow extends DataClass implements Insertable<EventRow> {
         id: id ?? this.id,
         name: name ?? this.name,
         date: date ?? this.date,
-        venueTier: venueTier ?? this.venueTier,
+        venue: venue ?? this.venue,
+        ticketPrice: ticketPrice ?? this.ticketPrice,
         status: status ?? this.status,
         promotionBudgetSpent: promotionBudgetSpent ?? this.promotionBudgetSpent,
         attendance: attendance ?? this.attendance,
@@ -1952,7 +1976,9 @@ class EventRow extends DataClass implements Insertable<EventRow> {
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
       date: data.date.present ? data.date.value : this.date,
-      venueTier: data.venueTier.present ? data.venueTier.value : this.venueTier,
+      venue: data.venue.present ? data.venue.value : this.venue,
+      ticketPrice:
+          data.ticketPrice.present ? data.ticketPrice.value : this.ticketPrice,
       status: data.status.present ? data.status.value : this.status,
       promotionBudgetSpent: data.promotionBudgetSpent.present
           ? data.promotionBudgetSpent.value
@@ -1974,7 +2000,8 @@ class EventRow extends DataClass implements Insertable<EventRow> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('date: $date, ')
-          ..write('venueTier: $venueTier, ')
+          ..write('venue: $venue, ')
+          ..write('ticketPrice: $ticketPrice, ')
           ..write('status: $status, ')
           ..write('promotionBudgetSpent: $promotionBudgetSpent, ')
           ..write('attendance: $attendance, ')
@@ -1991,7 +2018,8 @@ class EventRow extends DataClass implements Insertable<EventRow> {
       id,
       name,
       date,
-      venueTier,
+      venue,
+      ticketPrice,
       status,
       promotionBudgetSpent,
       attendance,
@@ -2006,7 +2034,8 @@ class EventRow extends DataClass implements Insertable<EventRow> {
           other.id == this.id &&
           other.name == this.name &&
           other.date == this.date &&
-          other.venueTier == this.venueTier &&
+          other.venue == this.venue &&
+          other.ticketPrice == this.ticketPrice &&
           other.status == this.status &&
           other.promotionBudgetSpent == this.promotionBudgetSpent &&
           other.attendance == this.attendance &&
@@ -2020,7 +2049,8 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
   final Value<String> id;
   final Value<String> name;
   final Value<DateTime> date;
-  final Value<String> venueTier;
+  final Value<String> venue;
+  final Value<int> ticketPrice;
   final Value<String> status;
   final Value<int> promotionBudgetSpent;
   final Value<int> attendance;
@@ -2033,7 +2063,8 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.date = const Value.absent(),
-    this.venueTier = const Value.absent(),
+    this.venue = const Value.absent(),
+    this.ticketPrice = const Value.absent(),
     this.status = const Value.absent(),
     this.promotionBudgetSpent = const Value.absent(),
     this.attendance = const Value.absent(),
@@ -2047,7 +2078,8 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
     required String id,
     required String name,
     required DateTime date,
-    required String venueTier,
+    required String venue,
+    this.ticketPrice = const Value.absent(),
     this.status = const Value.absent(),
     this.promotionBudgetSpent = const Value.absent(),
     this.attendance = const Value.absent(),
@@ -2059,12 +2091,13 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
   })  : id = Value(id),
         name = Value(name),
         date = Value(date),
-        venueTier = Value(venueTier);
+        venue = Value(venue);
   static Insertable<EventRow> custom({
     Expression<String>? id,
     Expression<String>? name,
     Expression<DateTime>? date,
-    Expression<String>? venueTier,
+    Expression<String>? venue,
+    Expression<int>? ticketPrice,
     Expression<String>? status,
     Expression<int>? promotionBudgetSpent,
     Expression<int>? attendance,
@@ -2078,7 +2111,8 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
       if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (date != null) 'date': date,
-      if (venueTier != null) 'venue_tier': venueTier,
+      if (venue != null) 'venue': venue,
+      if (ticketPrice != null) 'ticket_price': ticketPrice,
       if (status != null) 'status': status,
       if (promotionBudgetSpent != null)
         'promotion_budget_spent': promotionBudgetSpent,
@@ -2095,7 +2129,8 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
       {Value<String>? id,
       Value<String>? name,
       Value<DateTime>? date,
-      Value<String>? venueTier,
+      Value<String>? venue,
+      Value<int>? ticketPrice,
       Value<String>? status,
       Value<int>? promotionBudgetSpent,
       Value<int>? attendance,
@@ -2108,7 +2143,8 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
       id: id ?? this.id,
       name: name ?? this.name,
       date: date ?? this.date,
-      venueTier: venueTier ?? this.venueTier,
+      venue: venue ?? this.venue,
+      ticketPrice: ticketPrice ?? this.ticketPrice,
       status: status ?? this.status,
       promotionBudgetSpent: promotionBudgetSpent ?? this.promotionBudgetSpent,
       attendance: attendance ?? this.attendance,
@@ -2132,8 +2168,11 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
     if (date.present) {
       map['date'] = Variable<DateTime>(date.value);
     }
-    if (venueTier.present) {
-      map['venue_tier'] = Variable<String>(venueTier.value);
+    if (venue.present) {
+      map['venue'] = Variable<String>(venue.value);
+    }
+    if (ticketPrice.present) {
+      map['ticket_price'] = Variable<int>(ticketPrice.value);
     }
     if (status.present) {
       map['status'] = Variable<String>(status.value);
@@ -2168,7 +2207,8 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('date: $date, ')
-          ..write('venueTier: $venueTier, ')
+          ..write('venue: $venue, ')
+          ..write('ticketPrice: $ticketPrice, ')
           ..write('status: $status, ')
           ..write('promotionBudgetSpent: $promotionBudgetSpent, ')
           ..write('attendance: $attendance, ')
@@ -4111,7 +4151,8 @@ typedef $$EventsTableCreateCompanionBuilder = EventsCompanion Function({
   required String id,
   required String name,
   required DateTime date,
-  required String venueTier,
+  required String venue,
+  Value<int> ticketPrice,
   Value<String> status,
   Value<int> promotionBudgetSpent,
   Value<int> attendance,
@@ -4125,7 +4166,8 @@ typedef $$EventsTableUpdateCompanionBuilder = EventsCompanion Function({
   Value<String> id,
   Value<String> name,
   Value<DateTime> date,
-  Value<String> venueTier,
+  Value<String> venue,
+  Value<int> ticketPrice,
   Value<String> status,
   Value<int> promotionBudgetSpent,
   Value<int> attendance,
@@ -4154,8 +4196,11 @@ class $$EventsTableFilterComposer
   ColumnFilters<DateTime> get date => $composableBuilder(
       column: $table.date, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get venueTier => $composableBuilder(
-      column: $table.venueTier, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get venue => $composableBuilder(
+      column: $table.venue, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get ticketPrice => $composableBuilder(
+      column: $table.ticketPrice, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get status => $composableBuilder(
       column: $table.status, builder: (column) => ColumnFilters(column));
@@ -4199,8 +4244,11 @@ class $$EventsTableOrderingComposer
   ColumnOrderings<DateTime> get date => $composableBuilder(
       column: $table.date, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get venueTier => $composableBuilder(
-      column: $table.venueTier, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<String> get venue => $composableBuilder(
+      column: $table.venue, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get ticketPrice => $composableBuilder(
+      column: $table.ticketPrice, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get status => $composableBuilder(
       column: $table.status, builder: (column) => ColumnOrderings(column));
@@ -4244,8 +4292,11 @@ class $$EventsTableAnnotationComposer
   GeneratedColumn<DateTime> get date =>
       $composableBuilder(column: $table.date, builder: (column) => column);
 
-  GeneratedColumn<String> get venueTier =>
-      $composableBuilder(column: $table.venueTier, builder: (column) => column);
+  GeneratedColumn<String> get venue =>
+      $composableBuilder(column: $table.venue, builder: (column) => column);
+
+  GeneratedColumn<int> get ticketPrice => $composableBuilder(
+      column: $table.ticketPrice, builder: (column) => column);
 
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
@@ -4295,7 +4346,8 @@ class $$EventsTableTableManager extends RootTableManager<
             Value<String> id = const Value.absent(),
             Value<String> name = const Value.absent(),
             Value<DateTime> date = const Value.absent(),
-            Value<String> venueTier = const Value.absent(),
+            Value<String> venue = const Value.absent(),
+            Value<int> ticketPrice = const Value.absent(),
             Value<String> status = const Value.absent(),
             Value<int> promotionBudgetSpent = const Value.absent(),
             Value<int> attendance = const Value.absent(),
@@ -4309,7 +4361,8 @@ class $$EventsTableTableManager extends RootTableManager<
             id: id,
             name: name,
             date: date,
-            venueTier: venueTier,
+            venue: venue,
+            ticketPrice: ticketPrice,
             status: status,
             promotionBudgetSpent: promotionBudgetSpent,
             attendance: attendance,
@@ -4323,7 +4376,8 @@ class $$EventsTableTableManager extends RootTableManager<
             required String id,
             required String name,
             required DateTime date,
-            required String venueTier,
+            required String venue,
+            Value<int> ticketPrice = const Value.absent(),
             Value<String> status = const Value.absent(),
             Value<int> promotionBudgetSpent = const Value.absent(),
             Value<int> attendance = const Value.absent(),
@@ -4337,7 +4391,8 @@ class $$EventsTableTableManager extends RootTableManager<
             id: id,
             name: name,
             date: date,
-            venueTier: venueTier,
+            venue: venue,
+            ticketPrice: ticketPrice,
             status: status,
             promotionBudgetSpent: promotionBudgetSpent,
             attendance: attendance,

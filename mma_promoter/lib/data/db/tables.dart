@@ -71,7 +71,8 @@ class Events extends Table {
   TextColumn get id => text()();
   TextColumn get name => text()();
   DateTimeColumn get date => dateTime()();
-  TextColumn get venueTier => text()();
+  TextColumn get venue => text()();
+  IntColumn get ticketPrice => integer().withDefault(const Constant(50))();
   TextColumn get status => text().withDefault(const Constant('scheduled'))();
   IntColumn get promotionBudgetSpent =>
       integer().withDefault(const Constant(0))();

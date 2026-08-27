@@ -1,0 +1,224 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../../core/utils/id_generator.dart';
+import '../../../data/models/models.dart';
+import '../../../data/seed/roster_seed.dart';
+import '../../state/game_controller.dart';
+
+/// Create-from-scratch and edit-existing share this one form. In edit mode
+/// the fighter's id, record, win streak, morale, injury status and
+/// contract are preserved untouched — only what's shown here changes.
+class FighterEditorScreen extends StatefulWidget {
+  final Fighter? existingFighter;
+
+  const FighterEditorScreen({super.key, this.existingFighter});
+
+  @override
+  State<FighterEditorScreen> createState() => _FighterEditorScreenState();
+}
+
+class _FighterEditorScreenState extends State<FighterEditorScreen> {
+  late final TextEditingController _nameController;
+  late int _age;
+  late String _nationality;
+  late WeightClass _weightClass;
+  late Set<StyleTag> _styleTags;
+  late int _striking;
+  late int _grappling;
+  late int _cardio;
+  late int _chin;
+  late int _power;
+  late int _popularity;
+  bool _saving = false;
+
+  bool get _isEditing => widget.existingFighter != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final f = widget.existingFighter;
+    _nameController = TextEditingController(text: f?.name ?? '');
+    _age = f?.age ?? 25;
+    _nationality = f?.nationality ?? knownNationalities.first;
+    _weightClass = f?.weightClass ?? WeightClass.lightweight;
+    _styleTags = {...(f?.styleTags ?? const [StyleTag.allRounder])};
+    _striking = f?.stats.striking ?? 50;
+    _grappling = f?.stats.grappling ?? 50;
+    _cardio = f?.stats.cardio ?? 50;
+    _chin = f?.stats.chin ?? 50;
+    _power = f?.stats.power ?? 50;
+    _popularity = f?.popularity ?? 20;
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(_isEditing ? 'Edit Fighter' : 'Create Fighter'),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          TextField(
+            controller: _nameController,
+            decoration: const InputDecoration(labelText: 'Name'),
+          ),
+          const SizedBox(height: 16),
+          Text('Age: $_age'),
+          Slider(
+            value: _age.toDouble(),
+            min: 18,
+            max: 45,
+            divisions: 27,
+            label: '$_age',
+            onChanged: (v) => setState(() => _age = v.round()),
+          ),
+          DropdownButtonFormField<String>(
+            value: _nationality,
+            decoration: const InputDecoration(labelText: 'Nationality'),
+            items: knownNationalities
+                .map((n) => DropdownMenuItem(value: n, child: Text(n)))
+                .toList(),
+            onChanged: (v) => setState(() => _nationality = v ?? _nationality),
+          ),
+          const SizedBox(height: 16),
+          DropdownButtonFormField<WeightClass>(
+            value: _weightClass,
+            decoration: const InputDecoration(labelText: 'Weight Class'),
+            items: WeightClass.values
+                .map((w) => DropdownMenuItem(value: w, child: Text(w.labelWithLimit)))
+                .toList(),
+            onChanged: (v) => setState(() => _weightClass = v ?? _weightClass),
+          ),
+          const SizedBox(height: 16),
+          Text('Style', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            children: StyleTag.values.map((tag) {
+              return FilterChip(
+                label: Text(tag.label),
+                selected: _styleTags.contains(tag),
+                onSelected: (selected) => setState(() {
+                  if (selected) {
+                    _styleTags.add(tag);
+                  } else if (_styleTags.length > 1) {
+                    _styleTags.remove(tag);
+                  }
+                }),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 24),
+          Text('Stats', style: Theme.of(context).textTheme.titleMedium),
+          _StatSlider(label: 'Striking', value: _striking, onChanged: (v) => setState(() => _striking = v)),
+          _StatSlider(label: 'Grappling', value: _grappling, onChanged: (v) => setState(() => _grappling = v)),
+          _StatSlider(label: 'Cardio', value: _cardio, onChanged: (v) => setState(() => _cardio = v)),
+          _StatSlider(label: 'Chin', value: _chin, onChanged: (v) => setState(() => _chin = v)),
+          _StatSlider(label: 'Power', value: _power, onChanged: (v) => setState(() => _power = v)),
+          _StatSlider(label: 'Popularity', value: _popularity, onChanged: (v) => setState(() => _popularity = v)),
+          const SizedBox(height: 24),
+          FilledButton(
+            onPressed: _saving ? null : _save,
+            child: _saving
+                ? const SizedBox(
+                    height: 16,
+                    width: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(_isEditing ? 'Save Changes' : 'Add to Talent Pool'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _save() async {
+    final name = _nameController.text.trim();
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Enter a name.')));
+      return;
+    }
+
+    setState(() => _saving = true);
+    final controller = context.read<GameController>();
+    final existing = widget.existingFighter;
+
+    final stats = FighterStats(
+      striking: _striking,
+      grappling: _grappling,
+      cardio: _cardio,
+      chin: _chin,
+      power: _power,
+    );
+
+    final fighter = existing == null
+        ? Fighter(
+            id: newId(),
+            name: name,
+            age: _age,
+            nationality: _nationality,
+            weightClass: _weightClass,
+            record: const FightRecord(),
+            stats: stats,
+            popularity: _popularity,
+            morale: 70,
+            injuryStatus: InjuryStatus.healthy,
+            winStreak: 0,
+            styleTags: _styleTags.toList(),
+          )
+        : existing.copyWith(
+            name: name,
+            age: _age,
+            nationality: _nationality,
+            weightClass: _weightClass,
+            stats: stats,
+            popularity: _popularity,
+            styleTags: _styleTags.toList(),
+          );
+
+    await controller.saveFighter(fighter);
+    if (!mounted) return;
+    Navigator.of(context).pop();
+  }
+}
+
+class _StatSlider extends StatelessWidget {
+  final String label;
+  final int value;
+  final ValueChanged<int> onChanged;
+
+  const _StatSlider({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SizedBox(width: 90, child: Text(label)),
+        Expanded(
+          child: Slider(
+            value: value.toDouble(),
+            min: 1,
+            max: 100,
+            divisions: 99,
+            label: '$value',
+            onChanged: (v) => onChanged(v.round()),
+          ),
+        ),
+        SizedBox(width: 28, child: Text('$value', textAlign: TextAlign.right)),
+      ],
+    );
+  }
+}

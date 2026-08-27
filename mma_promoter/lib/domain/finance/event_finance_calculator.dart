@@ -30,9 +30,12 @@ class EventFinanceCalculator {
 
   /// [card] must be resolved (have a [Fight.result]) so performance ratings
   /// can factor into reputation; [fighterLookup] maps fighter id -> Fighter
-  /// as of booking time (for popularity/purse figures).
+  /// as of booking time (for popularity/purse figures). [ticketPrice] is
+  /// whatever the player set at booking time (see [Venue.suggestedTicketPrice]
+  /// for the default they started from).
   EventFinanceResult calculate({
-    required VenueTier venueTier,
+    required Venue venue,
+    required int ticketPrice,
     required Organization organization,
     required List<Fight> card,
     required Map<String, Fighter> fighterLookup,
@@ -56,21 +59,31 @@ class EventFinanceCalculator {
     // Diminishing returns on promo spend: sqrt curve.
     final promoEffect = sqrt(promotionBudgetSpent.clamp(0, 500000)) * 4;
 
-    final demandScore =
+    final baseDemand =
         (organization.fanbaseSize * 0.015) +
         (mainEventPopularity * 8) +
         (cardPopularity * 3) +
         promoEffect;
 
+    // Price elasticity: pricing above the venue's suggested price softens
+    // demand, pricing below it boosts demand, with diminishing effect at
+    // the extremes (exponent < 1) so it never swings wildly.
+    final priceRatio = ticketPrice <= 0
+        ? 1.0
+        : venue.suggestedTicketPrice / ticketPrice;
+    final demandScore = baseDemand * pow(priceRatio, 0.6);
+
     final noise = 0.85 + _random.nextDouble() * 0.3; // +/-15%
     final rawAttendance = (demandScore * noise).round();
-    final attendance = rawAttendance.clamp(0, venueTier.capacity);
+    final attendance = rawAttendance.clamp(0, venue.capacity);
 
-    final ticketPrice = _ticketPrice(venueTier);
     final ticketRevenue = attendance * ticketPrice;
 
-    final canSellPpv = venueTier == VenueTier.nationalArena ||
-        venueTier == VenueTier.globalStadium;
+    // PPV deals are a function of the org's standing, not the venue itself
+    // — a national/international promotion can put a small-venue prelim
+    // card on PPV, a local promotion can't even in a big rented arena.
+    final canSellPpv = organization.reputationTier == ReputationTier.national ||
+        organization.reputationTier == ReputationTier.international;
     final ppvBuys = canSellPpv
         ? ((organization.fanbaseSize * 0.01) +
                 (mainEventPopularity * 15) +
@@ -90,7 +103,7 @@ class EventFinanceCalculator {
         return sum + pay;
       },
     );
-    final expenses = venueTier.baseCost + purses + promotionBudgetSpent;
+    final expenses = venue.baseCost + purses + promotionBudgetSpent;
 
     final reputationChange = _reputationChange(
       card: card,
@@ -105,19 +118,6 @@ class EventFinanceCalculator {
       expenses: expenses,
       reputationChange: reputationChange,
     );
-  }
-
-  int _ticketPrice(VenueTier tier) {
-    switch (tier) {
-      case VenueTier.localGym:
-        return 25;
-      case VenueTier.regionalArena:
-        return 60;
-      case VenueTier.nationalArena:
-        return 120;
-      case VenueTier.globalStadium:
-        return 200;
-    }
   }
 
   double _averagePopularity(List<Fighter?> fighters) {

@@ -98,13 +98,14 @@ class _PreEventView extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = context.watch<GameController>();
     final currency = NumberFormat.simpleCurrency();
-    final maxSpend = (controller.organization?.cashBalance ?? 0).clamp(0, 100000);
+    final maxSpend = (controller.organization?.cashBalance ?? 0).clamp(0, 1 << 30);
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         Text(
-          '${DateFormat.yMMMd().format(event.date)} · ${event.venueTier.label}',
+          '${DateFormat.yMMMd().format(event.date)} · ${event.venue.label} · '
+          '\$${event.ticketPrice} tickets',
           style: Theme.of(context).textTheme.bodyMedium,
         ),
         const SizedBox(height: 16),

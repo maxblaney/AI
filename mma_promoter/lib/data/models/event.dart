@@ -7,7 +7,8 @@ class MmaEvent {
   final String id;
   final String name;
   final DateTime date;
-  final VenueTier venueTier;
+  final Venue venue;
+  final int ticketPrice;
   final EventStatus status;
   final int promotionBudgetSpent;
   final int attendance;
@@ -20,7 +21,8 @@ class MmaEvent {
     required this.id,
     required this.name,
     required this.date,
-    required this.venueTier,
+    required this.venue,
+    required this.ticketPrice,
     this.status = EventStatus.scheduled,
     this.promotionBudgetSpent = 0,
     this.attendance = 0,
@@ -37,7 +39,8 @@ class MmaEvent {
     String? id,
     String? name,
     DateTime? date,
-    VenueTier? venueTier,
+    Venue? venue,
+    int? ticketPrice,
     EventStatus? status,
     int? promotionBudgetSpent,
     int? attendance,
@@ -50,7 +53,8 @@ class MmaEvent {
       id: id ?? this.id,
       name: name ?? this.name,
       date: date ?? this.date,
-      venueTier: venueTier ?? this.venueTier,
+      venue: venue ?? this.venue,
+      ticketPrice: ticketPrice ?? this.ticketPrice,
       status: status ?? this.status,
       promotionBudgetSpent: promotionBudgetSpent ?? this.promotionBudgetSpent,
       attendance: attendance ?? this.attendance,

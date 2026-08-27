@@ -15,8 +15,10 @@ class EventBookingScreen extends StatefulWidget {
 
 class _EventBookingScreenState extends State<EventBookingScreen> {
   late final TextEditingController _nameController;
+  late final TextEditingController _ticketPriceController;
   DateTime _date = DateTime.now().add(const Duration(days: 14));
-  VenueTier _venueTier = VenueTier.regionalArena;
+  Venue _venue = Venue.regionalUsa;
+  bool _ticketPriceEdited = false;
   final List<Fight> _card = [];
   String? _mainEventFightId;
   bool _submitting = false;
@@ -25,11 +27,14 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: 'Fight Night');
+    _ticketPriceController =
+        TextEditingController(text: '${_venue.suggestedTicketPrice}');
   }
 
   @override
   void dispose() {
     _nameController.dispose();
+    _ticketPriceController.dispose();
     super.dispose();
   }
 
@@ -60,16 +65,36 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
             trailing: const Icon(Icons.edit_calendar),
             onTap: _pickDate,
           ),
-          DropdownButtonFormField<VenueTier>(
-            value: _venueTier,
+          DropdownButtonFormField<Venue>(
+            value: _venue,
             decoration: const InputDecoration(labelText: 'Venue'),
-            items: VenueTier.values
+            items: Venue.values
                 .map((v) => DropdownMenuItem(
                       value: v,
-                      child: Text('${v.label} (cap. ${v.capacity}, \$${v.baseCost})'),
+                      child: Text(
+                        '${v.label} (cap. ${v.capacity}, \$${v.baseCost})',
+                      ),
                     ))
                 .toList(),
-            onChanged: (v) => setState(() => _venueTier = v ?? _venueTier),
+            onChanged: (v) => setState(() {
+              _venue = v ?? _venue;
+              if (!_ticketPriceEdited) {
+                _ticketPriceController.text = '${_venue.suggestedTicketPrice}';
+              }
+            }),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _ticketPriceController,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: 'Ticket Price',
+              helperText: 'Suggested for this venue: \$${_venue.suggestedTicketPrice}. '
+                  'Pricing above it softens demand, below it boosts it.',
+              helperMaxLines: 2,
+              prefixText: '\$',
+            ),
+            onChanged: (_) => _ticketPriceEdited = true,
           ),
           const SizedBox(height: 24),
           Row(
@@ -136,59 +161,88 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
     showDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setState) => AlertDialog(
-          title: const Text('Add Fight'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<String>(
-                value: fighterAId,
-                decoration: const InputDecoration(labelText: 'Fighter A'),
-                items: available
-                    .where((f) => f.id != fighterBId)
-                    .map((f) => DropdownMenuItem(value: f.id, child: Text(f.name)))
-                    .toList(),
-                onChanged: (v) => setState(() => fighterAId = v),
+        builder: (dialogContext, setState) {
+          // Fights are matched within a single weight class — once one
+          // side is picked, the other dropdown locks to that division.
+          WeightClass? lockedClass;
+          if (fighterAId != null) {
+            lockedClass =
+                available.firstWhere((f) => f.id == fighterAId).weightClass;
+          } else if (fighterBId != null) {
+            lockedClass =
+                available.firstWhere((f) => f.id == fighterBId).weightClass;
+          }
+
+          final optionsForA = available
+              .where((f) => f.id != fighterBId)
+              .where((f) => lockedClass == null || f.weightClass == lockedClass)
+              .toList();
+          final optionsForB = available
+              .where((f) => f.id != fighterAId)
+              .where((f) => lockedClass == null || f.weightClass == lockedClass)
+              .toList();
+
+          return AlertDialog(
+            title: const Text('Add Fight'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (lockedClass != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      lockedClass.labelWithLimit,
+                      style: Theme.of(dialogContext).textTheme.bodySmall,
+                    ),
+                  ),
+                DropdownButtonFormField<String>(
+                  value: fighterAId,
+                  decoration: const InputDecoration(labelText: 'Fighter A'),
+                  items: optionsForA
+                      .map((f) => DropdownMenuItem(value: f.id, child: Text(f.name)))
+                      .toList(),
+                  onChanged: (v) => setState(() => fighterAId = v),
+                ),
+                DropdownButtonFormField<String>(
+                  value: fighterBId,
+                  decoration: const InputDecoration(labelText: 'Fighter B'),
+                  items: optionsForB
+                      .map((f) => DropdownMenuItem(value: f.id, child: Text(f.name)))
+                      .toList(),
+                  onChanged: (v) => setState(() => fighterBId = v),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Cancel'),
               ),
-              DropdownButtonFormField<String>(
-                value: fighterBId,
-                decoration: const InputDecoration(labelText: 'Fighter B'),
-                items: available
-                    .where((f) => f.id != fighterAId)
-                    .map((f) => DropdownMenuItem(value: f.id, child: Text(f.name)))
-                    .toList(),
-                onChanged: (v) => setState(() => fighterBId = v),
+              FilledButton(
+                onPressed: fighterAId != null && fighterBId != null
+                    ? () {
+                        final a = roster.firstWhere((f) => f.id == fighterAId);
+                        this.setState(() {
+                          _card.add(Fight(
+                            id: newId(),
+                            eventId: '',
+                            fighterAId: fighterAId!,
+                            fighterBId: fighterBId!,
+                            weightClass: a.weightClass,
+                            isTitleFight: false,
+                            isMainEvent: false,
+                            cardOrder: _card.length,
+                          ));
+                        });
+                        Navigator.of(dialogContext).pop();
+                      }
+                    : null,
+                child: const Text('Add'),
               ),
             ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: fighterAId != null && fighterBId != null
-                  ? () {
-                      final a = roster.firstWhere((f) => f.id == fighterAId);
-                      this.setState(() {
-                        _card.add(Fight(
-                          id: newId(),
-                          eventId: '',
-                          fighterAId: fighterAId!,
-                          fighterBId: fighterBId!,
-                          weightClass: a.weightClass,
-                          isTitleFight: false,
-                          isMainEvent: false,
-                          cardOrder: _card.length,
-                        ));
-                      });
-                      Navigator.of(dialogContext).pop();
-                    }
-                  : null,
-              child: const Text('Add'),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -200,6 +254,11 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
     }
     if (_mainEventFightId == null) {
       _showError('Pick a main event fight.');
+      return;
+    }
+    final ticketPrice = int.tryParse(_ticketPriceController.text);
+    if (ticketPrice == null || ticketPrice <= 0) {
+      _showError('Enter a valid ticket price.');
       return;
     }
 
@@ -218,7 +277,8 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
           ? 'Fight Night'
           : _nameController.text.trim(),
       date: _date,
-      venueTier: _venueTier,
+      venue: _venue,
+      ticketPrice: ticketPrice,
       card: card,
     );
 
@@ -261,7 +321,10 @@ class _FightTile extends StatelessWidget {
           : null,
       child: ListTile(
         title: Text('${fighterA?.name ?? '?'} vs ${fighterB?.name ?? '?'}'),
-        subtitle: Text(isMainEvent ? 'Main Event' : 'Undercard'),
+        subtitle: Text(
+          '${fight.weightClass.label}'
+          '${isMainEvent ? ' · Main Event' : ' · Undercard'}',
+        ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [

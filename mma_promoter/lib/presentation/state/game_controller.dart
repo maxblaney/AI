@@ -95,11 +95,49 @@ class GameController extends ChangeNotifier {
   List<MmaEvent> get completedEvents =>
       events.where((e) => e.isCompleted).toList();
 
+  /// True once we've checked persistence and found no organization yet —
+  /// the UI should show the new-game setup screen instead of the dashboard.
+  bool needsNewGame = false;
+
   Future<void> init() async {
-    var org = await _orgRepo.get();
-    org ??= await _seedNewGame();
+    final org = await _orgRepo.get();
     organization = org;
 
+    if (org == null) {
+      needsNewGame = true;
+      isLoading = false;
+      notifyListeners();
+      return;
+    }
+
+    await _subscribeToStreams();
+    isLoading = false;
+    notifyListeners();
+  }
+
+  /// Seeds a brand-new save with the player's chosen org name and starting
+  /// tier (which sets cash and fanbase — see [ReputationTierInfo]), then
+  /// starts the game normally. Called from the new-game setup screen.
+  Future<void> startNewGame({
+    required String orgName,
+    required ReputationTier tier,
+  }) async {
+    final org = generateStartingOrganization(name: orgName, tier: tier);
+    final pool = generateStartingRoster();
+    final roster = signStartingRoster(pool);
+
+    await _orgRepo.save(org);
+    for (final fighter in roster) {
+      await _fighterRepo.save(fighter);
+    }
+    organization = org;
+    needsNewGame = false;
+
+    await _subscribeToStreams();
+    notifyListeners();
+  }
+
+  Future<void> _subscribeToStreams() async {
     _fighterSub = _fighterRepo.watchAll().listen((fighters) {
       allFighters = fighters;
       notifyListeners();
@@ -116,21 +154,6 @@ class GameController extends ChangeNotifier {
       pendingRandomEvents = e;
       notifyListeners();
     });
-
-    isLoading = false;
-    notifyListeners();
-  }
-
-  Future<Organization> _seedNewGame() async {
-    final org = generateStartingOrganization(name: 'Apex Fighting Championship');
-    final pool = generateStartingRoster();
-    final roster = signStartingRoster(pool);
-
-    await _orgRepo.save(org);
-    for (final fighter in roster) {
-      await _fighterRepo.save(fighter);
-    }
-    return org;
   }
 
   Future<MmaEvent?> getEventById(String id) => _eventRepo.getById(id);
@@ -178,6 +201,13 @@ class GameController extends ChangeNotifier {
     await _fighterRepo.release(fighterId);
   }
 
+  /// Creates a brand-new fighter in the talent pool, or persists edits to
+  /// an existing one — [FighterEditorScreen] uses this for both modes.
+  /// Editing preserves whatever id/record/contract the caller passed in.
+  Future<void> saveFighter(Fighter fighter) async {
+    await _fighterRepo.save(fighter);
+  }
+
   // ---- Event booking ------------------------------------------------------
 
   /// Books a new scheduled event with the given card. [card] entries must
@@ -186,7 +216,8 @@ class GameController extends ChangeNotifier {
   Future<String?> bookEvent({
     required String name,
     required DateTime date,
-    required VenueTier venueTier,
+    required Venue venue,
+    required int ticketPrice,
     required List<Fight> card,
   }) async {
     if (card.isEmpty) return 'Add at least one fight to the card.';
@@ -196,7 +227,8 @@ class GameController extends ChangeNotifier {
       id: newId(),
       name: name,
       date: date,
-      venueTier: venueTier,
+      venue: venue,
+      ticketPrice: ticketPrice,
     );
     await _eventRepo.saveEvent(event);
     final fightsWithEventId =
@@ -234,7 +266,8 @@ class GameController extends ChangeNotifier {
     }
 
     final finance = _financeCalculator.calculate(
-      venueTier: event.venueTier,
+      venue: event.venue,
+      ticketPrice: event.ticketPrice,
       organization: org,
       card: resolvedCard,
       fighterLookup: fighterLookup,

@@ -5,6 +5,7 @@ import '../state/game_controller.dart';
 import '../widgets/random_event_dialog.dart';
 import 'dashboard/dashboard_screen.dart';
 import 'finance/finance_screen.dart';
+import 'new_game/new_game_screen.dart';
 import 'roster/roster_screen.dart';
 
 /// App shell: bottom-tab navigation plus a global watcher that pops up a
@@ -33,6 +34,10 @@ class _HomeShellState extends State<HomeShell> {
 
     if (controller.isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (controller.needsNewGame) {
+      return const NewGameScreen();
     }
 
     final pending = controller.pendingRandomEvents;

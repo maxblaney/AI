@@ -33,6 +33,30 @@ extension WeightClassLabel on WeightClass {
         return 'Heavyweight';
     }
   }
+
+  /// Upper weight limit in pounds.
+  int get limitLbs {
+    switch (this) {
+      case WeightClass.flyweight:
+        return 125;
+      case WeightClass.bantamweight:
+        return 135;
+      case WeightClass.featherweight:
+        return 145;
+      case WeightClass.lightweight:
+        return 155;
+      case WeightClass.welterweight:
+        return 170;
+      case WeightClass.middleweight:
+        return 185;
+      case WeightClass.lightHeavyweight:
+        return 200;
+      case WeightClass.heavyweight:
+        return 265;
+    }
+  }
+
+  String get labelWithLimit => '$label ($limitLbs lbs)';
 }
 
 enum StyleTag {
@@ -78,67 +102,142 @@ extension InjuryStatusLabel on InjuryStatus {
   }
 }
 
-enum ReputationTier { regional, national, global }
+/// The organization's overall standing. Also used at new-game setup to pick
+/// a starting cash balance (see [ReputationTierInfo.startingCash]).
+enum ReputationTier { local, regional, national, international }
 
-extension ReputationTierLabel on ReputationTier {
+extension ReputationTierInfo on ReputationTier {
   String get label {
     switch (this) {
+      case ReputationTier.local:
+        return 'Local';
       case ReputationTier.regional:
         return 'Regional';
       case ReputationTier.national:
         return 'National';
-      case ReputationTier.global:
-        return 'Global';
+      case ReputationTier.international:
+        return 'International';
+    }
+  }
+
+  int get startingCash {
+    switch (this) {
+      case ReputationTier.local:
+        return 10000;
+      case ReputationTier.regional:
+        return 100000;
+      case ReputationTier.national:
+        return 1000000;
+      case ReputationTier.international:
+        return 10000000;
+    }
+  }
+
+  int get startingFanbase {
+    switch (this) {
+      case ReputationTier.local:
+        return 800;
+      case ReputationTier.regional:
+        return 8000;
+      case ReputationTier.national:
+        return 80000;
+      case ReputationTier.international:
+        return 800000;
     }
   }
 }
 
-enum VenueTier {
-  localGym,
-  regionalArena,
-  nationalArena,
-  globalStadium,
+/// A specific, bookable event venue. Replaces the earlier abstract
+/// "tier" concept with real locations, each with its own capacity and
+/// rental cost.
+enum Venue {
+  regionalUsa,
+  hartfordCt,
+  atlantaGa,
+  bostonMa,
+  lasVegasNv,
+  newYorkNy,
+  manchesterUk,
 }
 
-extension VenueTierInfo on VenueTier {
+extension VenueInfo on Venue {
   String get label {
     switch (this) {
-      case VenueTier.localGym:
-        return 'Local Gym';
-      case VenueTier.regionalArena:
-        return 'Regional Arena';
-      case VenueTier.nationalArena:
-        return 'National Arena';
-      case VenueTier.globalStadium:
-        return 'Global Stadium';
+      case Venue.regionalUsa:
+        return 'Regional USA';
+      case Venue.hartfordCt:
+        return 'Hartford, CT';
+      case Venue.atlantaGa:
+        return 'Atlanta, GA';
+      case Venue.bostonMa:
+        return 'Boston, MA';
+      case Venue.lasVegasNv:
+        return 'Las Vegas, NV';
+      case Venue.newYorkNy:
+        return 'New York, NY';
+      case Venue.manchesterUk:
+        return 'Manchester, UK';
     }
   }
 
   /// Base venue rental cost in dollars.
   int get baseCost {
     switch (this) {
-      case VenueTier.localGym:
-        return 2000;
-      case VenueTier.regionalArena:
-        return 15000;
-      case VenueTier.nationalArena:
-        return 60000;
-      case VenueTier.globalStadium:
+      case Venue.regionalUsa:
+        return 1500;
+      case Venue.hartfordCt:
+        return 10000;
+      case Venue.atlantaGa:
+        return 20000;
+      case Venue.bostonMa:
+        return 50000;
+      case Venue.lasVegasNv:
+        return 75000;
+      case Venue.newYorkNy:
         return 250000;
+      case Venue.manchesterUk:
+        return 100000;
     }
   }
 
   /// Maximum attendance capacity for ticket revenue purposes.
   int get capacity {
     switch (this) {
-      case VenueTier.localGym:
-        return 500;
-      case VenueTier.regionalArena:
-        return 5000;
-      case VenueTier.nationalArena:
+      case Venue.regionalUsa:
+        return 3500;
+      case Venue.hartfordCt:
+        return 10000;
+      case Venue.atlantaGa:
+        return 15000;
+      case Venue.bostonMa:
         return 20000;
-      case VenueTier.globalStadium:
-        return 60000;
+      case Venue.lasVegasNv:
+        return 20000;
+      case Venue.newYorkNy:
+        return 25000;
+      case Venue.manchesterUk:
+        return 25000;
+    }
+  }
+
+  /// A reasonable default ticket price to pre-fill the booking form with;
+  /// the player can override it there.
+  int get suggestedTicketPrice {
+    switch (this) {
+      case Venue.regionalUsa:
+        return 35;
+      case Venue.hartfordCt:
+        return 55;
+      case Venue.atlantaGa:
+        return 70;
+      case Venue.bostonMa:
+        return 90;
+      case Venue.lasVegasNv:
+        return 120;
+      case Venue.newYorkNy:
+        return 175;
+      case Venue.manchesterUk:
+        return 140;
     }
   }
 }
