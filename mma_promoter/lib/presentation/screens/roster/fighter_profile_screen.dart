@@ -44,6 +44,11 @@ class FighterProfileScreen extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
+            '${fighter.heightDisplay} · ${fighter.weightLbs} lbs',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 4),
+          Text(
             'Record: ${fighter.record.display}   Win streak: ${fighter.winStreak}',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
@@ -86,6 +91,8 @@ class FighterProfileScreen extends StatelessWidget {
               label: const Text('Sign Fighter'),
               onPressed: () => _showSignDialog(context, fighter),
             ),
+          const SizedBox(height: 24),
+          _FightHistorySection(fighter: fighter),
         ],
       ),
     );
@@ -202,6 +209,100 @@ class _ContractSection extends StatelessWidget {
             child: const Text('Release'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _FightHistorySection extends StatelessWidget {
+  final Fighter fighter;
+
+  const _FightHistorySection({required this.fighter});
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = context.read<GameController>();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Fight History', style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 8),
+        FutureBuilder<List<({Fight fight, MmaEvent? event})>>(
+          future: controller.getFightHistory(fighter.id),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: LinearProgressIndicator(),
+              );
+            }
+            final history = snapshot.data!;
+            if (history.isEmpty) {
+              return const Text('No fights yet.');
+            }
+            return Column(
+              children: [
+                for (final entry in history)
+                  _FightHistoryTile(
+                    fight: entry.fight,
+                    event: entry.event,
+                    fighterId: fighter.id,
+                    opponentName: _opponentName(controller, entry.fight, fighter.id),
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  String _opponentName(GameController controller, Fight fight, String fighterId) {
+    final opponentId =
+        fight.fighterAId == fighterId ? fight.fighterBId : fight.fighterAId;
+    return controller.fighterById(opponentId)?.name ?? 'Unknown Opponent';
+  }
+}
+
+class _FightHistoryTile extends StatelessWidget {
+  final Fight fight;
+  final MmaEvent? event;
+  final String fighterId;
+  final String opponentName;
+
+  const _FightHistoryTile({
+    required this.fight,
+    required this.event,
+    required this.fighterId,
+    required this.opponentName,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final result = fight.result!;
+    final outcome = result.isDraw
+        ? 'Draw'
+        : (result.winnerId == fighterId ? 'Win' : 'Loss');
+    final outcomeColor = switch (outcome) {
+      'Win' => Colors.green,
+      'Loss' => Colors.red,
+      _ => Colors.grey,
+    };
+
+    return Card(
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: outcomeColor,
+          child: Text(
+            outcome[0],
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+        ),
+        title: Text('vs $opponentName'),
+        subtitle: Text(
+          '${result.isDraw ? 'Draw' : '${result.method.label}, Round ${result.round}'}'
+          '${event != null ? ' · ${DateFormat.yMMMd().format(event!.date)}' : ''}',
+        ),
       ),
     );
   }

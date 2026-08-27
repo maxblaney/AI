@@ -16,6 +16,8 @@ Fighter fighterFromRow(FighterRow row, ContractRow? contractRow) {
     age: row.age,
     nationality: row.nationality,
     weightClass: WeightClass.values.byName(row.weightClass),
+    heightInches: row.heightInches,
+    weightLbs: row.weightLbs,
     record: FightRecord(wins: row.wins, losses: row.losses, draws: row.draws),
     stats: FighterStats(
       striking: row.striking,
@@ -42,6 +44,8 @@ FightersCompanion fighterToCompanion(Fighter fighter) {
     age: fighter.age,
     nationality: fighter.nationality,
     weightClass: fighter.weightClass.name,
+    heightInches: Value(fighter.heightInches),
+    weightLbs: Value(fighter.weightLbs),
     wins: Value(fighter.record.wins),
     losses: Value(fighter.record.losses),
     draws: Value(fighter.record.draws),
@@ -120,6 +124,8 @@ MmaEvent eventFromRow(EventRow row) {
     revenue: row.revenue,
     expenses: row.expenses,
     reputationChange: row.reputationChange,
+    fightOfTheNightFightId: row.fightOfTheNightFightId,
+    performanceOfTheNightFighterId: row.performanceOfTheNightFighterId,
   );
 }
 
@@ -137,6 +143,9 @@ EventsCompanion eventToCompanion(MmaEvent event) {
     revenue: Value(event.revenue),
     expenses: Value(event.expenses),
     reputationChange: Value(event.reputationChange),
+    fightOfTheNightFightId: Value(event.fightOfTheNightFightId),
+    performanceOfTheNightFighterId:
+        Value(event.performanceOfTheNightFighterId),
   );
 }
 
@@ -149,6 +158,14 @@ Fight fightFromRow(FightRow row) {
       round: row.resultRound ?? 1,
       winnerPerformanceRating: row.winnerPerformanceRating ?? 0,
       loserPerformanceRating: row.loserPerformanceRating ?? 0,
+      fighterAInjury: row.resultFighterAInjury == null
+          ? InjuryStatus.healthy
+          : InjuryStatus.values.byName(row.resultFighterAInjury!),
+      fighterBInjury: row.resultFighterBInjury == null
+          ? InjuryStatus.healthy
+          : InjuryStatus.values.byName(row.resultFighterBInjury!),
+      // Round-by-round scores are display-only and not persisted; they're
+      // only present on a freshly-simulated result held in memory.
     );
   }
   return Fight(
@@ -157,8 +174,10 @@ Fight fightFromRow(FightRow row) {
     fighterAId: row.fighterAId,
     fighterBId: row.fighterBId,
     weightClass: WeightClass.values.byName(row.weightClass),
-    isTitleFight: row.isTitleFight,
+    titleFightType: TitleFightType.values.byName(row.titleFightType),
     isMainEvent: row.isMainEvent,
+    isCoMainEvent: row.isCoMainEvent,
+    rounds: row.rounds,
     cardOrder: row.cardOrder,
     result: result,
   );
@@ -171,14 +190,18 @@ FightsCompanion fightToCompanion(Fight fight) {
     fighterAId: fight.fighterAId,
     fighterBId: fight.fighterBId,
     weightClass: fight.weightClass.name,
-    isTitleFight: Value(fight.isTitleFight),
+    titleFightType: Value(fight.titleFightType.name),
     isMainEvent: Value(fight.isMainEvent),
+    isCoMainEvent: Value(fight.isCoMainEvent),
+    rounds: Value(fight.rounds),
     cardOrder: Value(fight.cardOrder),
     resultWinnerId: Value(fight.result?.winnerId),
     resultMethod: Value(fight.result?.method.name),
     resultRound: Value(fight.result?.round),
     winnerPerformanceRating: Value(fight.result?.winnerPerformanceRating),
     loserPerformanceRating: Value(fight.result?.loserPerformanceRating),
+    resultFighterAInjury: Value(fight.result?.fighterAInjury.name),
+    resultFighterBInjury: Value(fight.result?.fighterBInjury.name),
   );
 }
 

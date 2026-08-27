@@ -12,6 +12,8 @@ class Fighters extends Table {
   IntColumn get age => integer()();
   TextColumn get nationality => text()();
   TextColumn get weightClass => text()();
+  IntColumn get heightInches => integer().withDefault(const Constant(70))();
+  IntColumn get weightLbs => integer().withDefault(const Constant(155))();
 
   IntColumn get wins => integer().withDefault(const Constant(0))();
   IntColumn get losses => integer().withDefault(const Constant(0))();
@@ -81,6 +83,8 @@ class Events extends Table {
   IntColumn get revenue => integer().withDefault(const Constant(0))();
   IntColumn get expenses => integer().withDefault(const Constant(0))();
   IntColumn get reputationChange => integer().withDefault(const Constant(0))();
+  TextColumn get fightOfTheNightFightId => text().nullable()();
+  TextColumn get performanceOfTheNightFighterId => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -93,8 +97,12 @@ class Fights extends Table {
   TextColumn get fighterAId => text()();
   TextColumn get fighterBId => text()();
   TextColumn get weightClass => text()();
-  BoolColumn get isTitleFight => boolean().withDefault(const Constant(false))();
+  TextColumn get titleFightType =>
+      text().withDefault(const Constant('none'))();
   BoolColumn get isMainEvent => boolean().withDefault(const Constant(false))();
+  BoolColumn get isCoMainEvent =>
+      boolean().withDefault(const Constant(false))();
+  IntColumn get rounds => integer().withDefault(const Constant(3))();
   IntColumn get cardOrder => integer().withDefault(const Constant(0))();
 
   TextColumn get resultWinnerId => text().nullable()();
@@ -102,6 +110,8 @@ class Fights extends Table {
   IntColumn get resultRound => integer().nullable()();
   IntColumn get winnerPerformanceRating => integer().nullable()();
   IntColumn get loserPerformanceRating => integer().nullable()();
+  TextColumn get resultFighterAInjury => text().nullable()();
+  TextColumn get resultFighterBInjury => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};

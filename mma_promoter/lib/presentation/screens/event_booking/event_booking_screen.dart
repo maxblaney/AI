@@ -21,6 +21,7 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
   bool _ticketPriceEdited = false;
   final List<Fight> _card = [];
   String? _mainEventFightId;
+  String? _coMainEventFightId;
   bool _submitting = false;
 
   @override
@@ -41,12 +42,30 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
   Set<String> get _usedFighterIds =>
       _card.expand((f) => [f.fighterAId, f.fighterBId]).toSet();
 
+  /// Weight classes with at least 2 unused signed fighters — the only ones
+  /// a new fight can be booked in.
+  List<WeightClass> _bookableWeightClasses(List<Fighter> roster) {
+    return WeightClass.values.where((wc) {
+      final count = roster
+          .where((f) => f.weightClass == wc && !_usedFighterIds.contains(f.id))
+          .length;
+      return count >= 2;
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<GameController>();
     final roster = controller.signedRoster
         .where((f) => f.injuryStatus != InjuryStatus.major)
         .toList();
+    final bookableClasses = _bookableWeightClasses(roster);
+
+    final mainCard = <Fight>[];
+    final prelims = <Fight>[];
+    for (var i = 0; i < _card.length; i++) {
+      (i < Fight.mainCardSize ? mainCard : prelims).add(_card[i]);
+    }
 
     return Scaffold(
       appBar: AppBar(title: const Text('Book Event')),
@@ -104,8 +123,8 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
               TextButton.icon(
                 icon: const Icon(Icons.add),
                 label: const Text('Add Fight'),
-                onPressed: roster.length - _usedFighterIds.length >= 2
-                    ? () => _addFight(roster)
+                onPressed: bookableClasses.isNotEmpty
+                    ? () => _addFight(roster, bookableClasses)
                     : null,
               ),
             ],
@@ -115,17 +134,14 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
               padding: EdgeInsets.symmetric(vertical: 8),
               child: Text('No fights added yet.'),
             ),
-          for (final fight in _card) _FightTile(
-            fight: fight,
-            fighterA: controller.fighterById(fight.fighterAId),
-            fighterB: controller.fighterById(fight.fighterBId),
-            isMainEvent: fight.id == _mainEventFightId,
-            onSetMainEvent: () => setState(() => _mainEventFightId = fight.id),
-            onRemove: () => setState(() {
-              _card.remove(fight);
-              if (_mainEventFightId == fight.id) _mainEventFightId = null;
-            }),
-          ),
+          if (mainCard.isNotEmpty) ...[
+            const _SectionLabel('Main Card'),
+            for (final fight in mainCard) _buildFightTile(controller, fight, isMainCardEligible: true),
+          ],
+          if (prelims.isNotEmpty) ...[
+            const _SectionLabel('Prelims'),
+            for (final fight in prelims) _buildFightTile(controller, fight, isMainCardEligible: false),
+          ],
           const SizedBox(height: 24),
           FilledButton(
             onPressed: _submitting ? null : _confirm,
@@ -142,6 +158,34 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
     );
   }
 
+  Widget _buildFightTile(
+    GameController controller,
+    Fight fight, {
+    required bool isMainCardEligible,
+  }) {
+    return _FightTile(
+      fight: fight,
+      fighterA: controller.fighterById(fight.fighterAId),
+      fighterB: controller.fighterById(fight.fighterBId),
+      isMainEvent: fight.id == _mainEventFightId,
+      isCoMainEvent: fight.id == _coMainEventFightId,
+      showMainEventControls: isMainCardEligible,
+      onSetMainEvent: () => setState(() {
+        _mainEventFightId = fight.id;
+        if (_coMainEventFightId == fight.id) _coMainEventFightId = null;
+      }),
+      onSetCoMainEvent: () => setState(() {
+        _coMainEventFightId = fight.id;
+        if (_mainEventFightId == fight.id) _mainEventFightId = null;
+      }),
+      onRemove: () => setState(() {
+        _card.remove(fight);
+        if (_mainEventFightId == fight.id) _mainEventFightId = null;
+        if (_coMainEventFightId == fight.id) _coMainEventFightId = null;
+      }),
+    );
+  }
+
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -152,67 +196,82 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
     if (picked != null) setState(() => _date = picked);
   }
 
-  void _addFight(List<Fighter> roster) {
-    final available =
-        roster.where((f) => !_usedFighterIds.contains(f.id)).toList();
+  void _addFight(List<Fighter> roster, List<WeightClass> bookableClasses) {
+    WeightClass weightClass = bookableClasses.first;
     String? fighterAId;
     String? fighterBId;
+    int rounds = 3;
+    TitleFightType titleFightType = TitleFightType.none;
 
     showDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setState) {
-          // Fights are matched within a single weight class — once one
-          // side is picked, the other dropdown locks to that division.
-          WeightClass? lockedClass;
-          if (fighterAId != null) {
-            lockedClass =
-                available.firstWhere((f) => f.id == fighterAId).weightClass;
-          } else if (fighterBId != null) {
-            lockedClass =
-                available.firstWhere((f) => f.id == fighterBId).weightClass;
-          }
-
-          final optionsForA = available
-              .where((f) => f.id != fighterBId)
-              .where((f) => lockedClass == null || f.weightClass == lockedClass)
-              .toList();
-          final optionsForB = available
-              .where((f) => f.id != fighterAId)
-              .where((f) => lockedClass == null || f.weightClass == lockedClass)
+          final available = roster
+              .where((f) =>
+                  f.weightClass == weightClass &&
+                  !_usedFighterIds.contains(f.id))
               .toList();
 
           return AlertDialog(
             title: const Text('Add Fight'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (lockedClass != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Text(
-                      lockedClass.labelWithLimit,
-                      style: Theme.of(dialogContext).textTheme.bodySmall,
-                    ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  DropdownButtonFormField<WeightClass>(
+                    value: weightClass,
+                    decoration: const InputDecoration(labelText: 'Weight Class'),
+                    items: bookableClasses
+                        .map((w) => DropdownMenuItem(value: w, child: Text(w.labelWithLimit)))
+                        .toList(),
+                    onChanged: (v) => setState(() {
+                      weightClass = v ?? weightClass;
+                      fighterAId = null;
+                      fighterBId = null;
+                    }),
                   ),
-                DropdownButtonFormField<String>(
-                  value: fighterAId,
-                  decoration: const InputDecoration(labelText: 'Fighter A'),
-                  items: optionsForA
-                      .map((f) => DropdownMenuItem(value: f.id, child: Text(f.name)))
-                      .toList(),
-                  onChanged: (v) => setState(() => fighterAId = v),
-                ),
-                DropdownButtonFormField<String>(
-                  value: fighterBId,
-                  decoration: const InputDecoration(labelText: 'Fighter B'),
-                  items: optionsForB
-                      .map((f) => DropdownMenuItem(value: f.id, child: Text(f.name)))
-                      .toList(),
-                  onChanged: (v) => setState(() => fighterBId = v),
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: fighterAId,
+                    decoration: const InputDecoration(labelText: 'Fighter A'),
+                    items: available
+                        .where((f) => f.id != fighterBId)
+                        .map((f) => DropdownMenuItem(value: f.id, child: Text(f.name)))
+                        .toList(),
+                    onChanged: (v) => setState(() => fighterAId = v),
+                  ),
+                  DropdownButtonFormField<String>(
+                    value: fighterBId,
+                    decoration: const InputDecoration(labelText: 'Fighter B'),
+                    items: available
+                        .where((f) => f.id != fighterAId)
+                        .map((f) => DropdownMenuItem(value: f.id, child: Text(f.name)))
+                        .toList(),
+                    onChanged: (v) => setState(() => fighterBId = v),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text('Rounds'),
+                  SegmentedButton<int>(
+                    segments: const [
+                      ButtonSegment(value: 3, label: Text('3')),
+                      ButtonSegment(value: 5, label: Text('5')),
+                    ],
+                    selected: {rounds},
+                    onSelectionChanged: (s) => setState(() => rounds = s.first),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<TitleFightType>(
+                    value: titleFightType,
+                    decoration: const InputDecoration(labelText: 'Title Implications'),
+                    items: TitleFightType.values
+                        .map((t) => DropdownMenuItem(value: t, child: Text(t.label)))
+                        .toList(),
+                    onChanged: (v) => setState(() => titleFightType = v ?? titleFightType),
+                  ),
+                ],
+              ),
             ),
             actions: [
               TextButton(
@@ -222,16 +281,15 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
               FilledButton(
                 onPressed: fighterAId != null && fighterBId != null
                     ? () {
-                        final a = roster.firstWhere((f) => f.id == fighterAId);
                         this.setState(() {
                           _card.add(Fight(
                             id: newId(),
                             eventId: '',
                             fighterAId: fighterAId!,
                             fighterBId: fighterBId!,
-                            weightClass: a.weightClass,
-                            isTitleFight: false,
-                            isMainEvent: false,
+                            weightClass: weightClass,
+                            rounds: rounds,
+                            titleFightType: titleFightType,
                             cardOrder: _card.length,
                           ));
                         });
@@ -256,6 +314,11 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
       _showError('Pick a main event fight.');
       return;
     }
+    final mainCardCount = _card.length < Fight.mainCardSize ? _card.length : Fight.mainCardSize;
+    if (mainCardCount >= 2 && _coMainEventFightId == null) {
+      _showError('Pick a co-main event fight.');
+      return;
+    }
     final ticketPrice = int.tryParse(_ticketPriceController.text);
     if (ticketPrice == null || ticketPrice <= 0) {
       _showError('Enter a valid ticket price.');
@@ -267,6 +330,7 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
       for (var i = 0; i < _card.length; i++)
         _card[i].copyWith(
           isMainEvent: _card[i].id == _mainEventFightId,
+          isCoMainEvent: _card[i].id == _coMainEventFightId,
           cardOrder: i,
         ),
     ];
@@ -296,12 +360,29 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
   }
 }
 
+class _SectionLabel extends StatelessWidget {
+  final String text;
+
+  const _SectionLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 12, bottom: 4),
+      child: Text(text, style: Theme.of(context).textTheme.titleSmall),
+    );
+  }
+}
+
 class _FightTile extends StatelessWidget {
   final Fight fight;
   final Fighter? fighterA;
   final Fighter? fighterB;
   final bool isMainEvent;
+  final bool isCoMainEvent;
+  final bool showMainEventControls;
   final VoidCallback onSetMainEvent;
+  final VoidCallback onSetCoMainEvent;
   final VoidCallback onRemove;
 
   const _FightTile({
@@ -309,30 +390,47 @@ class _FightTile extends StatelessWidget {
     required this.fighterA,
     required this.fighterB,
     required this.isMainEvent,
+    required this.isCoMainEvent,
+    required this.showMainEventControls,
     required this.onSetMainEvent,
+    required this.onSetCoMainEvent,
     required this.onRemove,
   });
 
   @override
   Widget build(BuildContext context) {
+    final tags = [
+      fight.weightClass.label,
+      '${fight.rounds} Rounds',
+      if (fight.titleFightType != TitleFightType.none) fight.titleFightType.label,
+      if (isMainEvent) 'Main Event',
+      if (isCoMainEvent) 'Co-Main Event',
+    ];
+
     return Card(
       color: isMainEvent
           ? Theme.of(context).colorScheme.primaryContainer
-          : null,
+          : isCoMainEvent
+              ? Theme.of(context).colorScheme.secondaryContainer
+              : null,
       child: ListTile(
         title: Text('${fighterA?.name ?? '?'} vs ${fighterB?.name ?? '?'}'),
-        subtitle: Text(
-          '${fight.weightClass.label}'
-          '${isMainEvent ? ' · Main Event' : ' · Undercard'}',
-        ),
+        subtitle: Text(tags.join(' · ')),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            IconButton(
-              icon: Icon(isMainEvent ? Icons.star : Icons.star_border),
-              tooltip: 'Set as main event',
-              onPressed: onSetMainEvent,
-            ),
+            if (showMainEventControls) ...[
+              IconButton(
+                icon: Icon(isMainEvent ? Icons.star : Icons.star_border),
+                tooltip: 'Set as main event',
+                onPressed: onSetMainEvent,
+              ),
+              IconButton(
+                icon: Icon(isCoMainEvent ? Icons.star_half : Icons.star_outline),
+                tooltip: 'Set as co-main event',
+                onPressed: onSetCoMainEvent,
+              ),
+            ],
             IconButton(
               icon: const Icon(Icons.delete_outline),
               onPressed: onRemove,

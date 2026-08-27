@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../data/models/models.dart';
 import '../../state/game_controller.dart';
+import 'fight_breakdown_screen.dart';
 
 /// Shows a booked card before it runs (with a "Run Event" action that
 /// resolves every fight) or the full results breakdown once it's completed.
@@ -20,6 +21,7 @@ class _EventResultScreenState extends State<EventResultScreen> {
   double _promoSpend = 2000;
   bool _simulating = false;
   List<Fight>? _card;
+  List<FighterOutcomeSummary>? _fighterOutcomes;
 
   @override
   void initState() {
@@ -50,7 +52,11 @@ class _EventResultScreenState extends State<EventResultScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(event.name)),
       body: event.isCompleted
-          ? _ResultsView(event: event, card: _card!)
+          ? _ResultsView(
+              event: event,
+              card: _card!,
+              fighterOutcomes: _fighterOutcomes,
+            )
           : _PreEventView(
               event: event,
               card: _card!,
@@ -72,7 +78,10 @@ class _EventResultScreenState extends State<EventResultScreen> {
     if (!mounted) return;
     setState(() {
       _simulating = false;
-      if (summary != null) _card = summary.resolvedCard;
+      if (summary != null) {
+        _card = summary.resolvedCard;
+        _fighterOutcomes = summary.fighterOutcomes;
+      }
     });
   }
 }
@@ -116,7 +125,14 @@ class _PreEventView extends StatelessWidget {
               '${controller.fighterById(fight.fighterAId)?.name ?? '?'} vs '
               '${controller.fighterById(fight.fighterBId)?.name ?? '?'}',
             ),
-            subtitle: Text(fight.isMainEvent ? 'Main Event' : 'Undercard'),
+            subtitle: Text([
+              if (fight.isMainEvent) 'Main Event'
+              else if (fight.isCoMainEvent) 'Co-Main Event'
+              else if (fight.isMainCard) 'Main Card'
+              else 'Prelim',
+              '${fight.rounds} Rounds',
+              if (fight.titleFightType != TitleFightType.none) fight.titleFightType.label,
+            ].join(' · ')),
           ),
         const SizedBox(height: 16),
         Text('Promotion Spend', style: Theme.of(context).textTheme.titleMedium),
@@ -142,13 +158,20 @@ class _PreEventView extends StatelessWidget {
 class _ResultsView extends StatelessWidget {
   final MmaEvent event;
   final List<Fight> card;
+  final List<FighterOutcomeSummary>? fighterOutcomes;
 
-  const _ResultsView({required this.event, required this.card});
+  const _ResultsView({
+    required this.event,
+    required this.card,
+    required this.fighterOutcomes,
+  });
 
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<GameController>();
     final currency = NumberFormat.simpleCurrency();
+    final outcomes = fighterOutcomes;
+    final injured = outcomes?.where((o) => o.injuryStatus != InjuryStatus.healthy).toList();
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -172,7 +195,166 @@ class _ResultsView extends StatelessWidget {
         const SizedBox(height: 24),
         Text('Results', style: Theme.of(context).textTheme.titleLarge),
         for (final fight in card) _FightResultTile(fight: fight, controller: controller),
+        const SizedBox(height: 24),
+        _AwardsSection(event: event, card: card, controller: controller),
+        if (injured != null && injured.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          Text('Injuries', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          for (final outcome in injured)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.local_hospital, color: Colors.orange),
+              title: Text(outcome.fighterName),
+              subtitle: Text(outcome.injuryStatus.label),
+            ),
+        ],
+        if (outcomes != null && outcomes.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          Text('Popularity Changes', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          for (final outcome in outcomes)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(outcome.fighterName),
+              trailing: Text(
+                '${outcome.popularityDelta >= 0 ? '+' : ''}${outcome.popularityDelta}',
+                style: TextStyle(
+                  color: outcome.popularityDelta >= 0 ? Colors.green : Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+        ],
       ],
+    );
+  }
+}
+
+class _AwardsSection extends StatelessWidget {
+  final MmaEvent event;
+  final List<Fight> card;
+  final GameController controller;
+
+  const _AwardsSection({
+    required this.event,
+    required this.card,
+    required this.controller,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bonus = controller.organization?.reputationTier.nightlyBonusAmount ?? 0;
+    final currency = NumberFormat.simpleCurrency();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Fight Night Awards', style: Theme.of(context).textTheme.titleLarge),
+        Text(
+          'Bonus per award: ${currency.format(bonus)}',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 8),
+        if (event.fightOfTheNightFightId != null)
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.emoji_events, color: Colors.amber),
+            title: const Text('Fight of the Night'),
+            subtitle: Text(_fightLabel(event.fightOfTheNightFightId!)),
+          )
+        else
+          OutlinedButton.icon(
+            icon: const Icon(Icons.emoji_events),
+            label: const Text('Award Fight of the Night'),
+            onPressed: () => _pickFight(context),
+          ),
+        const SizedBox(height: 8),
+        if (event.performanceOfTheNightFighterId != null)
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.star, color: Colors.amber),
+            title: const Text('Performance of the Night'),
+            subtitle: Text(
+              controller.fighterById(event.performanceOfTheNightFighterId!)?.name ??
+                  'Unknown',
+            ),
+          )
+        else
+          OutlinedButton.icon(
+            icon: const Icon(Icons.star),
+            label: const Text('Award Performance of the Night'),
+            onPressed: () => _pickFighter(context),
+          ),
+      ],
+    );
+  }
+
+  String _fightLabel(String fightId) {
+    for (final fight in card) {
+      if (fight.id == fightId) {
+        final a = controller.fighterById(fight.fighterAId)?.name ?? '?';
+        final b = controller.fighterById(fight.fighterBId)?.name ?? '?';
+        return '$a vs $b';
+      }
+    }
+    return 'Unknown fight';
+  }
+
+  void _pickFight(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: const Text('Fight of the Night'),
+        children: [
+          for (final fight in card)
+            SimpleDialogOption(
+              onPressed: () async {
+                Navigator.of(dialogContext).pop();
+                final error =
+                    await controller.awardFightOfTheNight(event.id, fight.id);
+                if (error != null && context.mounted) {
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(SnackBar(content: Text(error)));
+                }
+              },
+              child: Text(
+                '${controller.fighterById(fight.fighterAId)?.name ?? '?'} vs '
+                '${controller.fighterById(fight.fighterBId)?.name ?? '?'}',
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _pickFighter(BuildContext context) {
+    final fighterIds = <String>{};
+    for (final fight in card) {
+      fighterIds.add(fight.fighterAId);
+      fighterIds.add(fight.fighterBId);
+    }
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: const Text('Performance of the Night'),
+        children: [
+          for (final id in fighterIds)
+            SimpleDialogOption(
+              onPressed: () async {
+                Navigator.of(dialogContext).pop();
+                final error =
+                    await controller.awardPerformanceOfTheNight(event.id, id);
+                if (error != null && context.mounted) {
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(SnackBar(content: Text(error)));
+                }
+              },
+              child: Text(controller.fighterById(id)?.name ?? 'Unknown'),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -195,15 +377,34 @@ class _FightResultTile extends StatelessWidget {
     final winnerName = result.isDraw
         ? null
         : (result.winnerId == a.id ? a.name : b.name);
+    final tag = fight.isMainEvent
+        ? ' (Main Event)'
+        : fight.isCoMainEvent
+            ? ' (Co-Main Event)'
+            : '';
 
     return Card(
       child: ListTile(
-        title: Text('${a.name} vs ${b.name}${fight.isMainEvent ? ' (Main Event)' : ''}'),
+        title: Text('${a.name} vs ${b.name}$tag'),
         subtitle: Text(
           result.isDraw
               ? 'Draw / No Contest'
               : '$winnerName wins by ${result.method.label}, Round ${result.round}',
         ),
+        trailing: result.roundScores.isEmpty
+            ? null
+            : TextButton(
+                child: const Text('Round-by-Round'),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => FightBreakdownScreen(
+                      fight: fight,
+                      fighterA: a,
+                      fighterB: b,
+                    ),
+                  ),
+                ),
+              ),
       ),
     );
   }

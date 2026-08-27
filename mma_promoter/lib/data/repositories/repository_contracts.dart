@@ -27,6 +27,9 @@ abstract class EventRepositoryContract {
   Future<List<Fight>> getCard(String eventId);
   Future<void> saveFight(Fight fight);
   Future<void> saveCard(List<Fight> fights);
+
+  /// All resolved fights involving [fighterId], most recent first.
+  Future<List<Fight>> getFightsForFighter(String fighterId);
 }
 
 abstract class RandomEventRepositoryContract {

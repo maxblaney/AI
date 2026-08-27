@@ -22,12 +22,34 @@ class EventSimulationSummary {
   final MmaEvent event;
   final List<Fight> resolvedCard;
   final EventFinanceResult finance;
+  final List<FighterOutcomeSummary> fighterOutcomes;
 
   const EventSimulationSummary({
     required this.event,
     required this.resolvedCard,
     required this.finance,
+    required this.fighterOutcomes,
   });
+}
+
+/// Before/after snapshot of one fighter's popularity and final injury
+/// status coming out of a single event — shown on the results screen.
+class FighterOutcomeSummary {
+  final String fighterId;
+  final String fighterName;
+  final int popularityBefore;
+  final int popularityAfter;
+  final InjuryStatus injuryStatus;
+
+  const FighterOutcomeSummary({
+    required this.fighterId,
+    required this.fighterName,
+    required this.popularityBefore,
+    required this.popularityAfter,
+    required this.injuryStatus,
+  });
+
+  int get popularityDelta => popularityAfter - popularityBefore;
 }
 
 /// The single app-wide source of truth for game state. Owns the DB,
@@ -123,11 +145,11 @@ class GameController extends ChangeNotifier {
     required ReputationTier tier,
   }) async {
     final org = generateStartingOrganization(name: orgName, tier: tier);
+    // Everyone starts as a free agent — nobody's signed to "My Roster" yet.
     final pool = generateStartingRoster();
-    final roster = signStartingRoster(pool);
 
     await _orgRepo.save(org);
-    for (final fighter in roster) {
+    for (final fighter in pool) {
       await _fighterRepo.save(fighter);
     }
     organization = org;
@@ -157,6 +179,20 @@ class GameController extends ChangeNotifier {
   }
 
   Future<MmaEvent?> getEventById(String id) => _eventRepo.getById(id);
+
+  /// A fighter's past fights, most recent first, each paired with the
+  /// event they happened at (for the date/name) — used by the fighter
+  /// profile's fight history list.
+  Future<List<({Fight fight, MmaEvent? event})>> getFightHistory(
+    String fighterId,
+  ) async {
+    final fights = await _eventRepo.getFightsForFighter(fighterId);
+    final result = <({Fight fight, MmaEvent? event})>[];
+    for (final fight in fights) {
+      result.add((fight: fight, event: await _eventRepo.getById(fight.eventId)));
+    }
+    return result;
+  }
   Future<List<Fight>> getEventCard(String id) => _eventRepo.getCard(id);
 
   Fighter? fighterById(String id) {
@@ -259,8 +295,7 @@ class GameController extends ChangeNotifier {
       final result = _fightResolver.resolve(
         fighterA: a,
         fighterB: b,
-        isTitleFight: fight.isTitleFight,
-        isMainEvent: fight.isMainEvent,
+        rounds: fight.rounds,
       );
       resolvedCard.add(fight.copyWith(result: result));
     }
@@ -274,9 +309,10 @@ class GameController extends ChangeNotifier {
       promotionBudgetSpent: promotionBudgetSpent,
     );
 
+    final fighterOutcomes = <FighterOutcomeSummary>[];
     for (final fight in resolvedCard) {
       await _eventRepo.saveFight(fight);
-      await _applyFightOutcome(fight, fighterLookup);
+      fighterOutcomes.addAll(await _applyFightOutcome(fight, fighterLookup));
     }
 
     final completedEvent = event.copyWith(
@@ -304,42 +340,72 @@ class GameController extends ChangeNotifier {
       event: completedEvent,
       resolvedCard: resolvedCard,
       finance: finance,
+      fighterOutcomes: fighterOutcomes,
     );
   }
 
-  Future<void> _applyFightOutcome(
+  Future<List<FighterOutcomeSummary>> _applyFightOutcome(
     Fight fight,
     Map<String, Fighter> fighterLookup,
   ) async {
     final result = fight.result;
-    if (result == null) return;
+    if (result == null) return [];
     final a = fighterLookup[fight.fighterAId];
     final b = fighterLookup[fight.fighterBId];
-    if (a == null || b == null) return;
+    if (a == null || b == null) return [];
 
     if (result.isDraw) {
-      await _fighterRepo.save(_applyPostFight(a, record: a.record.addDraw()));
-      await _fighterRepo.save(_applyPostFight(b, record: b.record.addDraw()));
-      return;
+      final updatedA = _applyPostFight(
+        a,
+        record: a.record.addDraw(),
+        injuryFromFight: result.fighterAInjury,
+      );
+      final updatedB = _applyPostFight(
+        b,
+        record: b.record.addDraw(),
+        injuryFromFight: result.fighterBInjury,
+      );
+      await _fighterRepo.save(updatedA);
+      await _fighterRepo.save(updatedB);
+      return [_outcomeOf(a, updatedA), _outcomeOf(b, updatedB)];
     }
 
     final winner = result.winnerId == a.id ? a : b;
     final loser = result.winnerId == a.id ? b : a;
+    final winnerInjury =
+        result.winnerId == a.id ? result.fighterAInjury : result.fighterBInjury;
+    final loserInjury =
+        result.winnerId == a.id ? result.fighterBInjury : result.fighterAInjury;
 
-    await _fighterRepo.save(_applyPostFight(
+    final updatedWinner = _applyPostFight(
       winner,
       record: winner.record.addWin(),
       winStreak: winner.winStreak + 1,
       popularityDelta: 2 + result.winnerPerformanceRating ~/ 20,
       moraleDelta: 8,
-    ));
-    await _fighterRepo.save(_applyPostFight(
+      injuryFromFight: winnerInjury,
+    );
+    final updatedLoser = _applyPostFight(
       loser,
       record: loser.record.addLoss(),
       winStreak: 0,
       popularityDelta: 1,
       moraleDelta: -10,
-    ));
+      injuryFromFight: loserInjury,
+    );
+    await _fighterRepo.save(updatedWinner);
+    await _fighterRepo.save(updatedLoser);
+    return [_outcomeOf(winner, updatedWinner), _outcomeOf(loser, updatedLoser)];
+  }
+
+  FighterOutcomeSummary _outcomeOf(Fighter before, Fighter after) {
+    return FighterOutcomeSummary(
+      fighterId: after.id,
+      fighterName: after.name,
+      popularityBefore: before.popularity,
+      popularityAfter: after.popularity,
+      injuryStatus: after.injuryStatus,
+    );
   }
 
   Fighter _applyPostFight(
@@ -348,17 +414,95 @@ class GameController extends ChangeNotifier {
     int? winStreak,
     int popularityDelta = 0,
     int moraleDelta = 0,
+    InjuryStatus injuryFromFight = InjuryStatus.healthy,
   }) {
     var updated = fighter.copyWith(
       record: record,
       winStreak: winStreak ?? fighter.winStreak,
       popularity: (fighter.popularity + popularityDelta).clamp(0, 100),
       morale: (fighter.morale + moraleDelta).clamp(0, 100),
+      // Fighting never heals a pre-existing injury, only matches or
+      // worsens it with whatever this fight itself caused.
+      injuryStatus: _worseInjury(fighter.injuryStatus, injuryFromFight),
     );
     if (updated.contract != null) {
       updated = updated.copyWith(contract: updated.contract!.afterFight());
     }
     return updated;
+  }
+
+  static const _injurySeverity = {
+    InjuryStatus.healthy: 0,
+    InjuryStatus.minor: 1,
+    InjuryStatus.major: 2,
+  };
+
+  InjuryStatus _worseInjury(InjuryStatus a, InjuryStatus b) {
+    return _injurySeverity[a]! >= _injurySeverity[b]! ? a : b;
+  }
+
+  // ---- Fight night awards -------------------------------------------------
+
+  /// Pays a reputation-scaled bonus to both fighters in [fightId] and gives
+  /// them a small popularity/morale bump. One-time per event.
+  Future<String?> awardFightOfTheNight(String eventId, String fightId) async {
+    final org = organization;
+    if (org == null) return 'No active organization.';
+    final event = await _eventRepo.getById(eventId);
+    if (event == null) return 'Event not found.';
+    if (event.fightOfTheNightFightId != null) return 'Already awarded.';
+
+    final card = await _eventRepo.getCard(eventId);
+    Fight? fight;
+    for (final f in card) {
+      if (f.id == fightId) {
+        fight = f;
+        break;
+      }
+    }
+    if (fight == null) return 'Fight not found.';
+
+    final bonus = org.reputationTier.nightlyBonusAmount;
+    await _eventRepo.saveEvent(event.copyWith(fightOfTheNightFightId: fightId));
+    await _orgRepo.save(org.copyWith(cashBalance: org.cashBalance - bonus));
+
+    for (final id in [fight.fighterAId, fight.fighterBId]) {
+      final fighter = fighterById(id);
+      if (fighter == null) continue;
+      await _fighterRepo.save(fighter.copyWith(
+        popularity: (fighter.popularity + 5).clamp(0, 100),
+        morale: (fighter.morale + 5).clamp(0, 100),
+      ));
+    }
+    return null;
+  }
+
+  /// Pays a reputation-scaled bonus to [fighterId] and gives them a
+  /// popularity/morale bump. One-time per event.
+  Future<String?> awardPerformanceOfTheNight(
+    String eventId,
+    String fighterId,
+  ) async {
+    final org = organization;
+    if (org == null) return 'No active organization.';
+    final event = await _eventRepo.getById(eventId);
+    if (event == null) return 'Event not found.';
+    if (event.performanceOfTheNightFighterId != null) return 'Already awarded.';
+
+    final bonus = org.reputationTier.nightlyBonusAmount;
+    await _eventRepo.saveEvent(
+      event.copyWith(performanceOfTheNightFighterId: fighterId),
+    );
+    await _orgRepo.save(org.copyWith(cashBalance: org.cashBalance - bonus));
+
+    final fighter = fighterById(fighterId);
+    if (fighter != null) {
+      await _fighterRepo.save(fighter.copyWith(
+        popularity: (fighter.popularity + 8).clamp(0, 100),
+        morale: (fighter.morale + 8).clamp(0, 100),
+      ));
+    }
+    return null;
   }
 
   // ---- Random events --------------------------------------------------

@@ -9,6 +9,8 @@ class Fighter {
   final int age;
   final String nationality;
   final WeightClass weightClass;
+  final int heightInches;
+  final int weightLbs; // walk-around weight, a bit above the class limit.
   final FightRecord record;
   final FighterStats stats;
   final int popularity; // 0-100, drives ticket/PPV draw.
@@ -24,6 +26,8 @@ class Fighter {
     required this.age,
     required this.nationality,
     required this.weightClass,
+    required this.heightInches,
+    required this.weightLbs,
     required this.record,
     required this.stats,
     required this.popularity,
@@ -37,12 +41,20 @@ class Fighter {
   bool get isSigned => contract != null;
   bool get isAvailableToFight => injuryStatus == InjuryStatus.healthy;
 
+  String get heightDisplay {
+    final feet = heightInches ~/ 12;
+    final inches = heightInches % 12;
+    return '$feet\'$inches"';
+  }
+
   Fighter copyWith({
     String? id,
     String? name,
     int? age,
     String? nationality,
     WeightClass? weightClass,
+    int? heightInches,
+    int? weightLbs,
     FightRecord? record,
     FighterStats? stats,
     int? popularity,
@@ -59,6 +71,8 @@ class Fighter {
       age: age ?? this.age,
       nationality: nationality ?? this.nationality,
       weightClass: weightClass ?? this.weightClass,
+      heightInches: heightInches ?? this.heightInches,
+      weightLbs: weightLbs ?? this.weightLbs,
       record: record ?? this.record,
       stats: stats ?? this.stats,
       popularity: popularity ?? this.popularity,

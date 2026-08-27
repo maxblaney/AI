@@ -116,11 +116,46 @@ the native mobile app with real persistence.
   same controls on both the signed roster and the talent pool.
 - **Create/edit fighters**: `FighterEditorScreen` is shared by both —
   create drops a brand-new fighter into the talent pool; edit preserves
-  id/record/contract and lets you change name, age, nationality, weight
-  class, style, the 5 core stats, and popularity.
+  id/contract and lets you change everything else, including record and
+  weight class.
 - **Nationality-matched names**: fighter names are generated from
-  per-nationality name pools (`roster_seed.dart`), so a Brazilian fighter
-  gets a Brazilian-sounding name, not a randomly-assembled mismatch.
+  per-nationality name pools (32 nationalities, `roster_seed.dart`), so a
+  Brazilian fighter gets a Brazilian-sounding name, not a
+  randomly-assembled mismatch.
+- **Height/weight**: every fighter has a plausible height and walk-around
+  weight generated per weight class (see `generatePhysicalStats`), shown
+  on their profile and editable in the fighter editor.
+- **New game starts empty**: nobody's on "My Roster" at the start of a
+  save — the whole generated pool starts in the talent pool, and you sign
+  who you want.
+- **Card structure**: the first 5 fights booked are the "Main Card," the
+  rest are "Prelims" (`Fight.mainCardSize`). Main-card fights can be
+  designated Main Event or Co-Main Event (mutually exclusive). Each fight
+  gets its own round count (3 or 5) and title implications (None /
+  Championship / Interim), set when you add it.
+- **Weight-class-first booking**: the Add Fight dialog makes you pick a
+  weight class before it'll show you fighters — you physically can't book
+  a mismatched fight.
+- **Round-by-round simulation**: `FightResolver` scores the fight round by
+  round (not one dice roll) and stops early on a finish. Right after
+  running an event, tap "Round-by-Round" on any fight in the results to
+  replay it as an animated blue (fighter A) / red (fighter B) bar per
+  round (`FightBreakdownScreen`). This data isn't persisted, so it's only
+  available immediately after simulating — not after navigating away and
+  back.
+- **Injuries from fighting**: separate from the pre-existing injury random
+  event, every resolved fight can itself leave a fighter with a minor or
+  major injury (worse for the fighter who lost by KO/TKO). An injury from
+  fighting never "heals" a fighter back to healthy — it only matches or
+  worsens whatever they already had.
+- **Fight of the Night / Performance of the Night**: after an event
+  completes, award either from the results screen. Bonus scales with the
+  org's reputation tier (Local $500 → International $100k), paid out of
+  org cash, and gives the winner(s) a popularity/morale bump. One award of
+  each per event.
+- **Fight history**: a fighter's profile lists their past fights (opponent,
+  method, round, event/date) next to their contract, queried live from
+  every event's card.
 
 ## Architecture
 
@@ -185,6 +220,9 @@ split along (e.g. a dedicated `RosterController`).
 - Reputation tier progression during play — `ReputationTier` is fixed at
   new-game setup and tracked via `reputationPoints`, but nothing currently
   promotes an org from e.g. Regional to National as points accumulate.
+- A talent pool that replenishes — it's a fixed batch generated once at
+  new-game setup; it only shrinks (as you sign fighters) or grows via
+  your own "Create Fighter." No organic prospect pipeline yet.
 - More random event types (positive drug tests, callouts, poaching, media
   controversies, weigh-in incidents — the `RandomEventType` enum already
   has slots for these)

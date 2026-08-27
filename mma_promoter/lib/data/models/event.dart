@@ -16,6 +16,8 @@ class MmaEvent {
   final int revenue;
   final int expenses;
   final int reputationChange;
+  final String? fightOfTheNightFightId;
+  final String? performanceOfTheNightFighterId;
 
   const MmaEvent({
     required this.id,
@@ -30,6 +32,8 @@ class MmaEvent {
     this.revenue = 0,
     this.expenses = 0,
     this.reputationChange = 0,
+    this.fightOfTheNightFightId,
+    this.performanceOfTheNightFighterId,
   });
 
   bool get isCompleted => status == EventStatus.completed;
@@ -48,6 +52,8 @@ class MmaEvent {
     int? revenue,
     int? expenses,
     int? reputationChange,
+    String? fightOfTheNightFightId,
+    String? performanceOfTheNightFighterId,
   }) {
     return MmaEvent(
       id: id ?? this.id,
@@ -62,6 +68,10 @@ class MmaEvent {
       revenue: revenue ?? this.revenue,
       expenses: expenses ?? this.expenses,
       reputationChange: reputationChange ?? this.reputationChange,
+      fightOfTheNightFightId:
+          fightOfTheNightFightId ?? this.fightOfTheNightFightId,
+      performanceOfTheNightFighterId: performanceOfTheNightFighterId ??
+          this.performanceOfTheNightFighterId,
     );
   }
 }

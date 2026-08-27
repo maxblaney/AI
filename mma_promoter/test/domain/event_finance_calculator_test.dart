@@ -11,6 +11,8 @@ Fighter _fighter(String id, {required int popularity, int payPerFight = 2000}) {
     age: 27,
     nationality: 'USA',
     weightClass: WeightClass.lightweight,
+    heightInches: 70,
+    weightLbs: 155,
     record: const FightRecord(wins: 10, losses: 2),
     stats: const FighterStats(
       striking: 70,
@@ -59,7 +61,6 @@ Fight _mainEventFight(String aId, String bId) {
     fighterAId: aId,
     fighterBId: bId,
     weightClass: WeightClass.lightweight,
-    isTitleFight: false,
     isMainEvent: true,
     cardOrder: 0,
     result: const FightResult(

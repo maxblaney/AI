@@ -145,6 +145,37 @@ extension ReputationTierInfo on ReputationTier {
         return 800000;
     }
   }
+
+  /// Fight of the Night / Performance of the Night cash bonus, paid out of
+  /// org funds — scales with how big a promotion you're running.
+  int get nightlyBonusAmount {
+    switch (this) {
+      case ReputationTier.local:
+        return 500;
+      case ReputationTier.regional:
+        return 1000;
+      case ReputationTier.national:
+        return 10000;
+      case ReputationTier.international:
+        return 100000;
+    }
+  }
+}
+
+/// Whether a fight carries championship stakes.
+enum TitleFightType { none, championship, interim }
+
+extension TitleFightTypeLabel on TitleFightType {
+  String get label {
+    switch (this) {
+      case TitleFightType.none:
+        return 'Non-Title';
+      case TitleFightType.championship:
+        return 'Championship';
+      case TitleFightType.interim:
+        return 'Interim Title';
+    }
+  }
 }
 
 /// A specific, bookable event venue. Replaces the earlier abstract

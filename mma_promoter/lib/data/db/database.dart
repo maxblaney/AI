@@ -74,6 +74,21 @@ class AppDatabase extends _$AppDatabase {
   Future<void> upsertFight(FightsCompanion entry) =>
       into(fights).insertOnConflictUpdate(entry);
 
+  /// All resolved fights involving [fighterId], most recent event first —
+  /// powers the fighter profile's fight history list.
+  Future<List<FightRow>> getFightsForFighter(String fighterId) {
+    final query = select(fights).join([
+      innerJoin(events, events.id.equalsExp(fights.eventId)),
+    ])
+      ..where(
+        fights.fighterAId.equals(fighterId) |
+            fights.fighterBId.equals(fighterId),
+      )
+      ..where(fights.resultMethod.isNotNull())
+      ..orderBy([OrderingTerm.desc(events.date)]);
+    return query.map((row) => row.readTable(fights)).get();
+  }
+
   // ---- Random events ------------------------------------------------------
 
   Stream<List<RandomEventRow>> watchUnresolvedRandomEvents() =>

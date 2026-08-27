@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -7,8 +9,9 @@ import '../../../data/seed/roster_seed.dart';
 import '../../state/game_controller.dart';
 
 /// Create-from-scratch and edit-existing share this one form. In edit mode
-/// the fighter's id, record, win streak, morale, injury status and
-/// contract are preserved untouched — only what's shown here changes.
+/// the fighter's id, win streak, morale, injury status and contract are
+/// preserved untouched — everything shown here, record and weight class
+/// included, can be changed.
 class FighterEditorScreen extends StatefulWidget {
   final Fighter? existingFighter;
 
@@ -30,6 +33,11 @@ class _FighterEditorScreenState extends State<FighterEditorScreen> {
   late int _chin;
   late int _power;
   late int _popularity;
+  late int _heightInches;
+  late int _weightLbs;
+  late int _wins;
+  late int _losses;
+  late int _draws;
   bool _saving = false;
 
   bool get _isEditing => widget.existingFighter != null;
@@ -49,6 +57,12 @@ class _FighterEditorScreenState extends State<FighterEditorScreen> {
     _chin = f?.stats.chin ?? 50;
     _power = f?.stats.power ?? 50;
     _popularity = f?.popularity ?? 20;
+    final defaultPhysical = generatePhysicalStats(_weightClass, Random());
+    _heightInches = f?.heightInches ?? defaultPhysical.$1;
+    _weightLbs = f?.weightLbs ?? defaultPhysical.$2;
+    _wins = f?.record.wins ?? 0;
+    _losses = f?.record.losses ?? 0;
+    _draws = f?.record.draws ?? 0;
   }
 
   @override
@@ -97,6 +111,30 @@ class _FighterEditorScreenState extends State<FighterEditorScreen> {
                 .toList(),
             onChanged: (v) => setState(() => _weightClass = v ?? _weightClass),
           ),
+          const SizedBox(height: 16),
+          Text('Height: ${_heightDisplay(_heightInches)}'),
+          Slider(
+            value: _heightInches.toDouble(),
+            min: 60,
+            max: 84,
+            divisions: 24,
+            label: _heightDisplay(_heightInches),
+            onChanged: (v) => setState(() => _heightInches = v.round()),
+          ),
+          Text('Weight: $_weightLbs lbs'),
+          Slider(
+            value: _weightLbs.toDouble(),
+            min: 110,
+            max: 320,
+            divisions: 42,
+            label: '$_weightLbs lbs',
+            onChanged: (v) => setState(() => _weightLbs = v.round()),
+          ),
+          const SizedBox(height: 16),
+          Text('Record', style: Theme.of(context).textTheme.titleMedium),
+          _CountStepper(label: 'Wins', value: _wins, onChanged: (v) => setState(() => _wins = v)),
+          _CountStepper(label: 'Losses', value: _losses, onChanged: (v) => setState(() => _losses = v)),
+          _CountStepper(label: 'Draws', value: _draws, onChanged: (v) => setState(() => _draws = v)),
           const SizedBox(height: 16),
           Text('Style', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
@@ -160,6 +198,8 @@ class _FighterEditorScreenState extends State<FighterEditorScreen> {
       power: _power,
     );
 
+    final record = FightRecord(wins: _wins, losses: _losses, draws: _draws);
+
     final fighter = existing == null
         ? Fighter(
             id: newId(),
@@ -167,7 +207,9 @@ class _FighterEditorScreenState extends State<FighterEditorScreen> {
             age: _age,
             nationality: _nationality,
             weightClass: _weightClass,
-            record: const FightRecord(),
+            heightInches: _heightInches,
+            weightLbs: _weightLbs,
+            record: record,
             stats: stats,
             popularity: _popularity,
             morale: 70,
@@ -180,6 +222,9 @@ class _FighterEditorScreenState extends State<FighterEditorScreen> {
             age: _age,
             nationality: _nationality,
             weightClass: _weightClass,
+            heightInches: _heightInches,
+            weightLbs: _weightLbs,
+            record: record,
             stats: stats,
             popularity: _popularity,
             styleTags: _styleTags.toList(),
@@ -188,6 +233,38 @@ class _FighterEditorScreenState extends State<FighterEditorScreen> {
     await controller.saveFighter(fighter);
     if (!mounted) return;
     Navigator.of(context).pop();
+  }
+
+  String _heightDisplay(int inches) => '${inches ~/ 12}\'${inches % 12}"';
+}
+
+class _CountStepper extends StatelessWidget {
+  final String label;
+  final int value;
+  final ValueChanged<int> onChanged;
+
+  const _CountStepper({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SizedBox(width: 90, child: Text(label)),
+        IconButton(
+          icon: const Icon(Icons.remove_circle_outline),
+          onPressed: value > 0 ? () => onChanged(value - 1) : null,
+        ),
+        SizedBox(width: 28, child: Text('$value', textAlign: TextAlign.center)),
+        IconButton(
+          icon: const Icon(Icons.add_circle_outline),
+          onPressed: value < 99 ? () => onChanged(value + 1) : null,
+        ),
+      ],
+    );
   }
 }
 

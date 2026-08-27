@@ -51,4 +51,20 @@ class InMemoryEventRepository implements EventRepositoryContract {
       await saveFight(fight);
     }
   }
+
+  @override
+  Future<List<Fight>> getFightsForFighter(String fighterId) async {
+    final list = _fights.values
+        .where((f) =>
+            f.isResolved &&
+            (f.fighterAId == fighterId || f.fighterBId == fighterId))
+        .toList();
+    list.sort((a, b) {
+      final eventA = _events[a.eventId];
+      final eventB = _events[b.eventId];
+      if (eventA == null || eventB == null) return 0;
+      return eventB.date.compareTo(eventA.date);
+    });
+    return list;
+  }
 }

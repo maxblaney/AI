@@ -15,6 +15,8 @@ Fighter _signedFighter({
     age: 27,
     nationality: 'USA',
     weightClass: WeightClass.lightweight,
+    heightInches: 70,
+    weightLbs: 155,
     record: const FightRecord(wins: 5, losses: 1),
     stats: const FighterStats(
       striking: 70,

@@ -11,6 +11,8 @@ Fighter _fighter(String id, {required int stat}) {
     age: 27,
     nationality: 'USA',
     weightClass: WeightClass.lightweight,
+    heightInches: 70,
+    weightLbs: 155,
     record: const FightRecord(wins: 10, losses: 2),
     stats: FighterStats(
       striking: stat,
@@ -84,7 +86,7 @@ void main() {
       }
     });
 
-    test('round never exceeds the 5-round limit for a title fight', () {
+    test('round never exceeds the 5-round limit for a 5-round fight', () {
       final resolver = FightResolver(random: Random(9));
       final a = _fighter('a', stat: 60);
       final b = _fighter('b', stat: 60);
@@ -93,7 +95,7 @@ void main() {
         final result = resolver.resolve(
           fighterA: a,
           fighterB: b,
-          isTitleFight: true,
+          rounds: 5,
         );
         expect(result.round, inInclusiveRange(1, 5));
       }
@@ -109,6 +111,41 @@ void main() {
         expect(result.winnerPerformanceRating, inInclusiveRange(0, 100));
         expect(result.loserPerformanceRating, inInclusiveRange(0, 100));
       }
+    });
+
+    test('round scores never exceed the scheduled round count', () {
+      final resolver = FightResolver(random: Random(13));
+      final a = _fighter('a', stat: 60);
+      final b = _fighter('b', stat: 60);
+
+      for (var i = 0; i < 200; i++) {
+        final result = resolver.resolve(fighterA: a, fighterB: b, rounds: 3);
+        expect(result.roundScores.length, inInclusiveRange(1, 3));
+        expect(result.roundScores.last.round, result.roundScores.length);
+        for (final score in result.roundScores) {
+          expect(score.fighterAShare, inInclusiveRange(0.0, 1.0));
+        }
+      }
+    });
+
+    test('a finish ends the fight before the scheduled round count', () {
+      // Wildly mismatched fighters should finish well before 5 rounds most
+      // of the time.
+      final resolver = FightResolver(random: Random(21));
+      final strong = _fighter('strong', stat: 95);
+      final weak = _fighter('weak', stat: 15);
+
+      var finishedEarly = 0;
+      const trials = 200;
+      for (var i = 0; i < trials; i++) {
+        final result = resolver.resolve(fighterA: strong, fighterB: weak, rounds: 5);
+        if (result.method != FightMethod.decision &&
+            result.method != FightMethod.drawOrNc) {
+          finishedEarly++;
+        }
+      }
+
+      expect(finishedEarly / trials, greaterThan(0.3));
     });
   });
 }
