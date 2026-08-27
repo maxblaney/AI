@@ -15,13 +15,13 @@ class FighterListTile extends StatelessWidget {
       title: Text(fighter.name),
       subtitle: Text(
         '${fighter.weightClass.label} · ${fighter.record.display} · '
-        '${fighter.styleTags.map((t) => t.label).join(', ')}',
+        '${fighter.style.label}',
       ),
       trailing: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Text('OVR ${fighter.stats.overall.round()}'),
+          Text('OVR ${fighter.overall.round()}'),
           if (fighter.injuryStatus != InjuryStatus.healthy)
             Text(
               fighter.injuryStatus.label,

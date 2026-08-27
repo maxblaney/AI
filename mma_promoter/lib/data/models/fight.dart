@@ -1,13 +1,14 @@
 import 'enums.dart';
 
-/// One round's worth of scoring — how much of that round fighter A won,
-/// from 0 (fighter B swept it) to 1 (fighter A swept it). Powers the
-/// round-by-round blue/red breakdown view.
-class RoundScore {
+/// One instant's momentum reading within a round — how much of *that
+/// moment* fighter A is winning, from 0 (fighter B) to 1 (fighter A).
+/// Several of these per round is what lets the round-by-round breakdown
+/// genuinely fluctuate through a round instead of showing one static bar.
+class MomentumTick {
   final int round;
   final double fighterAShare;
 
-  const RoundScore({required this.round, required this.fighterAShare});
+  const MomentumTick({required this.round, required this.fighterAShare});
 }
 
 /// Outcome of a resolved fight.
@@ -20,11 +21,11 @@ class FightResult {
   final InjuryStatus fighterAInjury;
   final InjuryStatus fighterBInjury;
 
-  /// One entry per round actually fought (fewer than the fight's scheduled
-  /// [Fight.rounds] if it ended in a finish). Not persisted — only
-  /// available on a freshly-simulated result, not after reloading from
-  /// storage.
-  final List<RoundScore> roundScores;
+  /// Several ticks per round actually fought (fewer rounds' worth than
+  /// the fight's scheduled [Fight.rounds] if it ended in a finish). Not
+  /// persisted — only available on a freshly-simulated result, not after
+  /// reloading from storage.
+  final List<MomentumTick> momentumTicks;
 
   const FightResult({
     required this.winnerId,
@@ -34,7 +35,7 @@ class FightResult {
     required this.loserPerformanceRating,
     this.fighterAInjury = InjuryStatus.healthy,
     this.fighterBInjury = InjuryStatus.healthy,
-    this.roundScores = const [],
+    this.momentumTicks = const [],
   });
 
   bool get isDraw => method == FightMethod.drawOrNc;

@@ -391,10 +391,10 @@ class _FightResultTile extends StatelessWidget {
               ? 'Draw / No Contest'
               : '$winnerName wins by ${result.method.label}, Round ${result.round}',
         ),
-        trailing: result.roundScores.isEmpty
+        trailing: result.momentumTicks.isEmpty
             ? null
             : TextButton(
-                child: const Text('Round-by-Round'),
+                child: const Text('Watch Live'),
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => FightBreakdownScreen(

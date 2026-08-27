@@ -59,30 +59,47 @@ extension WeightClassLabel on WeightClass {
   String get labelWithLimit => '$label ($limitLbs lbs)';
 }
 
-enum StyleTag {
-  striker,
-  wrestler,
-  grappler,
-  brawler,
+/// A fighter's primary approach — drives both stat generation (see
+/// `roster_seed.dart`) and how their [Tendencies] weight into a fight.
+enum FightingStyle {
   boxer,
-  allRounder,
+  kickboxer,
+  muayThai,
+  wrestler,
+  bjj,
+  wrestlingHeavy,
+  counterStriker,
+  pressureFighter,
+  pointFighter,
+  brawler,
+  wellRounded,
 }
 
-extension StyleTagLabel on StyleTag {
+extension FightingStyleLabel on FightingStyle {
   String get label {
     switch (this) {
-      case StyleTag.striker:
-        return 'Striker';
-      case StyleTag.wrestler:
-        return 'Wrestler';
-      case StyleTag.grappler:
-        return 'Grappler';
-      case StyleTag.brawler:
-        return 'Brawler';
-      case StyleTag.boxer:
+      case FightingStyle.boxer:
         return 'Boxer';
-      case StyleTag.allRounder:
-        return 'All-Rounder';
+      case FightingStyle.kickboxer:
+        return 'Kickboxer';
+      case FightingStyle.muayThai:
+        return 'Muay Thai';
+      case FightingStyle.wrestler:
+        return 'Wrestler';
+      case FightingStyle.bjj:
+        return 'BJJ';
+      case FightingStyle.wrestlingHeavy:
+        return 'Wrestling-Heavy';
+      case FightingStyle.counterStriker:
+        return 'Counter Striker';
+      case FightingStyle.pressureFighter:
+        return 'Pressure Fighter';
+      case FightingStyle.pointFighter:
+        return 'Point Fighter';
+      case FightingStyle.brawler:
+        return 'Brawler';
+      case FightingStyle.wellRounded:
+        return 'Well-Rounded';
     }
   }
 }

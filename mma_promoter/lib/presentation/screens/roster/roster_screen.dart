@@ -37,7 +37,7 @@ class RosterScreen extends StatefulWidget {
 class _RosterScreenState extends State<RosterScreen> {
   final Set<String> _nationalityFilter = {};
   WeightClass? _weightClassFilter;
-  final Set<StyleTag> _styleFilter = {};
+  final Set<FightingStyle> _styleFilter = {};
   RosterSortKey _sortKey = RosterSortKey.name;
   bool _sortDescending = false;
 
@@ -55,8 +55,7 @@ class _RosterScreenState extends State<RosterScreen> {
       if (_weightClassFilter != null && f.weightClass != _weightClassFilter) {
         return false;
       }
-      if (_styleFilter.isNotEmpty &&
-          !f.styleTags.any(_styleFilter.contains)) {
+      if (_styleFilter.isNotEmpty && !_styleFilter.contains(f.style)) {
         return false;
       }
       return true;
@@ -241,7 +240,7 @@ class _RosterScreenState extends State<RosterScreen> {
                 spacing: 8,
                 runSpacing: 4,
                 children: [
-                  for (final s in StyleTag.values)
+                  for (final s in FightingStyle.values)
                     FilterChip(
                       label: Text(s.label),
                       selected: _styleFilter.contains(s),

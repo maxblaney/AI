@@ -12,6 +12,7 @@ import '../../data/repositories/organization_repository.dart';
 import '../../data/repositories/random_event_repository.dart';
 import '../../data/repositories/repository_contracts.dart';
 import '../../data/seed/roster_seed.dart';
+import '../../domain/career/career_progression_engine.dart';
 import '../../domain/events/random_event_engine.dart';
 import '../../domain/finance/event_finance_calculator.dart';
 import '../../domain/simulation/fight_resolver.dart';
@@ -65,6 +66,7 @@ class GameController extends ChangeNotifier {
   final FightResolver _fightResolver = FightResolver();
   final EventFinanceCalculator _financeCalculator = EventFinanceCalculator();
   final RandomEventEngine _randomEventEngine = RandomEventEngine();
+  final CareerProgressionEngine _careerEngine = CareerProgressionEngine();
 
   StreamSubscription<List<Fighter>>? _fighterSub;
   StreamSubscription<Organization?>? _orgSub;
@@ -109,9 +111,13 @@ class GameController extends ChangeNotifier {
   List<RandomEvent> pendingRandomEvents = [];
 
   List<Fighter> get signedRoster =>
-      allFighters.where((f) => f.isSigned).toList();
+      allFighters.where((f) => f.isSigned && !f.retired).toList();
   List<Fighter> get talentPool =>
-      allFighters.where((f) => !f.isSigned).toList();
+      allFighters.where((f) => !f.isSigned && !f.retired).toList();
+  List<Fighter> get retiredFighters =>
+      allFighters.where((f) => f.retired).toList();
+  List<Fighter> get rankedFighters =>
+      allFighters.where((f) => f.isRanked && !f.retired).toList();
   List<MmaEvent> get scheduledEvents =>
       events.where((e) => !e.isCompleted).toList();
   List<MmaEvent> get completedEvents =>
@@ -280,9 +286,11 @@ class GameController extends ChangeNotifier {
     String eventId, {
     required int promotionBudgetSpent,
   }) async {
-    final org = organization;
+    var org = organization;
     final event = await _eventRepo.getById(eventId);
     if (org == null || event == null || event.isCompleted) return null;
+
+    org = await _maybeRefreshTalentPool(org, asOf: event.date);
 
     final card = await _eventRepo.getCard(eventId);
     final fighterLookup = {for (final f in allFighters) f.id: f};
@@ -344,6 +352,28 @@ class GameController extends ChangeNotifier {
     );
   }
 
+  /// Tops up the talent pool with ~10 fresh free agents for every calendar
+  /// month that's passed since the last refresh, keyed off the date of the
+  /// event being simulated (the only thing that advances "game time").
+  Future<Organization> _maybeRefreshTalentPool(
+    Organization org, {
+    required DateTime asOf,
+  }) async {
+    final last = org.lastTalentRefresh;
+    final monthsElapsed =
+        (asOf.year - last.year) * 12 + (asOf.month - last.month);
+    if (monthsElapsed < 1) return org;
+
+    for (var i = 0; i < monthsElapsed; i++) {
+      for (final fighter in generateMonthlyTalentPool()) {
+        await _fighterRepo.save(fighter);
+      }
+    }
+    final updated = org.copyWith(lastTalentRefresh: asOf);
+    await _orgRepo.save(updated);
+    return updated;
+  }
+
   Future<List<FighterOutcomeSummary>> _applyFightOutcome(
     Fight fight,
     Map<String, Fighter> fighterLookup,
@@ -354,15 +384,21 @@ class GameController extends ChangeNotifier {
     final b = fighterLookup[fight.fighterBId];
     if (a == null || b == null) return [];
 
+    final scoreA = result.isDraw ? 0.5 : (result.winnerId == a.id ? 1.0 : 0.0);
+    final (newEloA, newEloB) =
+        _careerEngine.updateElo(a.eloRating, b.eloRating, scoreA);
+
     if (result.isDraw) {
       final updatedA = _applyPostFight(
         a,
         record: a.record.addDraw(),
+        eloRating: newEloA,
         injuryFromFight: result.fighterAInjury,
       );
       final updatedB = _applyPostFight(
         b,
         record: b.record.addDraw(),
+        eloRating: newEloB,
         injuryFromFight: result.fighterBInjury,
       );
       await _fighterRepo.save(updatedA);
@@ -372,6 +408,8 @@ class GameController extends ChangeNotifier {
 
     final winner = result.winnerId == a.id ? a : b;
     final loser = result.winnerId == a.id ? b : a;
+    final winnerNewElo = result.winnerId == a.id ? newEloA : newEloB;
+    final loserNewElo = result.winnerId == a.id ? newEloB : newEloA;
     final winnerInjury =
         result.winnerId == a.id ? result.fighterAInjury : result.fighterBInjury;
     final loserInjury =
@@ -381,6 +419,8 @@ class GameController extends ChangeNotifier {
       winner,
       record: winner.record.addWin(),
       winStreak: winner.winStreak + 1,
+      lossStreak: 0,
+      eloRating: winnerNewElo,
       popularityDelta: 2 + result.winnerPerformanceRating ~/ 20,
       moraleDelta: 8,
       injuryFromFight: winnerInjury,
@@ -389,6 +429,8 @@ class GameController extends ChangeNotifier {
       loser,
       record: loser.record.addLoss(),
       winStreak: 0,
+      lossStreak: loser.lossStreak + 1,
+      eloRating: loserNewElo,
       popularityDelta: 1,
       moraleDelta: -10,
       injuryFromFight: loserInjury,
@@ -412,23 +454,38 @@ class GameController extends ChangeNotifier {
     Fighter fighter, {
     required FightRecord record,
     int? winStreak,
+    int? lossStreak,
+    int? eloRating,
     int popularityDelta = 0,
     int moraleDelta = 0,
     InjuryStatus injuryFromFight = InjuryStatus.healthy,
   }) {
+    final newWinStreak = winStreak ?? fighter.winStreak;
+    final newLossStreak = lossStreak ?? fighter.lossStreak;
     var updated = fighter.copyWith(
       record: record,
-      winStreak: winStreak ?? fighter.winStreak,
+      winStreak: newWinStreak,
+      lossStreak: newLossStreak,
+      eloRating: eloRating ?? fighter.eloRating,
+      // Ranked as soon as they've had one fight in their division.
+      isRanked: true,
       popularity: (fighter.popularity + popularityDelta).clamp(0, 100),
       morale: (fighter.morale + moraleDelta).clamp(0, 100),
       // Fighting never heals a pre-existing injury, only matches or
       // worsens it with whatever this fight itself caused.
       injuryStatus: _worseInjury(fighter.injuryStatus, injuryFromFight),
     );
+    updated = updated.copyWith(
+      potential: _careerEngine.adjustPotential(
+        updated,
+        winStreak: newWinStreak,
+        lossStreak: newLossStreak,
+      ),
+    );
     if (updated.contract != null) {
       updated = updated.copyWith(contract: updated.contract!.afterFight());
     }
-    return updated;
+    return _careerEngine.maybeRetire(updated);
   }
 
   static const _injurySeverity = {

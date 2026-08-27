@@ -5,16 +5,18 @@ sign fighters, build fight cards, run events, and manage the books. You
 never fight — you manage the business and creative direction of the
 promotion.
 
-This is the **v1 vertical slice, extended**: all 8 real weight classes, a
-generated talent pool with nationality-matched names, roster
-filter/sort, create-from-scratch and edit-stats for any fighter,
-sign/release, event booking (with a real venue picked from a fixed list
-and a player-set ticket price), fight simulation, finances, a choice of
-starting cash/reputation tier at new-game setup, and two random event
-types (injuries, contract disputes). Everything else in the original
-design doc (rivalries, sponsors, staff, title belts, media deals, org
-tier progression beyond the data model) is intentionally out of scope
-for now.
+This is the **v3 vertical slice**: all 8 real weight classes, a generated
+talent pool with nationality-matched names that replenishes over time,
+roster filter/sort, create-from-scratch and edit-stats for any fighter
+across a 28-stat fighting/physical/mental model plus fighting style and
+tendencies, sign/release, event booking (with a real venue picked from a
+fixed list and a player-set ticket price), a genuinely live round-by-round
+fight simulation, an Elo-based rankings system, a career-history/accolades
+screen, retirement, a potential ceiling that shifts with streaks, finances,
+a choice of starting cash/reputation tier at new-game setup, and two random
+event types (injuries, contract disputes). Everything else in the original
+design doc (rivalries, sponsors, title-belt lineage, media deals, org tier
+progression beyond the data model) is intentionally out of scope for now.
 
 ## Stack
 
@@ -26,9 +28,10 @@ for now.
 - **provider** for state management — a single `GameController`
   (`ChangeNotifier`) is the one source of truth the UI reads from and
   writes through.
-- Game logic (fight resolution, event finances, random events) lives in
-  plain Dart classes under `lib/domain/`, with **zero Flutter or database
-  imports**, so it's unit-testable in isolation. See `test/domain/`.
+- Game logic (fight resolution, event finances, random events, career
+  progression) lives in plain Dart classes under `lib/domain/`, with
+  **zero Flutter or database imports**, so it's unit-testable in
+  isolation. See `test/domain/`.
 - No backend, no multiplayer, fully offline.
 
 ## Getting started
@@ -83,10 +86,15 @@ mobile build:
   `lib/data/repositories/in_memory/`.
 
 ```bash
-flutter build web --release --web-renderer html
+flutter build web --release --web-renderer html --no-web-resources-cdn
 cd build/web && python3 -m http.server 8765
 # open http://localhost:8765 in a browser
 ```
+
+`--no-web-resources-cdn` avoids a runtime fetch to Google's CDN for
+CanvasKit/font assets, so the built app has no external dependency at
+all — useful offline and behind restrictive networks, and used for the
+GitHub Pages deploy too.
 
 This is a preview path, not a target platform — the real deliverable is
 the native mobile app with real persistence.
@@ -136,13 +144,56 @@ the native mobile app with real persistence.
 - **Weight-class-first booking**: the Add Fight dialog makes you pick a
   weight class before it'll show you fighters — you physically can't book
   a mismatched fight.
-- **Round-by-round simulation**: `FightResolver` scores the fight round by
-  round (not one dice roll) and stops early on a finish. Right after
-  running an event, tap "Round-by-Round" on any fight in the results to
-  replay it as an animated blue (fighter A) / red (fighter B) bar per
-  round (`FightBreakdownScreen`). This data isn't persisted, so it's only
-  available immediately after simulating — not after navigating away and
-  back.
+- **Live round-by-round simulation**: `FightResolver` samples momentum
+  4 times per round (`FightResolver.ticksPerRound`), so it fluctuates
+  continuously within and across rounds rather than jumping between one
+  static score per round. Right after running an event, tap "Watch Live"
+  on any fight in the results to play it back tick-by-tick as an animated
+  blue (fighter A) / red (fighter B) bar (`FightBreakdownScreen`), with a
+  scrolling history of every tick so far. This data isn't persisted, so
+  it's only available immediately after simulating — not after
+  navigating away and back.
+- **28-stat fighter model**: fighters are scored on 13 Fighting stats
+  (Punching, Kicking, Power, Speed, Accuracy, Defense, Takedowns, Takedown
+  Defense, Wrestling, Ground & Pound, Submission Offense, Submission
+  Defense, Grappling), 8 Physical stats (Cardio, Durability, Chin, Body
+  Toughness, Leg Toughness, Strength, Athleticism, Recovery), and 7 Mental
+  stats (Fight IQ, Composure, Aggression, Discipline, Confidence, Heart,
+  Adaptability) — see `lib/data/models/fighter_stats.dart`. `FightResolver`
+  deliberately doesn't simulate all 28 independently; it blends each
+  category into a striking/grappling composite per fighter, weighted by
+  their `FightingStyle` (a wrestler leans grappling-heavy, a boxer leans
+  striking-heavy, etc. — see `_buildProfile` in `fight_resolver.dart`).
+- **Fighting style & tendencies**: every fighter has one `FightingStyle`
+  (Boxer, Kickboxer, Muay Thai, Wrestler, BJJ, Wrestling-Heavy, Counter
+  Striker, Pressure Fighter, Point Fighter, Brawler, Well-Rounded) and 11
+  `Tendencies` dials (0-100: striking/takedown/kick/clinch frequency,
+  submission attempts, ground & pound, aggression, counter striking, head
+  hunting, body/leg attacks). `roster_seed.dart` correlates generated
+  stats and tendencies with style, so a wrestler's sheet actually looks
+  like a wrestler's.
+- **Potential**: a ceiling on a fighter's `overall`, shown on their
+  profile. Long win streaks (3+) nudge it up, long losing streaks (3+)
+  nudge it down, and it never falls below the fighter's current overall
+  (`CareerProgressionEngine.adjustPotential`).
+- **Elo rankings**: every resolved fight updates both fighters' Elo rating
+  (`CareerProgressionEngine.updateElo`, standard formula, K=32). A fighter
+  becomes "ranked" — and shows up on the **Rankings** tab — after their
+  first fight in a division; the tab lists the top fighters per weight
+  class by Elo.
+- **Retirement**: `CareerProgressionEngine.maybeRetire` rolls a retirement
+  chance after every fight, driven by age (34+), a long losing streak
+  (3+), and major injuries — any combination stacks, capped at 90%.
+  Retired fighters leave the signed roster and talent pool and show up on
+  the **History** tab instead, with their retirement reason.
+- **History tab**: hall-of-fame leaderboards (Most Wins, Highest Elo,
+  Longest Active Win Streak, Fight/Performance of the Night counts,
+  Highest Potential) plus the full list of retired fighters.
+- **Monthly talent pool refresh**: `Organization.lastTalentRefresh`
+  tracks the last calendar month the pool got new blood; simulating an
+  event whose date has crossed into a new month drops in ~10 fresh free
+  agents (`generateMonthlyTalentPool`) before resolving the card, so the
+  pool doesn't go stale over a long save.
 - **Injuries from fighting**: separate from the pre-existing injury random
   event, every resolved fight can itself leave a fighter with a minor or
   major injury (worse for the fighter who lost by KO/TKO). An injury from
@@ -176,16 +227,19 @@ lib/
                        #   brand-new game
   domain/
     simulation/        # FightResolver — resolves a matchup from stats +
-                       #   RNG into a FightResult. Pure Dart, seedable.
+                       #   RNG into a live, multi-tick FightResult. Pure
+                       #   Dart, seedable.
     finance/            # EventFinanceCalculator — attendance/PPV/revenue/
                        #   expenses/reputation from a resolved card
     events/              # RandomEventEngine — generates and resolves
                        #   injuries / contract disputes
+    career/              # CareerProgressionEngine — Elo, potential drift,
+                       #   retirement rolls. Pure Dart, seedable.
   presentation/
     state/              # GameController: owns the DB + repos + domain
                        #   engines, exposes plain state to widgets
-    screens/            # dashboard, roster (list + profile), event
-                       #   booking, event results, finance
+    screens/            # dashboard, roster (list + profile), rankings,
+                       #   history, event booking, event results, finance
     widgets/            # Shared widgets (fighter list tile, random event
                        #   dialog)
 ```
@@ -216,13 +270,11 @@ split along (e.g. a dedicated `RosterController`).
   odds.
 - Rivalries/storylines that feed into hype and ticket sales
 - Sponsors, staff hiring, media deals
-- Title belts and championship lineage
+- Title belt lineage/history beyond the per-fight championship flag —
+  there's no persistent "current champion" record yet.
 - Reputation tier progression during play — `ReputationTier` is fixed at
   new-game setup and tracked via `reputationPoints`, but nothing currently
   promotes an org from e.g. Regional to National as points accumulate.
-- A talent pool that replenishes — it's a fixed batch generated once at
-  new-game setup; it only shrinks (as you sign fighters) or grows via
-  your own "Create Fighter." No organic prospect pipeline yet.
 - More random event types (positive drug tests, callouts, poaching, media
   controversies, weigh-in incidents — the `RandomEventType` enum already
   has slots for these)

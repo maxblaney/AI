@@ -19,20 +19,71 @@ class Fighters extends Table {
   IntColumn get losses => integer().withDefault(const Constant(0))();
   IntColumn get draws => integer().withDefault(const Constant(0))();
 
-  IntColumn get striking => integer()();
-  IntColumn get grappling => integer()();
-  IntColumn get cardio => integer()();
-  IntColumn get chin => integer()();
+  // -- Fighting stats (13) --
+  IntColumn get punching => integer()();
+  IntColumn get kicking => integer()();
   IntColumn get power => integer()();
+  IntColumn get speed => integer()();
+  IntColumn get accuracy => integer()();
+  IntColumn get defense => integer()();
+  IntColumn get takedowns => integer()();
+  IntColumn get takedownDefense => integer()();
+  IntColumn get wrestling => integer()();
+  IntColumn get groundAndPound => integer()();
+  IntColumn get submissionOffense => integer()();
+  IntColumn get submissionDefense => integer()();
+  IntColumn get grappling => integer()();
+
+  // -- Physical stats (8) --
+  IntColumn get cardio => integer()();
+  IntColumn get durability => integer()();
+  IntColumn get chin => integer()();
+  IntColumn get bodyToughness => integer()();
+  IntColumn get legToughness => integer()();
+  IntColumn get strength => integer()();
+  IntColumn get athleticism => integer()();
+  IntColumn get recovery => integer()();
+
+  // -- Mental stats (7) --
+  IntColumn get fightIq => integer()();
+  IntColumn get composure => integer()();
+  IntColumn get aggression => integer()();
+  IntColumn get discipline => integer()();
+  IntColumn get confidence => integer()();
+  IntColumn get heart => integer()();
+  IntColumn get adaptability => integer()();
+
+  // -- Tendencies (11) --
+  IntColumn get tendStrikingFrequency => integer()();
+  IntColumn get tendTakedownFrequency => integer()();
+  IntColumn get tendKickFrequency => integer()();
+  IntColumn get tendClinchFrequency => integer()();
+  IntColumn get tendSubmissionAttempts => integer()();
+  IntColumn get tendGroundAndPound => integer()();
+  IntColumn get tendAggression => integer()();
+  IntColumn get tendCounterStriking => integer()();
+  IntColumn get tendHeadHunting => integer()();
+  IntColumn get tendBodyAttacks => integer()();
+  IntColumn get tendLegAttacks => integer()();
+
+  TextColumn get style => text().withDefault(const Constant('wellRounded'))();
+  IntColumn get potential => integer().withDefault(const Constant(60))();
 
   IntColumn get popularity => integer().withDefault(const Constant(30))();
   IntColumn get morale => integer().withDefault(const Constant(70))();
   TextColumn get injuryStatus =>
       text().withDefault(const Constant('healthy'))();
   IntColumn get winStreak => integer().withDefault(const Constant(0))();
+  IntColumn get lossStreak => integer().withDefault(const Constant(0))();
 
-  /// Comma-separated [StyleTag] names, e.g. "striker,wrestler".
-  TextColumn get styleTags => text().withDefault(const Constant(''))();
+  IntColumn get eloRating => integer().withDefault(const Constant(1500))();
+  BoolColumn get isRanked => boolean().withDefault(const Constant(false))();
+  BoolColumn get retired => boolean().withDefault(const Constant(false))();
+  TextColumn get retirementReason => text().nullable()();
+  IntColumn get fightOfTheNightCount =>
+      integer().withDefault(const Constant(0))();
+  IntColumn get performanceOfTheNightCount =>
+      integer().withDefault(const Constant(0))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -63,6 +114,7 @@ class Organizations extends Table {
   IntColumn get fanbaseSize => integer().withDefault(const Constant(0))();
   TextColumn get homeRegion => text()();
   IntColumn get promotionBudget => integer().withDefault(const Constant(0))();
+  DateTimeColumn get lastTalentRefresh => dateTime()();
 
   @override
   Set<Column> get primaryKey => {id};

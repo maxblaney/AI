@@ -38,6 +38,30 @@ class FighterProfileScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          if (fighter.retired)
+            Card(
+              color: Theme.of(context).colorScheme.errorContainer,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Icon(Icons.event_busy,
+                        color: Theme.of(context).colorScheme.onErrorContainer),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Retired${fighter.retirementReason != null ? ' — ${fighter.retirementReason}' : ''}',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onErrorContainer,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          if (fighter.retired) const SizedBox(height: 12),
           Text(
             '${fighter.weightClass.label} · ${fighter.nationality} · Age ${fighter.age}',
             style: Theme.of(context).textTheme.bodyMedium,
@@ -49,23 +73,105 @@ class FighterProfileScreen extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Record: ${fighter.record.display}   Win streak: ${fighter.winStreak}',
+            'Record: ${fighter.record.display}   Streak: '
+            '${fighter.winStreak > 0 ? 'W${fighter.winStreak}' : fighter.lossStreak > 0 ? 'L${fighter.lossStreak}' : '-'}',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 4),
           Text(
-            'Style: ${fighter.styleTags.map((t) => t.label).join(', ')}',
+            'Style: ${fighter.style.label}',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
+          const SizedBox(height: 4),
+          Text(
+            'Elo: ${fighter.eloRating}${fighter.isRanked ? ' (Ranked)' : ' (Unranked)'}',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          if (fighter.fightOfTheNightCount > 0 || fighter.performanceOfTheNightCount > 0) ...[
+            const SizedBox(height: 4),
+            Text(
+              [
+                if (fighter.fightOfTheNightCount > 0)
+                  'FOTN x${fighter.fightOfTheNightCount}',
+                if (fighter.performanceOfTheNightCount > 0)
+                  'POTN x${fighter.performanceOfTheNightCount}',
+              ].join(' · '),
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ],
           const SizedBox(height: 24),
-          Text('Stats', style: Theme.of(context).textTheme.titleMedium),
+          Text('Overview', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
-          _StatBar(label: 'Striking', value: fighter.stats.striking),
-          _StatBar(label: 'Grappling', value: fighter.stats.grappling),
-          _StatBar(label: 'Cardio', value: fighter.stats.cardio),
-          _StatBar(label: 'Chin', value: fighter.stats.chin),
-          _StatBar(label: 'Power', value: fighter.stats.power),
-          const SizedBox(height: 24),
+          _StatBar(label: 'Overall', value: fighter.overall.round()),
+          _StatBar(label: 'Potential', value: fighter.potential),
+          _StatBar(label: 'Fighting', value: fighter.fightingStats.average.round()),
+          _StatBar(label: 'Physical', value: fighter.physicalStats.average.round()),
+          _StatBar(label: 'Mental', value: fighter.mentalStats.average.round()),
+          const SizedBox(height: 16),
+          ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            title: const Text('Fighting Stats'),
+            children: [
+              _StatBar(label: 'Punching', value: fighter.fightingStats.punching),
+              _StatBar(label: 'Kicking', value: fighter.fightingStats.kicking),
+              _StatBar(label: 'Power', value: fighter.fightingStats.power),
+              _StatBar(label: 'Speed', value: fighter.fightingStats.speed),
+              _StatBar(label: 'Accuracy', value: fighter.fightingStats.accuracy),
+              _StatBar(label: 'Defense', value: fighter.fightingStats.defense),
+              _StatBar(label: 'Takedowns', value: fighter.fightingStats.takedowns),
+              _StatBar(label: 'TD Defense', value: fighter.fightingStats.takedownDefense),
+              _StatBar(label: 'Wrestling', value: fighter.fightingStats.wrestling),
+              _StatBar(label: 'Ground & Pound', value: fighter.fightingStats.groundAndPound),
+              _StatBar(label: 'Sub. Offense', value: fighter.fightingStats.submissionOffense),
+              _StatBar(label: 'Sub. Defense', value: fighter.fightingStats.submissionDefense),
+              _StatBar(label: 'Grappling', value: fighter.fightingStats.grappling),
+            ],
+          ),
+          ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            title: const Text('Physical Stats'),
+            children: [
+              _StatBar(label: 'Cardio', value: fighter.physicalStats.cardio),
+              _StatBar(label: 'Durability', value: fighter.physicalStats.durability),
+              _StatBar(label: 'Chin', value: fighter.physicalStats.chin),
+              _StatBar(label: 'Body Toughness', value: fighter.physicalStats.bodyToughness),
+              _StatBar(label: 'Leg Toughness', value: fighter.physicalStats.legToughness),
+              _StatBar(label: 'Strength', value: fighter.physicalStats.strength),
+              _StatBar(label: 'Athleticism', value: fighter.physicalStats.athleticism),
+              _StatBar(label: 'Recovery', value: fighter.physicalStats.recovery),
+            ],
+          ),
+          ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            title: const Text('Mental Stats'),
+            children: [
+              _StatBar(label: 'Fight IQ', value: fighter.mentalStats.fightIq),
+              _StatBar(label: 'Composure', value: fighter.mentalStats.composure),
+              _StatBar(label: 'Aggression', value: fighter.mentalStats.aggression),
+              _StatBar(label: 'Discipline', value: fighter.mentalStats.discipline),
+              _StatBar(label: 'Confidence', value: fighter.mentalStats.confidence),
+              _StatBar(label: 'Heart', value: fighter.mentalStats.heart),
+              _StatBar(label: 'Adaptability', value: fighter.mentalStats.adaptability),
+            ],
+          ),
+          ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            title: const Text('Tendencies'),
+            children: [
+              _StatBar(label: 'Striking Freq.', value: fighter.tendencies.strikingFrequency, max: 100),
+              _StatBar(label: 'Takedown Freq.', value: fighter.tendencies.takedownFrequency, max: 100),
+              _StatBar(label: 'Kick Freq.', value: fighter.tendencies.kickFrequency, max: 100),
+              _StatBar(label: 'Clinch Freq.', value: fighter.tendencies.clinchFrequency, max: 100),
+              _StatBar(label: 'Sub. Attempts', value: fighter.tendencies.submissionAttempts, max: 100),
+              _StatBar(label: 'Ground & Pound', value: fighter.tendencies.groundAndPound, max: 100),
+              _StatBar(label: 'Aggression', value: fighter.tendencies.aggression, max: 100),
+              _StatBar(label: 'Counter Striking', value: fighter.tendencies.counterStriking, max: 100),
+              _StatBar(label: 'Head Hunting', value: fighter.tendencies.headHunting, max: 100),
+              _StatBar(label: 'Body Attacks', value: fighter.tendencies.bodyAttacks, max: 100),
+              _StatBar(label: 'Leg Attacks', value: fighter.tendencies.legAttacks, max: 100),
+            ],
+          ),
+          const SizedBox(height: 8),
           Text('Condition', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           _StatBar(label: 'Morale', value: fighter.morale),
@@ -83,7 +189,9 @@ class FighterProfileScreen extends StatelessWidget {
             title: Text(fighter.injuryStatus.label),
           ),
           const SizedBox(height: 24),
-          if (fighter.isSigned)
+          if (fighter.retired)
+            const SizedBox.shrink()
+          else if (fighter.isSigned)
             _ContractSection(fighter: fighter)
           else
             FilledButton.icon(
@@ -311,8 +419,9 @@ class _FightHistoryTile extends StatelessWidget {
 class _StatBar extends StatelessWidget {
   final String label;
   final int value;
+  final int max;
 
-  const _StatBar({required this.label, required this.value});
+  const _StatBar({required this.label, required this.value, this.max = 100});
 
   @override
   Widget build(BuildContext context) {
@@ -320,12 +429,12 @@ class _StatBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          SizedBox(width: 90, child: Text(label)),
+          SizedBox(width: 120, child: Text(label)),
           Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(4),
               child: LinearProgressIndicator(
-                value: value / 100,
+                value: value / max,
                 minHeight: 8,
               ),
             ),

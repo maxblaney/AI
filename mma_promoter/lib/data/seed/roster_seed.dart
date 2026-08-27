@@ -161,6 +161,72 @@ const Map<WeightClass, (int, int)> _heightRangeByWeightClass = {
   WeightClass.heavyweight: (72, 80),
 };
 
+/// Fighting-stat fields boosted (positive) or held back (negative) by each
+/// [FightingStyle], applied on top of a fighter's random baseline so a
+/// wrestler's sheet actually looks like a wrestler's. Values are deltas.
+const Map<FightingStyle, Map<String, int>> _styleFightingDeltas = {
+  FightingStyle.boxer: {
+    'punching': 14, 'accuracy': 10, 'defense': 8,
+    'kicking': -14, 'takedowns': -10, 'wrestling': -8, 'submissionOffense': -8,
+  },
+  FightingStyle.kickboxer: {
+    'kicking': 14, 'punching': 8, 'power': 8,
+    'takedowns': -12, 'wrestling': -10, 'submissionOffense': -10,
+  },
+  FightingStyle.muayThai: {
+    'kicking': 12, 'power': 10, 'takedownDefense': 8,
+    'submissionOffense': -10, 'submissionDefense': -6,
+  },
+  FightingStyle.wrestler: {
+    'takedowns': 16, 'wrestling': 16, 'groundAndPound': 10, 'takedownDefense': 8,
+    'kicking': -12, 'submissionOffense': -6,
+  },
+  FightingStyle.bjj: {
+    'submissionOffense': 16, 'submissionDefense': 12, 'grappling': 10,
+    'kicking': -8, 'power': -8, 'takedowns': -4,
+  },
+  FightingStyle.wrestlingHeavy: {
+    'takedowns': 12, 'wrestling': 12, 'groundAndPound': 8, 'grappling': 6,
+    'kicking': -10,
+  },
+  FightingStyle.counterStriker: {
+    'accuracy': 12, 'defense': 12, 'speed': 8,
+    'takedowns': -8,
+  },
+  FightingStyle.pressureFighter: {
+    'power': 10, 'punching': 8,
+    'defense': -8,
+  },
+  FightingStyle.pointFighter: {
+    'accuracy': 12, 'defense': 10, 'speed': 8,
+    'power': -10,
+  },
+  FightingStyle.brawler: {
+    'power': 14, 'punching': 10,
+    'defense': -12, 'accuracy': -8,
+  },
+  FightingStyle.wellRounded: {
+    'punching': 3, 'kicking': 3, 'takedowns': 3, 'wrestling': 3,
+    'submissionOffense': 3, 'defense': 3,
+  },
+};
+
+/// Tendency fields pushed high (positive) or low (negative) by each style —
+/// how a fighter actually behaves in the cage, not just how skilled they are.
+const Map<FightingStyle, Map<String, int>> _styleTendencyDeltas = {
+  FightingStyle.boxer: {'strikingFrequency': 25, 'headHunting': 15, 'takedownFrequency': -25, 'kickFrequency': -25},
+  FightingStyle.kickboxer: {'kickFrequency': 25, 'strikingFrequency': 15, 'takedownFrequency': -20},
+  FightingStyle.muayThai: {'kickFrequency': 20, 'clinchFrequency': 25, 'bodyAttacks': 15, 'legAttacks': 15},
+  FightingStyle.wrestler: {'takedownFrequency': 30, 'groundAndPound': 25, 'strikingFrequency': -15},
+  FightingStyle.bjj: {'submissionAttempts': 30, 'takedownFrequency': 10, 'strikingFrequency': -15},
+  FightingStyle.wrestlingHeavy: {'takedownFrequency': 25, 'groundAndPound': 20, 'clinchFrequency': 10},
+  FightingStyle.counterStriker: {'counterStriking': 30, 'aggression': -20},
+  FightingStyle.pressureFighter: {'aggression': 25, 'strikingFrequency': 15, 'counterStriking': -15},
+  FightingStyle.pointFighter: {'strikingFrequency': 10, 'aggression': -15, 'counterStriking': 10},
+  FightingStyle.brawler: {'aggression': 30, 'headHunting': 20, 'counterStriking': -20},
+  FightingStyle.wellRounded: {},
+};
+
 /// Generates a fresh, unsigned talent pool spread across every weight
 /// class for a new game. Some are strong enough to headline immediately,
 /// most are mid-tier prospects and journeymen — enough variety to make
@@ -177,6 +243,18 @@ List<Fighter> generateStartingRoster({
   ];
 }
 
+/// Generates roughly [count] brand-new free agents spread randomly across
+/// weight classes, for the monthly talent-pool refresh — keeps the pool
+/// from going stale as the player signs fighters out of it over time.
+List<Fighter> generateMonthlyTalentPool({int count = 10, Random? random}) {
+  final rng = random ?? Random();
+  const weightClasses = WeightClass.values;
+  return List.generate(
+    count,
+    (_) => _generateFighter(weightClasses[rng.nextInt(weightClasses.length)], rng),
+  );
+}
+
 Fighter _generateFighter(WeightClass weightClass, Random rng) {
   final age = 21 + rng.nextInt(15); // 21-35
   final int experienceFights = max(0, (age - 20)) * (1 + rng.nextInt(3));
@@ -189,12 +267,75 @@ Fighter _generateFighter(WeightClass weightClass, Random rng) {
   final int skillFloor = 35 + min(experienceFights, 20);
   final int skillCeiling = min(95, skillFloor + 35);
   int stat() => skillFloor + rng.nextInt(max(1, skillCeiling - skillFloor));
+  int tendency() => 20 + rng.nextInt(41); // 20-60 baseline
 
-  final tags = StyleTag.values.toList()..shuffle(rng);
-  final styleTags = tags.take(1 + rng.nextInt(2)).toList();
+  final style = FightingStyle.values[rng.nextInt(FightingStyle.values.length)];
 
   final nationality = knownNationalities[rng.nextInt(knownNationalities.length)];
   final (heightInches, weightLbs) = generatePhysicalStats(weightClass, rng);
+
+  final fightingStats = _applyStyleDeltas(
+    FightingStats(
+      punching: stat(),
+      kicking: stat(),
+      power: stat(),
+      speed: stat(),
+      accuracy: stat(),
+      defense: stat(),
+      takedowns: stat(),
+      takedownDefense: stat(),
+      wrestling: stat(),
+      groundAndPound: stat(),
+      submissionOffense: stat(),
+      submissionDefense: stat(),
+      grappling: stat(),
+    ),
+    _styleFightingDeltas[style] ?? const {},
+  );
+
+  final physicalStats = PhysicalStats(
+    cardio: stat(),
+    durability: stat(),
+    chin: stat(),
+    bodyToughness: stat(),
+    legToughness: stat(),
+    strength: stat(),
+    athleticism: stat(),
+    recovery: stat(),
+  );
+
+  final mentalStats = MentalStats(
+    fightIq: stat(),
+    composure: stat(),
+    aggression: stat(),
+    discipline: stat(),
+    confidence: stat(),
+    heart: stat(),
+    adaptability: stat(),
+  );
+
+  final tendencies = _applyTendencyDeltas(
+    Tendencies(
+      strikingFrequency: tendency(),
+      takedownFrequency: tendency(),
+      kickFrequency: tendency(),
+      clinchFrequency: tendency(),
+      submissionAttempts: tendency(),
+      groundAndPound: tendency(),
+      aggression: tendency(),
+      counterStriking: tendency(),
+      headHunting: tendency(),
+      bodyAttacks: tendency(),
+      legAttacks: tendency(),
+    ),
+    _styleTendencyDeltas[style] ?? const {},
+  );
+
+  final overall = (fightingStats.average + physicalStats.average + mentalStats.average) / 3;
+  // Younger fighters have more room left to grow; veterans are close to
+  // whatever they've already shown.
+  final growthRoom = age <= 24 ? 10 + rng.nextInt(16) : age <= 29 ? 4 + rng.nextInt(10) : rng.nextInt(6);
+  final potential = (overall.round() + growthRoom).clamp(30, 99);
 
   return Fighter(
     id: newId(),
@@ -205,18 +346,52 @@ Fighter _generateFighter(WeightClass weightClass, Random rng) {
     heightInches: heightInches,
     weightLbs: weightLbs,
     record: FightRecord(wins: wins, losses: losses, draws: rng.nextInt(2)),
-    stats: FighterStats(
-      striking: stat(),
-      grappling: stat(),
-      cardio: stat(),
-      chin: stat(),
-      power: stat(),
-    ),
+    fightingStats: fightingStats,
+    physicalStats: physicalStats,
+    mentalStats: mentalStats,
+    style: style,
+    tendencies: tendencies,
+    potential: potential,
     popularity: 10 + rng.nextInt(50),
     morale: 65 + rng.nextInt(25),
     injuryStatus: InjuryStatus.healthy,
     winStreak: rng.nextInt(4),
-    styleTags: styleTags,
+  );
+}
+
+FightingStats _applyStyleDeltas(FightingStats stats, Map<String, int> deltas) {
+  int adj(String key, int base) => (base + (deltas[key] ?? 0)).clamp(1, 99);
+  return stats.copyWith(
+    punching: adj('punching', stats.punching),
+    kicking: adj('kicking', stats.kicking),
+    power: adj('power', stats.power),
+    speed: adj('speed', stats.speed),
+    accuracy: adj('accuracy', stats.accuracy),
+    defense: adj('defense', stats.defense),
+    takedowns: adj('takedowns', stats.takedowns),
+    takedownDefense: adj('takedownDefense', stats.takedownDefense),
+    wrestling: adj('wrestling', stats.wrestling),
+    groundAndPound: adj('groundAndPound', stats.groundAndPound),
+    submissionOffense: adj('submissionOffense', stats.submissionOffense),
+    submissionDefense: adj('submissionDefense', stats.submissionDefense),
+    grappling: adj('grappling', stats.grappling),
+  );
+}
+
+Tendencies _applyTendencyDeltas(Tendencies t, Map<String, int> deltas) {
+  int adj(String key, int base) => (base + (deltas[key] ?? 0)).clamp(0, 100);
+  return t.copyWith(
+    strikingFrequency: adj('strikingFrequency', t.strikingFrequency),
+    takedownFrequency: adj('takedownFrequency', t.takedownFrequency),
+    kickFrequency: adj('kickFrequency', t.kickFrequency),
+    clinchFrequency: adj('clinchFrequency', t.clinchFrequency),
+    submissionAttempts: adj('submissionAttempts', t.submissionAttempts),
+    groundAndPound: adj('groundAndPound', t.groundAndPound),
+    aggression: adj('aggression', t.aggression),
+    counterStriking: adj('counterStriking', t.counterStriking),
+    headHunting: adj('headHunting', t.headHunting),
+    bodyAttacks: adj('bodyAttacks', t.bodyAttacks),
+    legAttacks: adj('legAttacks', t.legAttacks),
   );
 }
 
@@ -241,6 +416,7 @@ String _generateName(String nationality, Random rng) {
 Organization generateStartingOrganization({
   required String name,
   required ReputationTier tier,
+  DateTime? asOf,
 }) {
   return Organization(
     id: newId(),
@@ -251,5 +427,6 @@ Organization generateStartingOrganization({
     fanbaseSize: tier.startingFanbase,
     homeRegion: 'Midwest, USA',
     promotionBudget: (tier.startingCash * 0.1).round(),
+    lastTalentRefresh: asOf ?? DateTime.now(),
   );
 }

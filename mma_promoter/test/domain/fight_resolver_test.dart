@@ -14,18 +14,59 @@ Fighter _fighter(String id, {required int stat}) {
     heightInches: 70,
     weightLbs: 155,
     record: const FightRecord(wins: 10, losses: 2),
-    stats: FighterStats(
-      striking: stat,
-      grappling: stat,
-      cardio: stat,
-      chin: stat,
+    fightingStats: FightingStats(
+      punching: stat,
+      kicking: stat,
       power: stat,
+      speed: stat,
+      accuracy: stat,
+      defense: stat,
+      takedowns: stat,
+      takedownDefense: stat,
+      wrestling: stat,
+      groundAndPound: stat,
+      submissionOffense: stat,
+      submissionDefense: stat,
+      grappling: stat,
     ),
+    physicalStats: PhysicalStats(
+      cardio: stat,
+      durability: stat,
+      chin: stat,
+      bodyToughness: stat,
+      legToughness: stat,
+      strength: stat,
+      athleticism: stat,
+      recovery: stat,
+    ),
+    mentalStats: MentalStats(
+      fightIq: stat,
+      composure: stat,
+      aggression: stat,
+      discipline: stat,
+      confidence: stat,
+      heart: stat,
+      adaptability: stat,
+    ),
+    style: FightingStyle.wellRounded,
+    tendencies: const Tendencies(
+      strikingFrequency: 50,
+      takedownFrequency: 50,
+      kickFrequency: 50,
+      clinchFrequency: 50,
+      submissionAttempts: 50,
+      groundAndPound: 50,
+      aggression: 50,
+      counterStriking: 50,
+      headHunting: 50,
+      bodyAttacks: 50,
+      legAttacks: 50,
+    ),
+    potential: stat.clamp(30, 99),
     popularity: 40,
     morale: 80,
     injuryStatus: InjuryStatus.healthy,
     winStreak: 2,
-    styleTags: const [StyleTag.allRounder],
   );
 }
 
@@ -113,17 +154,20 @@ void main() {
       }
     });
 
-    test('round scores never exceed the scheduled round count', () {
+    test('momentum ticks never exceed the scheduled round count', () {
       final resolver = FightResolver(random: Random(13));
       final a = _fighter('a', stat: 60);
       final b = _fighter('b', stat: 60);
 
       for (var i = 0; i < 200; i++) {
         final result = resolver.resolve(fighterA: a, fighterB: b, rounds: 3);
-        expect(result.roundScores.length, inInclusiveRange(1, 3));
-        expect(result.roundScores.last.round, result.roundScores.length);
-        for (final score in result.roundScores) {
-          expect(score.fighterAShare, inInclusiveRange(0.0, 1.0));
+        expect(
+          result.momentumTicks.length,
+          inInclusiveRange(1, 3 * FightResolver.ticksPerRound),
+        );
+        expect(result.momentumTicks.last.round, lessThanOrEqualTo(3));
+        for (final tick in result.momentumTicks) {
+          expect(tick.fighterAShare, inInclusiveRange(0.0, 1.0));
         }
       }
     });

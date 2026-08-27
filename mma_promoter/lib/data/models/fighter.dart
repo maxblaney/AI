@@ -12,13 +12,32 @@ class Fighter {
   final int heightInches;
   final int weightLbs; // walk-around weight, a bit above the class limit.
   final FightRecord record;
-  final FighterStats stats;
+  final FightingStats fightingStats;
+  final PhysicalStats physicalStats;
+  final MentalStats mentalStats;
+  final FightingStyle style;
+  final Tendencies tendencies;
+
+  /// Ceiling on [overall] — how good this fighter could become. Nudges up
+  /// on long win streaks, down on long losing streaks.
+  final int potential;
+
   final int popularity; // 0-100, drives ticket/PPV draw.
   final int morale; // 0-100, drifts with events, affects performance.
   final InjuryStatus injuryStatus;
   final int winStreak;
-  final List<StyleTag> styleTags;
+  final int lossStreak;
   final Contract? contract; // null = unsigned / in the free talent pool.
+
+  /// Elo rating within their weight class, starting at 1500. Only counts
+  /// toward the Rankings screen once [isRanked] is true.
+  final int eloRating;
+  final bool isRanked;
+
+  final bool retired;
+  final String? retirementReason;
+  final int fightOfTheNightCount;
+  final int performanceOfTheNightCount;
 
   const Fighter({
     required this.id,
@@ -29,17 +48,33 @@ class Fighter {
     required this.heightInches,
     required this.weightLbs,
     required this.record,
-    required this.stats,
+    required this.fightingStats,
+    required this.physicalStats,
+    required this.mentalStats,
+    required this.style,
+    required this.tendencies,
+    required this.potential,
     required this.popularity,
     required this.morale,
     required this.injuryStatus,
     required this.winStreak,
-    required this.styleTags,
+    this.lossStreak = 0,
     this.contract,
+    this.eloRating = 1500,
+    this.isRanked = false,
+    this.retired = false,
+    this.retirementReason,
+    this.fightOfTheNightCount = 0,
+    this.performanceOfTheNightCount = 0,
   });
 
   bool get isSigned => contract != null;
-  bool get isAvailableToFight => injuryStatus == InjuryStatus.healthy;
+  bool get isAvailableToFight => injuryStatus == InjuryStatus.healthy && !retired;
+
+  /// Single-number overview across all three ability categories, used for
+  /// matchmaking/scouting display and as the baseline for [potential].
+  double get overall =>
+      (fightingStats.average + physicalStats.average + mentalStats.average) / 3;
 
   String get heightDisplay {
     final feet = heightInches ~/ 12;
@@ -56,14 +91,25 @@ class Fighter {
     int? heightInches,
     int? weightLbs,
     FightRecord? record,
-    FighterStats? stats,
+    FightingStats? fightingStats,
+    PhysicalStats? physicalStats,
+    MentalStats? mentalStats,
+    FightingStyle? style,
+    Tendencies? tendencies,
+    int? potential,
     int? popularity,
     int? morale,
     InjuryStatus? injuryStatus,
     int? winStreak,
-    List<StyleTag>? styleTags,
+    int? lossStreak,
     Contract? contract,
     bool clearContract = false,
+    int? eloRating,
+    bool? isRanked,
+    bool? retired,
+    String? retirementReason,
+    int? fightOfTheNightCount,
+    int? performanceOfTheNightCount,
   }) {
     return Fighter(
       id: id ?? this.id,
@@ -74,13 +120,25 @@ class Fighter {
       heightInches: heightInches ?? this.heightInches,
       weightLbs: weightLbs ?? this.weightLbs,
       record: record ?? this.record,
-      stats: stats ?? this.stats,
+      fightingStats: fightingStats ?? this.fightingStats,
+      physicalStats: physicalStats ?? this.physicalStats,
+      mentalStats: mentalStats ?? this.mentalStats,
+      style: style ?? this.style,
+      tendencies: tendencies ?? this.tendencies,
+      potential: potential ?? this.potential,
       popularity: popularity ?? this.popularity,
       morale: morale ?? this.morale,
       injuryStatus: injuryStatus ?? this.injuryStatus,
       winStreak: winStreak ?? this.winStreak,
-      styleTags: styleTags ?? this.styleTags,
+      lossStreak: lossStreak ?? this.lossStreak,
       contract: clearContract ? null : (contract ?? this.contract),
+      eloRating: eloRating ?? this.eloRating,
+      isRanked: isRanked ?? this.isRanked,
+      retired: retired ?? this.retired,
+      retirementReason: retirementReason ?? this.retirementReason,
+      fightOfTheNightCount: fightOfTheNightCount ?? this.fightOfTheNightCount,
+      performanceOfTheNightCount:
+          performanceOfTheNightCount ?? this.performanceOfTheNightCount,
     );
   }
 }

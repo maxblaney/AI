@@ -11,6 +11,10 @@ class Organization {
   final String homeRegion;
   final int promotionBudget; // spendable resource for hype actions.
 
+  /// The last calendar month the talent pool got its ~10-fighter refresh.
+  /// Advances whenever a simulated event's date crosses into a new month.
+  final DateTime lastTalentRefresh;
+
   const Organization({
     required this.id,
     required this.name,
@@ -20,6 +24,7 @@ class Organization {
     required this.fanbaseSize,
     required this.homeRegion,
     required this.promotionBudget,
+    required this.lastTalentRefresh,
   });
 
   Organization copyWith({
@@ -31,6 +36,7 @@ class Organization {
     int? fanbaseSize,
     String? homeRegion,
     int? promotionBudget,
+    DateTime? lastTalentRefresh,
   }) {
     return Organization(
       id: id ?? this.id,
@@ -41,6 +47,7 @@ class Organization {
       fanbaseSize: fanbaseSize ?? this.fanbaseSize,
       homeRegion: homeRegion ?? this.homeRegion,
       promotionBudget: promotionBudget ?? this.promotionBudget,
+      lastTalentRefresh: lastTalentRefresh ?? this.lastTalentRefresh,
     );
   }
 }

@@ -5,7 +5,9 @@ import '../state/game_controller.dart';
 import '../widgets/random_event_dialog.dart';
 import 'dashboard/dashboard_screen.dart';
 import 'finance/finance_screen.dart';
+import 'history/history_screen.dart';
 import 'new_game/new_game_screen.dart';
+import 'rankings/rankings_screen.dart';
 import 'roster/roster_screen.dart';
 
 /// App shell: bottom-tab navigation plus a global watcher that pops up a
@@ -25,6 +27,8 @@ class _HomeShellState extends State<HomeShell> {
   static const _tabs = [
     DashboardScreen(),
     RosterScreen(),
+    RankingsScreen(),
+    HistoryScreen(),
     FinanceScreen(),
   ];
 
@@ -57,6 +61,11 @@ class _HomeShellState extends State<HomeShell> {
         destinations: const [
           NavigationDestination(icon: Icon(Icons.dashboard), label: 'Dashboard'),
           NavigationDestination(icon: Icon(Icons.groups), label: 'Roster'),
+          NavigationDestination(
+            icon: Icon(Icons.leaderboard),
+            label: 'Rankings',
+          ),
+          NavigationDestination(icon: Icon(Icons.history), label: 'History'),
           NavigationDestination(
             icon: Icon(Icons.account_balance_wallet),
             label: 'Finance',
