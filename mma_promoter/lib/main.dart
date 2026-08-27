@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -13,8 +14,12 @@ class MmaPromoterApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The web build has no `dart:io`/SQLite backend, so it runs on a
+    // volatile in-memory repository set instead (see GameController.inMemory
+    // and lib/data/db/connection_web.dart). Native builds persist for real.
     return ChangeNotifierProvider(
-      create: (_) => GameController()..init(),
+      create: (_) =>
+          (kIsWeb ? GameController.inMemory() : GameController())..init(),
       child: MaterialApp(
         title: 'MMA Promoter',
         debugShowCheckedModeBanner: false,

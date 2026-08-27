@@ -50,9 +50,42 @@ flutter test
 
 This scaffold was built and validated (`flutter analyze`, `flutter test`)
 in a sandbox without an Android/iOS toolchain or a display, so it hasn't
-been run in an actual simulator yet. Do that first before building on top
-of it — `flutter run -d <device>` on a machine with Xcode/Android Studio
-set up.
+been run in an actual mobile simulator yet. Do that first before building
+on top of it — `flutter run -d <device>` on a machine with Xcode/Android
+Studio set up.
+
+It *has* been driven end-to-end in a browser (see "Web preview" below),
+which exercises the same UI and game logic as mobile — everything except
+the native SQLite persistence.
+
+### Web preview
+
+`flutter build web` works and was used to smoke-test the full loop (sign
+fighters, book a card, run an event, resolve a random event) with headless
+Chromium. Two things make this possible that don't apply to the real
+mobile build:
+
+- **`--web-renderer html`** — the default CanvasKit renderer fetches its
+  `.wasm` runtime from Google's CDN at startup, which won't work offline
+  or behind a restrictive network. The HTML renderer needs no such fetch.
+- **In-memory persistence** — Flutter web has no `dart:io`, so the Drift
+  SQLite backend can't run there. `lib/data/db/connection.dart`
+  conditionally exports a native (`connection_native.dart`, real SQLite)
+  or web (`connection_web.dart`, stub) implementation, and
+  `main.dart` constructs `GameController.inMemory()` instead of the
+  default `GameController()` when `kIsWeb` is true — same UI, same domain
+  logic, volatile state that resets on reload. See
+  `lib/data/repositories/repository_contracts.dart` and
+  `lib/data/repositories/in_memory/`.
+
+```bash
+flutter build web --release --web-renderer html
+cd build/web && python3 -m http.server 8765
+# open http://localhost:8765 in a browser
+```
+
+This is a preview path, not a target platform — the real deliverable is
+the native mobile app with real persistence.
 
 ## Architecture
 
@@ -65,7 +98,10 @@ lib/
     db/                # Drift schema (tables.dart), generated code, and
                        #   the AppDatabase with query methods
     repositories/     # Bridge DB rows <-> domain models; the only layer
-                       #   that imports both drift and the plain models
+                       #   that imports both drift and the plain models.
+                       #   repository_contracts.dart defines the interfaces
+                       #   GameController depends on; in_memory/ holds the
+                       #   volatile web-preview implementations.
     seed/              # Starting roster / organization generation for a
                        #   brand-new game
   domain/

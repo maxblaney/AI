@@ -7,8 +7,10 @@ import '../../data/db/database.dart';
 import '../../data/models/models.dart';
 import '../../data/repositories/event_repository.dart';
 import '../../data/repositories/fighter_repository.dart';
+import '../../data/repositories/in_memory/in_memory_repositories.dart';
 import '../../data/repositories/organization_repository.dart';
 import '../../data/repositories/random_event_repository.dart';
+import '../../data/repositories/repository_contracts.dart';
 import '../../data/seed/roster_seed.dart';
 import '../../domain/events/random_event_engine.dart';
 import '../../domain/finance/event_finance_calculator.dart';
@@ -33,11 +35,10 @@ class EventSimulationSummary {
 /// [ChangeNotifier], and is the only place UI code should mutate game
 /// state through.
 class GameController extends ChangeNotifier {
-  final AppDatabase _db;
-  late final FighterRepository _fighterRepo;
-  late final OrganizationRepository _orgRepo;
-  late final EventRepository _eventRepo;
-  late final RandomEventRepository _randomEventRepo;
+  final FighterRepositoryContract _fighterRepo;
+  final OrganizationRepositoryContract _orgRepo;
+  final EventRepositoryContract _eventRepo;
+  final RandomEventRepositoryContract _randomEventRepo;
 
   final FightResolver _fightResolver = FightResolver();
   final EventFinanceCalculator _financeCalculator = EventFinanceCalculator();
@@ -48,12 +49,36 @@ class GameController extends ChangeNotifier {
   StreamSubscription<List<MmaEvent>>? _eventSub;
   StreamSubscription<List<RandomEvent>>? _randomEventSub;
 
-  GameController({AppDatabase? database}) : _db = database ?? AppDatabase() {
-    _fighterRepo = FighterRepository(_db);
-    _orgRepo = OrganizationRepository(_db);
-    _eventRepo = EventRepository(_db);
-    _randomEventRepo = RandomEventRepository(_db);
+  /// Persists to on-device SQLite via Drift. This is the real, shipping
+  /// backend — not available on Flutter web (no `dart:io`), which is why
+  /// [GameController.inMemory] exists separately.
+  factory GameController({AppDatabase? database}) {
+    final db = database ?? AppDatabase();
+    return GameController._(
+      fighterRepo: FighterRepository(db),
+      orgRepo: OrganizationRepository(db),
+      eventRepo: EventRepository(db),
+      randomEventRepo: RandomEventRepository(db),
+    );
   }
+
+  GameController._({
+    required FighterRepositoryContract fighterRepo,
+    required OrganizationRepositoryContract orgRepo,
+    required EventRepositoryContract eventRepo,
+    required RandomEventRepositoryContract randomEventRepo,
+  })  : _fighterRepo = fighterRepo,
+        _orgRepo = orgRepo,
+        _eventRepo = eventRepo,
+        _randomEventRepo = randomEventRepo;
+
+  /// Volatile, non-persistent mode used for the Flutter-web preview build.
+  /// Game state resets on every page reload.
+  GameController.inMemory()
+      : _fighterRepo = InMemoryFighterRepository(),
+        _orgRepo = InMemoryOrganizationRepository(),
+        _eventRepo = InMemoryEventRepository(),
+        _randomEventRepo = InMemoryRandomEventRepository();
 
   bool isLoading = true;
   Organization? organization;
