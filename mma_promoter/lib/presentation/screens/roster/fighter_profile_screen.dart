@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../data/models/models.dart';
 import '../../../domain/finance/pay_scale.dart';
 import '../../state/game_controller.dart';
+import '../../widgets/fighter_avatar.dart';
 import 'fighter_editor_screen.dart';
 
 class FighterProfileScreen extends StatelessWidget {
@@ -63,6 +64,8 @@ class FighterProfileScreen extends StatelessWidget {
               ),
             ),
           if (fighter.retired) const SizedBox(height: 12),
+          Center(child: FighterAvatar(fighter: fighter, radius: 48)),
+          const SizedBox(height: 16),
           Text(
             '${fighter.weightClass.label} · ${fighter.nationality} · Age ${fighter.age}',
             style: Theme.of(context).textTheme.bodyMedium,

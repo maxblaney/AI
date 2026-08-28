@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../data/models/models.dart';
+import 'fighter_avatar.dart';
 
 class FighterListTile extends StatelessWidget {
   final Fighter fighter;
@@ -11,7 +12,7 @@ class FighterListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: CircleAvatar(child: Text(fighter.name.substring(0, 1))),
+      leading: FighterAvatar(fighter: fighter),
       title: Text(fighter.name),
       subtitle: Text(
         '${fighter.weightClass.label} · ${fighter.record.display} · '

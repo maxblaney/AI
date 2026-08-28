@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../../core/utils/id_generator.dart';
 import '../../../data/models/models.dart';
 import '../../../data/seed/roster_seed.dart';
+import '../../../domain/cosmetics/fighter_headshots.dart';
 import '../../state/game_controller.dart';
 
 const List<(String, String)> _strikingStatFields = [
@@ -427,6 +428,7 @@ class _FighterEditorScreenState extends State<FighterEditorScreen>
             name: name,
             age: _age,
             nationality: _nationality,
+            headshotAsset: rollHeadshot(_nationality, Random()),
             weightClass: _weightClass,
             heightInches: _heightInches,
             weightLbs: _weightLbs,

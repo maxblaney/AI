@@ -11,6 +11,7 @@ class Fighters extends Table {
   TextColumn get name => text()();
   IntColumn get age => integer()();
   TextColumn get nationality => text()();
+  TextColumn get headshotAsset => text().nullable()();
   TextColumn get weightClass => text()();
   IntColumn get heightInches => integer().withDefault(const Constant(70))();
   IntColumn get weightLbs => integer().withDefault(const Constant(155))();

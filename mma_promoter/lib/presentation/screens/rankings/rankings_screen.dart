@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../data/models/models.dart';
 import '../../state/game_controller.dart';
+import '../../widgets/fighter_avatar.dart';
 import '../roster/fighter_profile_screen.dart';
 
 /// Elo-based rankings — one ladder per weight class, plus a
@@ -72,10 +73,8 @@ class _RankingsScreenState extends State<RankingsScreen> {
                     itemBuilder: (context, index) {
                       final fighter = ranked[index];
                       return ListTile(
-                        leading: CircleAvatar(
-                          child: Text('${index + 1}'),
-                        ),
-                        title: Text(fighter.name),
+                        leading: FighterAvatar(fighter: fighter),
+                        title: Text('${index + 1}. ${fighter.name}'),
                         subtitle: Text(
                           isP4P
                               ? '${fighter.weightClass.label} · ${fighter.record.display} · ${fighter.style.label}'

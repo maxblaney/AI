@@ -227,6 +227,18 @@ the native mobile app with real persistence.
   style with real spread inside each: most BJJ players hunt the tap, most
   wrestlers ride position, a wrestling-heavy fighter is more likely to
   posture up and hit, and a pure striker just wants back to his feet.
+- **Fighter headshots**: pixel-art portraits (`assets/fighters/`, sliced
+  from a fan-contributed sprite sheet) replace the initial-letter avatar
+  wherever a fighter appears — Roster, Fighter Profile, Rankings.
+  `rollHeadshot` (`lib/domain/cosmetics/fighter_headshots.dart`) assigns
+  one at generation time based on nationality: each nationality has its
+  own per-tone odds (deep/medium/tan skin), and most nationalities carry
+  no weight at all yet, so they keep the initial-letter fallback rather
+  than being force-fit into art that doesn't suit them (there's no
+  meaningful population of, say, Black Russian or Black Polish fighters
+  in reality). The art set is deliberately small right now — more
+  headshots (and more covered nationalities/tones) can be dropped in over
+  time by extending `_headshotsByTone` and `_nationalityToneWeights`.
 - **Potential**: a ceiling on a fighter's `overall`, shown on their
   profile. Long win streaks (3+) nudge it up, long losing streaks (3+)
   nudge it down, and it never falls below the fighter's current overall

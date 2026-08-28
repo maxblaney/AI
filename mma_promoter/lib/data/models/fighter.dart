@@ -8,6 +8,12 @@ class Fighter {
   final String name;
   final int age;
   final String nationality;
+
+  /// Asset path for this fighter's headshot art, or null to fall back to
+  /// the initial-letter avatar. Rolled at generation time from
+  /// [nationality] via `rollHeadshot` — most nationalities have no art
+  /// yet and stay null.
+  final String? headshotAsset;
   final WeightClass weightClass;
   final int heightInches;
   final int weightLbs; // walk-around weight, a bit above the class limit.
@@ -54,6 +60,7 @@ class Fighter {
     required this.name,
     required this.age,
     required this.nationality,
+    this.headshotAsset,
     required this.weightClass,
     required this.heightInches,
     required this.weightLbs,
@@ -105,6 +112,7 @@ class Fighter {
     String? name,
     int? age,
     String? nationality,
+    String? headshotAsset,
     WeightClass? weightClass,
     int? heightInches,
     int? weightLbs,
@@ -137,6 +145,7 @@ class Fighter {
       name: name ?? this.name,
       age: age ?? this.age,
       nationality: nationality ?? this.nationality,
+      headshotAsset: headshotAsset ?? this.headshotAsset,
       weightClass: weightClass ?? this.weightClass,
       heightInches: heightInches ?? this.heightInches,
       weightLbs: weightLbs ?? this.weightLbs,

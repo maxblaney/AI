@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import '../../core/utils/id_generator.dart';
+import '../../domain/cosmetics/fighter_headshots.dart';
 import '../models/models.dart';
 
 class _NamePool {
@@ -655,6 +656,7 @@ Fighter _generateFighter(WeightClass weightClass, Random rng) {
     name: _generateName(nationality, rng),
     age: age,
     nationality: nationality,
+    headshotAsset: rollHeadshot(nationality, rng),
     weightClass: weightClass,
     heightInches: heightInches,
     weightLbs: weightLbs,

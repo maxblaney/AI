@@ -30,6 +30,12 @@ class $FightersTable extends Fighters
   late final GeneratedColumn<String> nationality = GeneratedColumn<String>(
       'nationality', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _headshotAssetMeta =
+      const VerificationMeta('headshotAsset');
+  @override
+  late final GeneratedColumn<String> headshotAsset = GeneratedColumn<String>(
+      'headshot_asset', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _weightClassMeta =
       const VerificationMeta('weightClass');
   @override
@@ -561,6 +567,7 @@ class $FightersTable extends Fighters
         name,
         age,
         nationality,
+        headshotAsset,
         weightClass,
         heightInches,
         weightLbs,
@@ -673,6 +680,12 @@ class $FightersTable extends Fighters
               data['nationality']!, _nationalityMeta));
     } else if (isInserting) {
       context.missing(_nationalityMeta);
+    }
+    if (data.containsKey('headshot_asset')) {
+      context.handle(
+          _headshotAssetMeta,
+          headshotAsset.isAcceptableOrUnknown(
+              data['headshot_asset']!, _headshotAssetMeta));
     }
     if (data.containsKey('weight_class')) {
       context.handle(
@@ -1174,6 +1187,8 @@ class $FightersTable extends Fighters
           .read(DriftSqlType.int, data['${effectivePrefix}age'])!,
       nationality: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}nationality'])!,
+      headshotAsset: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}headshot_asset']),
       weightClass: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}weight_class'])!,
       heightInches: attachedDatabase.typeMapping
@@ -1344,6 +1359,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
   final String name;
   final int age;
   final String nationality;
+  final String? headshotAsset;
   final String weightClass;
   final int heightInches;
   final int weightLbs;
@@ -1431,6 +1447,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       required this.name,
       required this.age,
       required this.nationality,
+      this.headshotAsset,
       required this.weightClass,
       required this.heightInches,
       required this.weightLbs,
@@ -1515,6 +1532,9 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
     map['name'] = Variable<String>(name);
     map['age'] = Variable<int>(age);
     map['nationality'] = Variable<String>(nationality);
+    if (!nullToAbsent || headshotAsset != null) {
+      map['headshot_asset'] = Variable<String>(headshotAsset);
+    }
     map['weight_class'] = Variable<String>(weightClass);
     map['height_inches'] = Variable<int>(heightInches);
     map['weight_lbs'] = Variable<int>(weightLbs);
@@ -1606,6 +1626,9 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       name: Value(name),
       age: Value(age),
       nationality: Value(nationality),
+      headshotAsset: headshotAsset == null && nullToAbsent
+          ? const Value.absent()
+          : Value(headshotAsset),
       weightClass: Value(weightClass),
       heightInches: Value(heightInches),
       weightLbs: Value(weightLbs),
@@ -1698,6 +1721,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       name: serializer.fromJson<String>(json['name']),
       age: serializer.fromJson<int>(json['age']),
       nationality: serializer.fromJson<String>(json['nationality']),
+      headshotAsset: serializer.fromJson<String?>(json['headshotAsset']),
       weightClass: serializer.fromJson<String>(json['weightClass']),
       heightInches: serializer.fromJson<int>(json['heightInches']),
       weightLbs: serializer.fromJson<int>(json['weightLbs']),
@@ -1794,6 +1818,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       'name': serializer.toJson<String>(name),
       'age': serializer.toJson<int>(age),
       'nationality': serializer.toJson<String>(nationality),
+      'headshotAsset': serializer.toJson<String?>(headshotAsset),
       'weightClass': serializer.toJson<String>(weightClass),
       'heightInches': serializer.toJson<int>(heightInches),
       'weightLbs': serializer.toJson<int>(weightLbs),
@@ -1880,6 +1905,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           String? name,
           int? age,
           String? nationality,
+          Value<String?> headshotAsset = const Value.absent(),
           String? weightClass,
           int? heightInches,
           int? weightLbs,
@@ -1962,6 +1988,8 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
         name: name ?? this.name,
         age: age ?? this.age,
         nationality: nationality ?? this.nationality,
+        headshotAsset:
+            headshotAsset.present ? headshotAsset.value : this.headshotAsset,
         weightClass: weightClass ?? this.weightClass,
         heightInches: heightInches ?? this.heightInches,
         weightLbs: weightLbs ?? this.weightLbs,
@@ -2056,6 +2084,9 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       age: data.age.present ? data.age.value : this.age,
       nationality:
           data.nationality.present ? data.nationality.value : this.nationality,
+      headshotAsset: data.headshotAsset.present
+          ? data.headshotAsset.value
+          : this.headshotAsset,
       weightClass:
           data.weightClass.present ? data.weightClass.value : this.weightClass,
       heightInches: data.heightInches.present
@@ -2225,6 +2256,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           ..write('name: $name, ')
           ..write('age: $age, ')
           ..write('nationality: $nationality, ')
+          ..write('headshotAsset: $headshotAsset, ')
           ..write('weightClass: $weightClass, ')
           ..write('heightInches: $heightInches, ')
           ..write('weightLbs: $weightLbs, ')
@@ -2312,6 +2344,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
         name,
         age,
         nationality,
+        headshotAsset,
         weightClass,
         heightInches,
         weightLbs,
@@ -2398,6 +2431,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           other.name == this.name &&
           other.age == this.age &&
           other.nationality == this.nationality &&
+          other.headshotAsset == this.headshotAsset &&
           other.weightClass == this.weightClass &&
           other.heightInches == this.heightInches &&
           other.weightLbs == this.weightLbs &&
@@ -2482,6 +2516,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
   final Value<String> name;
   final Value<int> age;
   final Value<String> nationality;
+  final Value<String?> headshotAsset;
   final Value<String> weightClass;
   final Value<int> heightInches;
   final Value<int> weightLbs;
@@ -2565,6 +2600,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     this.name = const Value.absent(),
     this.age = const Value.absent(),
     this.nationality = const Value.absent(),
+    this.headshotAsset = const Value.absent(),
     this.weightClass = const Value.absent(),
     this.heightInches = const Value.absent(),
     this.weightLbs = const Value.absent(),
@@ -2649,6 +2685,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     required String name,
     required int age,
     required String nationality,
+    this.headshotAsset = const Value.absent(),
     required String weightClass,
     this.heightInches = const Value.absent(),
     this.weightLbs = const Value.absent(),
@@ -2776,6 +2813,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     Expression<String>? name,
     Expression<int>? age,
     Expression<String>? nationality,
+    Expression<String>? headshotAsset,
     Expression<String>? weightClass,
     Expression<int>? heightInches,
     Expression<int>? weightLbs,
@@ -2860,6 +2898,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
       if (name != null) 'name': name,
       if (age != null) 'age': age,
       if (nationality != null) 'nationality': nationality,
+      if (headshotAsset != null) 'headshot_asset': headshotAsset,
       if (weightClass != null) 'weight_class': weightClass,
       if (heightInches != null) 'height_inches': heightInches,
       if (weightLbs != null) 'weight_lbs': weightLbs,
@@ -2957,6 +2996,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
       Value<String>? name,
       Value<int>? age,
       Value<String>? nationality,
+      Value<String?>? headshotAsset,
       Value<String>? weightClass,
       Value<int>? heightInches,
       Value<int>? weightLbs,
@@ -3040,6 +3080,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
       name: name ?? this.name,
       age: age ?? this.age,
       nationality: nationality ?? this.nationality,
+      headshotAsset: headshotAsset ?? this.headshotAsset,
       weightClass: weightClass ?? this.weightClass,
       heightInches: heightInches ?? this.heightInches,
       weightLbs: weightLbs ?? this.weightLbs,
@@ -3140,6 +3181,9 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     }
     if (nationality.present) {
       map['nationality'] = Variable<String>(nationality.value);
+    }
+    if (headshotAsset.present) {
+      map['headshot_asset'] = Variable<String>(headshotAsset.value);
     }
     if (weightClass.present) {
       map['weight_class'] = Variable<String>(weightClass.value);
@@ -3391,6 +3435,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
           ..write('name: $name, ')
           ..write('age: $age, ')
           ..write('nationality: $nationality, ')
+          ..write('headshotAsset: $headshotAsset, ')
           ..write('weightClass: $weightClass, ')
           ..write('heightInches: $heightInches, ')
           ..write('weightLbs: $weightLbs, ')
@@ -6980,6 +7025,7 @@ typedef $$FightersTableCreateCompanionBuilder = FightersCompanion Function({
   required String name,
   required int age,
   required String nationality,
+  Value<String?> headshotAsset,
   required String weightClass,
   Value<int> heightInches,
   Value<int> weightLbs,
@@ -7064,6 +7110,7 @@ typedef $$FightersTableUpdateCompanionBuilder = FightersCompanion Function({
   Value<String> name,
   Value<int> age,
   Value<String> nationality,
+  Value<String?> headshotAsset,
   Value<String> weightClass,
   Value<int> heightInches,
   Value<int> weightLbs,
@@ -7164,6 +7211,9 @@ class $$FightersTableFilterComposer
 
   ColumnFilters<String> get nationality => $composableBuilder(
       column: $table.nationality, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get headshotAsset => $composableBuilder(
+      column: $table.headshotAsset, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get weightClass => $composableBuilder(
       column: $table.weightClass, builder: (column) => ColumnFilters(column));
@@ -7441,6 +7491,10 @@ class $$FightersTableOrderingComposer
 
   ColumnOrderings<String> get nationality => $composableBuilder(
       column: $table.nationality, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get headshotAsset => $composableBuilder(
+      column: $table.headshotAsset,
+      builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get weightClass => $composableBuilder(
       column: $table.weightClass, builder: (column) => ColumnOrderings(column));
@@ -7730,6 +7784,9 @@ class $$FightersTableAnnotationComposer
   GeneratedColumn<String> get nationality => $composableBuilder(
       column: $table.nationality, builder: (column) => column);
 
+  GeneratedColumn<String> get headshotAsset => $composableBuilder(
+      column: $table.headshotAsset, builder: (column) => column);
+
   GeneratedColumn<String> get weightClass => $composableBuilder(
       column: $table.weightClass, builder: (column) => column);
 
@@ -7989,6 +8046,7 @@ class $$FightersTableTableManager extends RootTableManager<
             Value<String> name = const Value.absent(),
             Value<int> age = const Value.absent(),
             Value<String> nationality = const Value.absent(),
+            Value<String?> headshotAsset = const Value.absent(),
             Value<String> weightClass = const Value.absent(),
             Value<int> heightInches = const Value.absent(),
             Value<int> weightLbs = const Value.absent(),
@@ -8073,6 +8131,7 @@ class $$FightersTableTableManager extends RootTableManager<
             name: name,
             age: age,
             nationality: nationality,
+            headshotAsset: headshotAsset,
             weightClass: weightClass,
             heightInches: heightInches,
             weightLbs: weightLbs,
@@ -8157,6 +8216,7 @@ class $$FightersTableTableManager extends RootTableManager<
             required String name,
             required int age,
             required String nationality,
+            Value<String?> headshotAsset = const Value.absent(),
             required String weightClass,
             Value<int> heightInches = const Value.absent(),
             Value<int> weightLbs = const Value.absent(),
@@ -8241,6 +8301,7 @@ class $$FightersTableTableManager extends RootTableManager<
             name: name,
             age: age,
             nationality: nationality,
+            headshotAsset: headshotAsset,
             weightClass: weightClass,
             heightInches: heightInches,
             weightLbs: weightLbs,
