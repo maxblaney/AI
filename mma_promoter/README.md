@@ -8,10 +8,11 @@ promotion.
 This is the **v3 vertical slice**: all 8 real weight classes, a generated
 talent pool with nationality-matched names that replenishes over time,
 roster filter/sort, create-from-scratch and edit-stats for any fighter
-across a 28-stat fighting/physical/mental model plus fighting style and
-tendencies, sign/release, event booking (with a real venue picked from a
-fixed list and a player-set ticket price), a genuinely live round-by-round
-fight simulation, an Elo-based rankings system, a career-history/accolades
+across a 56-attribute fighting/physical/mental model plus fighting style
+and tendencies, sign/release, event booking (with a real venue picked from
+a fixed list and a player-set ticket price), a position-based fight
+simulation with live play-by-play, box score and judges' scorecards, an
+Elo-based rankings system, a career-history/accolades
 screen, retirement, a potential ceiling that shifts with streaks, finances,
 a choice of starting cash/reputation tier at new-game setup, and two random
 event types (injuries, contract disputes). Everything else in the original
@@ -144,34 +145,60 @@ the native mobile app with real persistence.
 - **Weight-class-first booking**: the Add Fight dialog makes you pick a
   weight class before it'll show you fighters — you physically can't book
   a mismatched fight.
-- **Live round-by-round simulation**: `FightResolver` samples momentum
-  4 times per round (`FightResolver.ticksPerRound`), so it fluctuates
-  continuously within and across rounds rather than jumping between one
-  static score per round. Right after running an event, tap "Watch Live"
-  on any fight in the results to play it back tick-by-tick as an animated
-  blue (fighter A) / red (fighter B) bar (`FightBreakdownScreen`), with a
-  scrolling history of every tick so far. This data isn't persisted, so
-  it's only available immediately after simulating — not after
-  navigating away and back.
-- **28-stat fighter model**: fighters are scored on 13 Fighting stats
-  (Punching, Kicking, Power, Speed, Accuracy, Defense, Takedowns, Takedown
-  Defense, Wrestling, Ground & Pound, Submission Offense, Submission
-  Defense, Grappling), 8 Physical stats (Cardio, Durability, Chin, Body
-  Toughness, Leg Toughness, Strength, Athleticism, Recovery), and 7 Mental
-  stats (Fight IQ, Composure, Aggression, Discipline, Confidence, Heart,
-  Adaptability) — see `lib/data/models/fighter_stats.dart`. `FightResolver`
-  deliberately doesn't simulate all 28 independently; it blends each
-  category into a striking/grappling composite per fighter, weighted by
-  their `FightingStyle` (a wrestler leans grappling-heavy, a boxer leans
-  striking-heavy, etc. — see `_buildProfile` in `fight_resolver.dart`).
+- **Position-based fight simulation**: `FightResolver` doesn't roll dice
+  for a winner — it simulates the fight. The bout moves between
+  **standing, clinch and ground** positions (guard → half guard → side
+  control → mount → back) on a real 5-minute-per-round clock. Each
+  exchange, fighters pick an action from their tendencies (strike, shoot a
+  takedown, close the clinch, circle out) and execute it with their
+  individual stats. Damage, fatigue, leg damage, body damage and cuts all
+  accumulate; a hurt fighter gets swarmed; a stalled ground position gets
+  stood up by the referee. If nobody finishes it, three judges score it.
+  See "Simulation model" below.
+- **Live play-by-play**: every fight produces a full commentary feed
+  ("Silva DROPS Okafor with a left hook!", "The referee stands them up for
+  a lack of action"), a fluctuating momentum bar on a countdown clock, a
+  UFC-style **box score** (significant strikes split head/body/leg,
+  takedown accuracy, submission attempts, control time, knockdowns,
+  reversals) and the three **judges' scorecards**. Tap "Watch Live" on any
+  fight in the results right after simulating — with 1x/2x/4x speed and a
+  skip button (`FightBreakdownScreen`). This data isn't persisted, so it's
+  only available immediately after simulating.
+- **Realistic judging**: each of the three judges draws their own
+  striking- vs grappling-weighting bias for the fight, so close rounds
+  genuinely divide a panel — which is what produces split and majority
+  decisions instead of every fight being unanimous. Rounds are scored
+  10-9, or 10-8 for genuine domination (`judging.dart`).
+- **56-attribute fighter model**: **23 Fighting** stats across striking
+  (punching, kicking, power, speed, accuracy, defense, head movement,
+  blocking, footwork), wrestling/clinch (takedowns, takedown defense,
+  wrestling, clinch striking, clinch control, clinch defense) and ground
+  (top control, ground & pound, guard retention, sweeps, scrambling,
+  submission offense, submission defense, grappling); **11 Physical**
+  (cardio, durability, chin, body toughness, leg toughness, strength,
+  athleticism, recovery, explosiveness, flexibility, grip strength);
+  **8 Mental** (fight IQ, composure, aggression, discipline, confidence,
+  heart, adaptability, killer instinct); and **14 Tendencies**. Plus
+  **reach**, which is a real edge at striking range. Every one of these is
+  read individually by the resolver.
 - **Fighting style & tendencies**: every fighter has one `FightingStyle`
   (Boxer, Kickboxer, Muay Thai, Wrestler, BJJ, Wrestling-Heavy, Counter
-  Striker, Pressure Fighter, Point Fighter, Brawler, Well-Rounded) and 11
+  Striker, Pressure Fighter, Point Fighter, Brawler, Well-Rounded) and 14
   `Tendencies` dials (0-100: striking/takedown/kick/clinch frequency,
-  submission attempts, ground & pound, aggression, counter striking, head
-  hunting, body/leg attacks). `roster_seed.dart` correlates generated
-  stats and tendencies with style, so a wrestler's sheet actually looks
-  like a wrestler's.
+  submission attempts, ground & pound, position control, stand-up
+  preference, wall work, aggression, counter striking, head hunting,
+  body/leg attacks). `roster_seed.dart` correlates generated stats *and*
+  tendencies with style, so a wrestler's sheet actually reads like a
+  wrestler's.
+- **Grappling game plans**: three tendencies — `positionControl`,
+  `groundAndPound` and `submissionAttempts` — are normalised against each
+  other every time a fighter ends up on top, which is what makes two
+  wrestlers with identical takedown stats fight completely differently.
+  The seed generator gives each fighter one of four plans (**grinder**,
+  **ground striker**, **submission hunter**, **scrambler**), weighted by
+  style with real spread inside each: most BJJ players hunt the tap, most
+  wrestlers ride position, a wrestling-heavy fighter is more likely to
+  posture up and hit, and a pure striker just wants back to his feet.
 - **Potential**: a ceiling on a fighter's `overall`, shown on their
   profile. Long win streaks (3+) nudge it up, long losing streaks (3+)
   nudge it down, and it never falls below the fighter's current overall
@@ -208,6 +235,86 @@ the native mobile app with real persistence.
   method, round, event/date) next to their contract, queried live from
   every event's card.
 
+## Simulation model
+
+`FightResolver` runs a real bout rather than scoring a matchup. It's the
+most intricate part of the codebase, so here's the shape of it.
+
+**Position state machine.** The fight is always in one of `standing`,
+`clinch` or `ground`, plus (on the ground) a `GroundPosition` of guard →
+half guard → side control → mount → back mount. Position gates everything:
+you can't leg-kick from mount, ground and pound barely lands from closed
+guard but ends fights from mount, and a rear-naked choke is only really on
+from the back.
+
+**Exchange loop.** Each round is 300 seconds. Every exchange consumes a
+variable slice of that clock (a striking exchange is quick, riding position
+is slow), so the round genuinely runs out of time. Per exchange:
+
+1. Whoever's dictating is decided by footwork, speed and aggression —
+   counter-fighters deliberately hang back.
+2. They pick an action weighted by their tendencies, adjusted by fight IQ
+   (shooting into elite takedown defence is punished, so smart fighters do
+   it less), by stamina (gassed fighters stop shooting and start holding)
+   and by whether the opponent is hurt (a hurt opponent gets swarmed, not
+   wrestled).
+3. The action resolves against the *specific* defensive stats that oppose
+   it. Head strikes are defended by defense/head movement/footwork/
+   blocking; leg kicks mostly by checking (blocking); takedowns by takedown
+   defense/wrestling/athleticism/strength/footwork; guard passes by guard
+   retention/scrambling/flexibility/athleticism.
+
+**Condition.** Every stat read goes through one `rate()` call that folds in
+stamina (weighted per attribute — explosive things collapse when tired,
+chin barely cares), accumulated head damage, leg damage where it matters,
+morale, carried-in injuries and whether the fighter is currently rocked.
+Nothing is bolted on at one call site.
+
+**Damage.** Separate head, body and leg damage pools, resisted by
+durability, body toughness and leg toughness respectively. Body work drains
+the gas tank hard; leg damage degrades footwork, kicking and takedowns.
+Accumulated damage raises knockdown probability rather than acting as a
+health bar that empties on schedule — knockdowns come from power vs chin,
+and a knockdown starts a finishing sequence whose outcome turns on the hurt
+fighter's heart, composure and recovery.
+
+**Grappling intent.** The thing that makes two wrestlers different: on top,
+`positionControl` / `groundAndPound` / `submissionAttempts` are normalised
+against each other (and against the fighter's actual skill at each, and the
+current position) to decide whether they ride, strike or hunt a finish.
+From the bottom, `standUpPreference` decides between scrambling up,
+sweeping, or attacking a submission off their back.
+
+**Referee.** A ground position with nothing happening for ~70 seconds gets
+stood up, which is what stops fights becoming 60% control time.
+
+**Judging.** Three judges each draw a striking-vs-grappling bias for the
+fight and score every round on damage (weighted heaviest), significant
+strikes, knockdowns, position-weighted control time, takedowns and
+submission attempts. That disagreement is what produces split decisions.
+
+### Calibration
+
+`test/domain/fight_balance_test.dart` simulates thousands of fights between
+generated fighters and asserts the aggregate output stays in a realistic
+band. Current output against real UFC aggregates:
+
+| Metric | Sim | UFC |
+| --- | --- | --- |
+| KO/TKO | 31% | ~32% |
+| Submission | 24% | ~20% |
+| Decision | 43% | ~47% |
+| Striking accuracy | 42% | ~43% |
+| Takedowns landed / fighter | 1.1 | ~1.3 |
+| Takedown accuracy | 38% | ~38% |
+| Knockdowns / fighter | 0.38 | ~0.35 |
+| Control time / fighter | 143s | ~150s |
+
+Significant strikes landed (~34 per fighter per fight, ~14 per round) runs
+below the UFC average of ~18-21 per round. Pushing volume higher starts
+inflating the knockout rate, so the finish distribution is prioritised over
+raw volume; that's the one number knowingly left off-target.
+
 ## Architecture
 
 ```
@@ -226,9 +333,10 @@ lib/
     seed/              # Starting roster / organization generation for a
                        #   brand-new game
   domain/
-    simulation/        # FightResolver — resolves a matchup from stats +
-                       #   RNG into a live, multi-tick FightResult. Pure
-                       #   Dart, seedable.
+    simulation/        # FightResolver — position-based bout simulation
+                       #   (standing/clinch/ground, damage, stamina) and
+                       #   judging.dart, the three-judge panel. Pure Dart,
+                       #   seedable.
     finance/            # EventFinanceCalculator — attendance/PPV/revenue/
                        #   expenses/reputation from a resolved card
     events/              # RandomEventEngine — generates and resolves

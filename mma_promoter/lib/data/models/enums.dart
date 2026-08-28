@@ -290,7 +290,7 @@ extension VenueInfo on Venue {
   }
 }
 
-enum FightMethod { koTko, submission, decision, drawOrNc }
+enum FightMethod { koTko, submission, decision, doctorStoppage, drawOrNc }
 
 extension FightMethodLabel on FightMethod {
   String get label {
@@ -301,10 +301,142 @@ extension FightMethodLabel on FightMethod {
         return 'Submission';
       case FightMethod.decision:
         return 'Decision';
+      case FightMethod.doctorStoppage:
+        return 'TKO (Doctor Stoppage)';
       case FightMethod.drawOrNc:
         return 'Draw / No Contest';
     }
   }
+}
+
+/// How the judges split on a fight that went the distance.
+enum DecisionType { unanimous, split, majority, none }
+
+extension DecisionTypeLabel on DecisionType {
+  String get label {
+    switch (this) {
+      case DecisionType.unanimous:
+        return 'Unanimous';
+      case DecisionType.split:
+        return 'Split';
+      case DecisionType.majority:
+        return 'Majority';
+      case DecisionType.none:
+        return '';
+    }
+  }
+}
+
+/// Where the fight currently is. The resolver moves between these as
+/// takedowns land, clinches are broken, and fighters stand back up.
+enum FightPosition { standing, clinch, ground }
+
+/// Ground position from the *top* fighter's point of view. Ordered from
+/// least to most dominant — [index] is used directly for advancement.
+enum GroundPosition { guard, halfGuard, sideControl, mount, backMount }
+
+extension GroundPositionInfo on GroundPosition {
+  String get label {
+    switch (this) {
+      case GroundPosition.guard:
+        return 'in guard';
+      case GroundPosition.halfGuard:
+        return 'in half guard';
+      case GroundPosition.sideControl:
+        return 'in side control';
+      case GroundPosition.mount:
+        return 'in mount';
+      case GroundPosition.backMount:
+        return 'on the back';
+    }
+  }
+
+  /// How much of the top fighter's ground striking gets through. Almost
+  /// nothing lands from closed guard; mount is where fights end.
+  double get strikeMultiplier {
+    switch (this) {
+      case GroundPosition.guard:
+        return 0.35;
+      case GroundPosition.halfGuard:
+        return 0.6;
+      case GroundPosition.sideControl:
+        return 0.85;
+      case GroundPosition.mount:
+        return 1.3;
+      case GroundPosition.backMount:
+        return 1.0;
+    }
+  }
+
+  /// How much easier submissions are from here.
+  double get submissionMultiplier {
+    switch (this) {
+      case GroundPosition.guard:
+        return 0.5;
+      case GroundPosition.halfGuard:
+        return 0.7;
+      case GroundPosition.sideControl:
+        return 1.0;
+      case GroundPosition.mount:
+        return 1.4;
+      case GroundPosition.backMount:
+        return 2.2; // rear-naked choke territory.
+    }
+  }
+
+  /// Judges reward dominant position, not just time on top.
+  double get controlValue {
+    switch (this) {
+      case GroundPosition.guard:
+        return 0.5;
+      case GroundPosition.halfGuard:
+        return 0.8;
+      case GroundPosition.sideControl:
+        return 1.0;
+      case GroundPosition.mount:
+        return 1.3;
+      case GroundPosition.backMount:
+        return 1.4;
+    }
+  }
+}
+
+/// What a fighter is targeting with a strike.
+enum StrikeTarget { head, body, leg }
+
+extension StrikeTargetLabel on StrikeTarget {
+  String get label {
+    switch (this) {
+      case StrikeTarget.head:
+        return 'head';
+      case StrikeTarget.body:
+        return 'body';
+      case StrikeTarget.leg:
+        return 'leg';
+    }
+  }
+}
+
+/// What the fighter on top is trying to do — the thing that makes one
+/// wrestler a grinder and the next a finisher from the same position.
+enum GroundIntent { control, groundAndPound, submission }
+
+/// Categories for play-by-play lines, so the UI can colour/icon them.
+enum FightEventType {
+  strike,
+  bigStrike,
+  knockdown,
+  takedown,
+  takedownStuffed,
+  positionChange,
+  submissionAttempt,
+  sweep,
+  standUp,
+  clinch,
+  roundStart,
+  roundEnd,
+  finish,
+  decision,
 }
 
 enum RandomEventType {

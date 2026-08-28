@@ -52,6 +52,14 @@ class $FightersTable extends Fighters
       type: DriftSqlType.int,
       requiredDuringInsert: false,
       defaultValue: const Constant(155));
+  static const VerificationMeta _reachInchesMeta =
+      const VerificationMeta('reachInches');
+  @override
+  late final GeneratedColumn<int> reachInches = GeneratedColumn<int>(
+      'reach_inches', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
   static const VerificationMeta _winsMeta = const VerificationMeta('wins');
   @override
   late final GeneratedColumn<int> wins = GeneratedColumn<int>(
@@ -107,6 +115,30 @@ class $FightersTable extends Fighters
   late final GeneratedColumn<int> defense = GeneratedColumn<int>(
       'defense', aliasedName, false,
       type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _headMovementMeta =
+      const VerificationMeta('headMovement');
+  @override
+  late final GeneratedColumn<int> headMovement = GeneratedColumn<int>(
+      'head_movement', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(50));
+  static const VerificationMeta _blockingMeta =
+      const VerificationMeta('blocking');
+  @override
+  late final GeneratedColumn<int> blocking = GeneratedColumn<int>(
+      'blocking', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(50));
+  static const VerificationMeta _footworkMeta =
+      const VerificationMeta('footwork');
+  @override
+  late final GeneratedColumn<int> footwork = GeneratedColumn<int>(
+      'footwork', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(50));
   static const VerificationMeta _takedownsMeta =
       const VerificationMeta('takedowns');
   @override
@@ -125,12 +157,67 @@ class $FightersTable extends Fighters
   late final GeneratedColumn<int> wrestling = GeneratedColumn<int>(
       'wrestling', aliasedName, false,
       type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _clinchStrikingMeta =
+      const VerificationMeta('clinchStriking');
+  @override
+  late final GeneratedColumn<int> clinchStriking = GeneratedColumn<int>(
+      'clinch_striking', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(50));
+  static const VerificationMeta _clinchControlMeta =
+      const VerificationMeta('clinchControl');
+  @override
+  late final GeneratedColumn<int> clinchControl = GeneratedColumn<int>(
+      'clinch_control', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(50));
+  static const VerificationMeta _clinchDefenseMeta =
+      const VerificationMeta('clinchDefense');
+  @override
+  late final GeneratedColumn<int> clinchDefense = GeneratedColumn<int>(
+      'clinch_defense', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(50));
+  static const VerificationMeta _topControlMeta =
+      const VerificationMeta('topControl');
+  @override
+  late final GeneratedColumn<int> topControl = GeneratedColumn<int>(
+      'top_control', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(50));
   static const VerificationMeta _groundAndPoundMeta =
       const VerificationMeta('groundAndPound');
   @override
   late final GeneratedColumn<int> groundAndPound = GeneratedColumn<int>(
       'ground_and_pound', aliasedName, false,
       type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _guardRetentionMeta =
+      const VerificationMeta('guardRetention');
+  @override
+  late final GeneratedColumn<int> guardRetention = GeneratedColumn<int>(
+      'guard_retention', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(50));
+  static const VerificationMeta _sweepsMeta = const VerificationMeta('sweeps');
+  @override
+  late final GeneratedColumn<int> sweeps = GeneratedColumn<int>(
+      'sweeps', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(50));
+  static const VerificationMeta _scramblingMeta =
+      const VerificationMeta('scrambling');
+  @override
+  late final GeneratedColumn<int> scrambling = GeneratedColumn<int>(
+      'scrambling', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(50));
   static const VerificationMeta _submissionOffenseMeta =
       const VerificationMeta('submissionOffense');
   @override
@@ -195,6 +282,30 @@ class $FightersTable extends Fighters
   late final GeneratedColumn<int> recovery = GeneratedColumn<int>(
       'recovery', aliasedName, false,
       type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _explosivenessMeta =
+      const VerificationMeta('explosiveness');
+  @override
+  late final GeneratedColumn<int> explosiveness = GeneratedColumn<int>(
+      'explosiveness', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(50));
+  static const VerificationMeta _flexibilityMeta =
+      const VerificationMeta('flexibility');
+  @override
+  late final GeneratedColumn<int> flexibility = GeneratedColumn<int>(
+      'flexibility', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(50));
+  static const VerificationMeta _gripStrengthMeta =
+      const VerificationMeta('gripStrength');
+  @override
+  late final GeneratedColumn<int> gripStrength = GeneratedColumn<int>(
+      'grip_strength', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(50));
   static const VerificationMeta _fightIqMeta =
       const VerificationMeta('fightIq');
   @override
@@ -236,6 +347,14 @@ class $FightersTable extends Fighters
   late final GeneratedColumn<int> adaptability = GeneratedColumn<int>(
       'adaptability', aliasedName, false,
       type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _killerInstinctMeta =
+      const VerificationMeta('killerInstinct');
+  @override
+  late final GeneratedColumn<int> killerInstinct = GeneratedColumn<int>(
+      'killer_instinct', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(50));
   static const VerificationMeta _tendStrikingFrequencyMeta =
       const VerificationMeta('tendStrikingFrequency');
   @override
@@ -272,6 +391,30 @@ class $FightersTable extends Fighters
   late final GeneratedColumn<int> tendGroundAndPound = GeneratedColumn<int>(
       'tend_ground_and_pound', aliasedName, false,
       type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _tendPositionControlMeta =
+      const VerificationMeta('tendPositionControl');
+  @override
+  late final GeneratedColumn<int> tendPositionControl = GeneratedColumn<int>(
+      'tend_position_control', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(50));
+  static const VerificationMeta _tendStandUpPreferenceMeta =
+      const VerificationMeta('tendStandUpPreference');
+  @override
+  late final GeneratedColumn<int> tendStandUpPreference = GeneratedColumn<int>(
+      'tend_stand_up_preference', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(50));
+  static const VerificationMeta _tendWallWorkMeta =
+      const VerificationMeta('tendWallWork');
+  @override
+  late final GeneratedColumn<int> tendWallWork = GeneratedColumn<int>(
+      'tend_wall_work', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(50));
   static const VerificationMeta _tendAggressionMeta =
       const VerificationMeta('tendAggression');
   @override
@@ -415,6 +558,7 @@ class $FightersTable extends Fighters
         weightClass,
         heightInches,
         weightLbs,
+        reachInches,
         wins,
         losses,
         draws,
@@ -424,10 +568,20 @@ class $FightersTable extends Fighters
         speed,
         accuracy,
         defense,
+        headMovement,
+        blocking,
+        footwork,
         takedowns,
         takedownDefense,
         wrestling,
+        clinchStriking,
+        clinchControl,
+        clinchDefense,
+        topControl,
         groundAndPound,
+        guardRetention,
+        sweeps,
+        scrambling,
         submissionOffense,
         submissionDefense,
         grappling,
@@ -439,6 +593,9 @@ class $FightersTable extends Fighters
         strength,
         athleticism,
         recovery,
+        explosiveness,
+        flexibility,
+        gripStrength,
         fightIq,
         composure,
         aggression,
@@ -446,12 +603,16 @@ class $FightersTable extends Fighters
         confidence,
         heart,
         adaptability,
+        killerInstinct,
         tendStrikingFrequency,
         tendTakedownFrequency,
         tendKickFrequency,
         tendClinchFrequency,
         tendSubmissionAttempts,
         tendGroundAndPound,
+        tendPositionControl,
+        tendStandUpPreference,
+        tendWallWork,
         tendAggression,
         tendCounterStriking,
         tendHeadHunting,
@@ -524,6 +685,12 @@ class $FightersTable extends Fighters
       context.handle(_weightLbsMeta,
           weightLbs.isAcceptableOrUnknown(data['weight_lbs']!, _weightLbsMeta));
     }
+    if (data.containsKey('reach_inches')) {
+      context.handle(
+          _reachInchesMeta,
+          reachInches.isAcceptableOrUnknown(
+              data['reach_inches']!, _reachInchesMeta));
+    }
     if (data.containsKey('wins')) {
       context.handle(
           _winsMeta, wins.isAcceptableOrUnknown(data['wins']!, _winsMeta));
@@ -572,6 +739,20 @@ class $FightersTable extends Fighters
     } else if (isInserting) {
       context.missing(_defenseMeta);
     }
+    if (data.containsKey('head_movement')) {
+      context.handle(
+          _headMovementMeta,
+          headMovement.isAcceptableOrUnknown(
+              data['head_movement']!, _headMovementMeta));
+    }
+    if (data.containsKey('blocking')) {
+      context.handle(_blockingMeta,
+          blocking.isAcceptableOrUnknown(data['blocking']!, _blockingMeta));
+    }
+    if (data.containsKey('footwork')) {
+      context.handle(_footworkMeta,
+          footwork.isAcceptableOrUnknown(data['footwork']!, _footworkMeta));
+    }
     if (data.containsKey('takedowns')) {
       context.handle(_takedownsMeta,
           takedowns.isAcceptableOrUnknown(data['takedowns']!, _takedownsMeta));
@@ -592,6 +773,30 @@ class $FightersTable extends Fighters
     } else if (isInserting) {
       context.missing(_wrestlingMeta);
     }
+    if (data.containsKey('clinch_striking')) {
+      context.handle(
+          _clinchStrikingMeta,
+          clinchStriking.isAcceptableOrUnknown(
+              data['clinch_striking']!, _clinchStrikingMeta));
+    }
+    if (data.containsKey('clinch_control')) {
+      context.handle(
+          _clinchControlMeta,
+          clinchControl.isAcceptableOrUnknown(
+              data['clinch_control']!, _clinchControlMeta));
+    }
+    if (data.containsKey('clinch_defense')) {
+      context.handle(
+          _clinchDefenseMeta,
+          clinchDefense.isAcceptableOrUnknown(
+              data['clinch_defense']!, _clinchDefenseMeta));
+    }
+    if (data.containsKey('top_control')) {
+      context.handle(
+          _topControlMeta,
+          topControl.isAcceptableOrUnknown(
+              data['top_control']!, _topControlMeta));
+    }
     if (data.containsKey('ground_and_pound')) {
       context.handle(
           _groundAndPoundMeta,
@@ -599,6 +804,22 @@ class $FightersTable extends Fighters
               data['ground_and_pound']!, _groundAndPoundMeta));
     } else if (isInserting) {
       context.missing(_groundAndPoundMeta);
+    }
+    if (data.containsKey('guard_retention')) {
+      context.handle(
+          _guardRetentionMeta,
+          guardRetention.isAcceptableOrUnknown(
+              data['guard_retention']!, _guardRetentionMeta));
+    }
+    if (data.containsKey('sweeps')) {
+      context.handle(_sweepsMeta,
+          sweeps.isAcceptableOrUnknown(data['sweeps']!, _sweepsMeta));
+    }
+    if (data.containsKey('scrambling')) {
+      context.handle(
+          _scramblingMeta,
+          scrambling.isAcceptableOrUnknown(
+              data['scrambling']!, _scramblingMeta));
     }
     if (data.containsKey('submission_offense')) {
       context.handle(
@@ -678,6 +899,24 @@ class $FightersTable extends Fighters
     } else if (isInserting) {
       context.missing(_recoveryMeta);
     }
+    if (data.containsKey('explosiveness')) {
+      context.handle(
+          _explosivenessMeta,
+          explosiveness.isAcceptableOrUnknown(
+              data['explosiveness']!, _explosivenessMeta));
+    }
+    if (data.containsKey('flexibility')) {
+      context.handle(
+          _flexibilityMeta,
+          flexibility.isAcceptableOrUnknown(
+              data['flexibility']!, _flexibilityMeta));
+    }
+    if (data.containsKey('grip_strength')) {
+      context.handle(
+          _gripStrengthMeta,
+          gripStrength.isAcceptableOrUnknown(
+              data['grip_strength']!, _gripStrengthMeta));
+    }
     if (data.containsKey('fight_iq')) {
       context.handle(_fightIqMeta,
           fightIq.isAcceptableOrUnknown(data['fight_iq']!, _fightIqMeta));
@@ -728,6 +967,12 @@ class $FightersTable extends Fighters
     } else if (isInserting) {
       context.missing(_adaptabilityMeta);
     }
+    if (data.containsKey('killer_instinct')) {
+      context.handle(
+          _killerInstinctMeta,
+          killerInstinct.isAcceptableOrUnknown(
+              data['killer_instinct']!, _killerInstinctMeta));
+    }
     if (data.containsKey('tend_striking_frequency')) {
       context.handle(
           _tendStrikingFrequencyMeta,
@@ -775,6 +1020,24 @@ class $FightersTable extends Fighters
               data['tend_ground_and_pound']!, _tendGroundAndPoundMeta));
     } else if (isInserting) {
       context.missing(_tendGroundAndPoundMeta);
+    }
+    if (data.containsKey('tend_position_control')) {
+      context.handle(
+          _tendPositionControlMeta,
+          tendPositionControl.isAcceptableOrUnknown(
+              data['tend_position_control']!, _tendPositionControlMeta));
+    }
+    if (data.containsKey('tend_stand_up_preference')) {
+      context.handle(
+          _tendStandUpPreferenceMeta,
+          tendStandUpPreference.isAcceptableOrUnknown(
+              data['tend_stand_up_preference']!, _tendStandUpPreferenceMeta));
+    }
+    if (data.containsKey('tend_wall_work')) {
+      context.handle(
+          _tendWallWorkMeta,
+          tendWallWork.isAcceptableOrUnknown(
+              data['tend_wall_work']!, _tendWallWorkMeta));
     }
     if (data.containsKey('tend_aggression')) {
       context.handle(
@@ -904,6 +1167,8 @@ class $FightersTable extends Fighters
           .read(DriftSqlType.int, data['${effectivePrefix}height_inches'])!,
       weightLbs: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}weight_lbs'])!,
+      reachInches: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}reach_inches'])!,
       wins: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}wins'])!,
       losses: attachedDatabase.typeMapping
@@ -922,14 +1187,34 @@ class $FightersTable extends Fighters
           .read(DriftSqlType.int, data['${effectivePrefix}accuracy'])!,
       defense: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}defense'])!,
+      headMovement: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}head_movement'])!,
+      blocking: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}blocking'])!,
+      footwork: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}footwork'])!,
       takedowns: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}takedowns'])!,
       takedownDefense: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}takedown_defense'])!,
       wrestling: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}wrestling'])!,
+      clinchStriking: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}clinch_striking'])!,
+      clinchControl: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}clinch_control'])!,
+      clinchDefense: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}clinch_defense'])!,
+      topControl: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}top_control'])!,
       groundAndPound: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}ground_and_pound'])!,
+      guardRetention: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}guard_retention'])!,
+      sweeps: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}sweeps'])!,
+      scrambling: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}scrambling'])!,
       submissionOffense: attachedDatabase.typeMapping.read(
           DriftSqlType.int, data['${effectivePrefix}submission_offense'])!,
       submissionDefense: attachedDatabase.typeMapping.read(
@@ -952,6 +1237,12 @@ class $FightersTable extends Fighters
           .read(DriftSqlType.int, data['${effectivePrefix}athleticism'])!,
       recovery: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}recovery'])!,
+      explosiveness: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}explosiveness'])!,
+      flexibility: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}flexibility'])!,
+      gripStrength: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}grip_strength'])!,
       fightIq: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}fight_iq'])!,
       composure: attachedDatabase.typeMapping
@@ -966,6 +1257,8 @@ class $FightersTable extends Fighters
           .read(DriftSqlType.int, data['${effectivePrefix}heart'])!,
       adaptability: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}adaptability'])!,
+      killerInstinct: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}killer_instinct'])!,
       tendStrikingFrequency: attachedDatabase.typeMapping.read(
           DriftSqlType.int, data['${effectivePrefix}tend_striking_frequency'])!,
       tendTakedownFrequency: attachedDatabase.typeMapping.read(
@@ -979,6 +1272,12 @@ class $FightersTable extends Fighters
           data['${effectivePrefix}tend_submission_attempts'])!,
       tendGroundAndPound: attachedDatabase.typeMapping.read(
           DriftSqlType.int, data['${effectivePrefix}tend_ground_and_pound'])!,
+      tendPositionControl: attachedDatabase.typeMapping.read(
+          DriftSqlType.int, data['${effectivePrefix}tend_position_control'])!,
+      tendStandUpPreference: attachedDatabase.typeMapping.read(DriftSqlType.int,
+          data['${effectivePrefix}tend_stand_up_preference'])!,
+      tendWallWork: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}tend_wall_work'])!,
       tendAggression: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}tend_aggression'])!,
       tendCounterStriking: attachedDatabase.typeMapping.read(
@@ -1033,6 +1332,9 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
   final String weightClass;
   final int heightInches;
   final int weightLbs;
+
+  /// 0 means "not recorded" — the model falls back to height.
+  final int reachInches;
   final int wins;
   final int losses;
   final int draws;
@@ -1042,10 +1344,20 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
   final int speed;
   final int accuracy;
   final int defense;
+  final int headMovement;
+  final int blocking;
+  final int footwork;
   final int takedowns;
   final int takedownDefense;
   final int wrestling;
+  final int clinchStriking;
+  final int clinchControl;
+  final int clinchDefense;
+  final int topControl;
   final int groundAndPound;
+  final int guardRetention;
+  final int sweeps;
+  final int scrambling;
   final int submissionOffense;
   final int submissionDefense;
   final int grappling;
@@ -1057,6 +1369,9 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
   final int strength;
   final int athleticism;
   final int recovery;
+  final int explosiveness;
+  final int flexibility;
+  final int gripStrength;
   final int fightIq;
   final int composure;
   final int aggression;
@@ -1064,12 +1379,16 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
   final int confidence;
   final int heart;
   final int adaptability;
+  final int killerInstinct;
   final int tendStrikingFrequency;
   final int tendTakedownFrequency;
   final int tendKickFrequency;
   final int tendClinchFrequency;
   final int tendSubmissionAttempts;
   final int tendGroundAndPound;
+  final int tendPositionControl;
+  final int tendStandUpPreference;
+  final int tendWallWork;
   final int tendAggression;
   final int tendCounterStriking;
   final int tendHeadHunting;
@@ -1096,6 +1415,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       required this.weightClass,
       required this.heightInches,
       required this.weightLbs,
+      required this.reachInches,
       required this.wins,
       required this.losses,
       required this.draws,
@@ -1105,10 +1425,20 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       required this.speed,
       required this.accuracy,
       required this.defense,
+      required this.headMovement,
+      required this.blocking,
+      required this.footwork,
       required this.takedowns,
       required this.takedownDefense,
       required this.wrestling,
+      required this.clinchStriking,
+      required this.clinchControl,
+      required this.clinchDefense,
+      required this.topControl,
       required this.groundAndPound,
+      required this.guardRetention,
+      required this.sweeps,
+      required this.scrambling,
       required this.submissionOffense,
       required this.submissionDefense,
       required this.grappling,
@@ -1120,6 +1450,9 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       required this.strength,
       required this.athleticism,
       required this.recovery,
+      required this.explosiveness,
+      required this.flexibility,
+      required this.gripStrength,
       required this.fightIq,
       required this.composure,
       required this.aggression,
@@ -1127,12 +1460,16 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       required this.confidence,
       required this.heart,
       required this.adaptability,
+      required this.killerInstinct,
       required this.tendStrikingFrequency,
       required this.tendTakedownFrequency,
       required this.tendKickFrequency,
       required this.tendClinchFrequency,
       required this.tendSubmissionAttempts,
       required this.tendGroundAndPound,
+      required this.tendPositionControl,
+      required this.tendStandUpPreference,
+      required this.tendWallWork,
       required this.tendAggression,
       required this.tendCounterStriking,
       required this.tendHeadHunting,
@@ -1161,6 +1498,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
     map['weight_class'] = Variable<String>(weightClass);
     map['height_inches'] = Variable<int>(heightInches);
     map['weight_lbs'] = Variable<int>(weightLbs);
+    map['reach_inches'] = Variable<int>(reachInches);
     map['wins'] = Variable<int>(wins);
     map['losses'] = Variable<int>(losses);
     map['draws'] = Variable<int>(draws);
@@ -1170,10 +1508,20 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
     map['speed'] = Variable<int>(speed);
     map['accuracy'] = Variable<int>(accuracy);
     map['defense'] = Variable<int>(defense);
+    map['head_movement'] = Variable<int>(headMovement);
+    map['blocking'] = Variable<int>(blocking);
+    map['footwork'] = Variable<int>(footwork);
     map['takedowns'] = Variable<int>(takedowns);
     map['takedown_defense'] = Variable<int>(takedownDefense);
     map['wrestling'] = Variable<int>(wrestling);
+    map['clinch_striking'] = Variable<int>(clinchStriking);
+    map['clinch_control'] = Variable<int>(clinchControl);
+    map['clinch_defense'] = Variable<int>(clinchDefense);
+    map['top_control'] = Variable<int>(topControl);
     map['ground_and_pound'] = Variable<int>(groundAndPound);
+    map['guard_retention'] = Variable<int>(guardRetention);
+    map['sweeps'] = Variable<int>(sweeps);
+    map['scrambling'] = Variable<int>(scrambling);
     map['submission_offense'] = Variable<int>(submissionOffense);
     map['submission_defense'] = Variable<int>(submissionDefense);
     map['grappling'] = Variable<int>(grappling);
@@ -1185,6 +1533,9 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
     map['strength'] = Variable<int>(strength);
     map['athleticism'] = Variable<int>(athleticism);
     map['recovery'] = Variable<int>(recovery);
+    map['explosiveness'] = Variable<int>(explosiveness);
+    map['flexibility'] = Variable<int>(flexibility);
+    map['grip_strength'] = Variable<int>(gripStrength);
     map['fight_iq'] = Variable<int>(fightIq);
     map['composure'] = Variable<int>(composure);
     map['aggression'] = Variable<int>(aggression);
@@ -1192,12 +1543,16 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
     map['confidence'] = Variable<int>(confidence);
     map['heart'] = Variable<int>(heart);
     map['adaptability'] = Variable<int>(adaptability);
+    map['killer_instinct'] = Variable<int>(killerInstinct);
     map['tend_striking_frequency'] = Variable<int>(tendStrikingFrequency);
     map['tend_takedown_frequency'] = Variable<int>(tendTakedownFrequency);
     map['tend_kick_frequency'] = Variable<int>(tendKickFrequency);
     map['tend_clinch_frequency'] = Variable<int>(tendClinchFrequency);
     map['tend_submission_attempts'] = Variable<int>(tendSubmissionAttempts);
     map['tend_ground_and_pound'] = Variable<int>(tendGroundAndPound);
+    map['tend_position_control'] = Variable<int>(tendPositionControl);
+    map['tend_stand_up_preference'] = Variable<int>(tendStandUpPreference);
+    map['tend_wall_work'] = Variable<int>(tendWallWork);
     map['tend_aggression'] = Variable<int>(tendAggression);
     map['tend_counter_striking'] = Variable<int>(tendCounterStriking);
     map['tend_head_hunting'] = Variable<int>(tendHeadHunting);
@@ -1231,6 +1586,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       weightClass: Value(weightClass),
       heightInches: Value(heightInches),
       weightLbs: Value(weightLbs),
+      reachInches: Value(reachInches),
       wins: Value(wins),
       losses: Value(losses),
       draws: Value(draws),
@@ -1240,10 +1596,20 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       speed: Value(speed),
       accuracy: Value(accuracy),
       defense: Value(defense),
+      headMovement: Value(headMovement),
+      blocking: Value(blocking),
+      footwork: Value(footwork),
       takedowns: Value(takedowns),
       takedownDefense: Value(takedownDefense),
       wrestling: Value(wrestling),
+      clinchStriking: Value(clinchStriking),
+      clinchControl: Value(clinchControl),
+      clinchDefense: Value(clinchDefense),
+      topControl: Value(topControl),
       groundAndPound: Value(groundAndPound),
+      guardRetention: Value(guardRetention),
+      sweeps: Value(sweeps),
+      scrambling: Value(scrambling),
       submissionOffense: Value(submissionOffense),
       submissionDefense: Value(submissionDefense),
       grappling: Value(grappling),
@@ -1255,6 +1621,9 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       strength: Value(strength),
       athleticism: Value(athleticism),
       recovery: Value(recovery),
+      explosiveness: Value(explosiveness),
+      flexibility: Value(flexibility),
+      gripStrength: Value(gripStrength),
       fightIq: Value(fightIq),
       composure: Value(composure),
       aggression: Value(aggression),
@@ -1262,12 +1631,16 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       confidence: Value(confidence),
       heart: Value(heart),
       adaptability: Value(adaptability),
+      killerInstinct: Value(killerInstinct),
       tendStrikingFrequency: Value(tendStrikingFrequency),
       tendTakedownFrequency: Value(tendTakedownFrequency),
       tendKickFrequency: Value(tendKickFrequency),
       tendClinchFrequency: Value(tendClinchFrequency),
       tendSubmissionAttempts: Value(tendSubmissionAttempts),
       tendGroundAndPound: Value(tendGroundAndPound),
+      tendPositionControl: Value(tendPositionControl),
+      tendStandUpPreference: Value(tendStandUpPreference),
+      tendWallWork: Value(tendWallWork),
       tendAggression: Value(tendAggression),
       tendCounterStriking: Value(tendCounterStriking),
       tendHeadHunting: Value(tendHeadHunting),
@@ -1302,6 +1675,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       weightClass: serializer.fromJson<String>(json['weightClass']),
       heightInches: serializer.fromJson<int>(json['heightInches']),
       weightLbs: serializer.fromJson<int>(json['weightLbs']),
+      reachInches: serializer.fromJson<int>(json['reachInches']),
       wins: serializer.fromJson<int>(json['wins']),
       losses: serializer.fromJson<int>(json['losses']),
       draws: serializer.fromJson<int>(json['draws']),
@@ -1311,10 +1685,20 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       speed: serializer.fromJson<int>(json['speed']),
       accuracy: serializer.fromJson<int>(json['accuracy']),
       defense: serializer.fromJson<int>(json['defense']),
+      headMovement: serializer.fromJson<int>(json['headMovement']),
+      blocking: serializer.fromJson<int>(json['blocking']),
+      footwork: serializer.fromJson<int>(json['footwork']),
       takedowns: serializer.fromJson<int>(json['takedowns']),
       takedownDefense: serializer.fromJson<int>(json['takedownDefense']),
       wrestling: serializer.fromJson<int>(json['wrestling']),
+      clinchStriking: serializer.fromJson<int>(json['clinchStriking']),
+      clinchControl: serializer.fromJson<int>(json['clinchControl']),
+      clinchDefense: serializer.fromJson<int>(json['clinchDefense']),
+      topControl: serializer.fromJson<int>(json['topControl']),
       groundAndPound: serializer.fromJson<int>(json['groundAndPound']),
+      guardRetention: serializer.fromJson<int>(json['guardRetention']),
+      sweeps: serializer.fromJson<int>(json['sweeps']),
+      scrambling: serializer.fromJson<int>(json['scrambling']),
       submissionOffense: serializer.fromJson<int>(json['submissionOffense']),
       submissionDefense: serializer.fromJson<int>(json['submissionDefense']),
       grappling: serializer.fromJson<int>(json['grappling']),
@@ -1326,6 +1710,9 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       strength: serializer.fromJson<int>(json['strength']),
       athleticism: serializer.fromJson<int>(json['athleticism']),
       recovery: serializer.fromJson<int>(json['recovery']),
+      explosiveness: serializer.fromJson<int>(json['explosiveness']),
+      flexibility: serializer.fromJson<int>(json['flexibility']),
+      gripStrength: serializer.fromJson<int>(json['gripStrength']),
       fightIq: serializer.fromJson<int>(json['fightIq']),
       composure: serializer.fromJson<int>(json['composure']),
       aggression: serializer.fromJson<int>(json['aggression']),
@@ -1333,6 +1720,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       confidence: serializer.fromJson<int>(json['confidence']),
       heart: serializer.fromJson<int>(json['heart']),
       adaptability: serializer.fromJson<int>(json['adaptability']),
+      killerInstinct: serializer.fromJson<int>(json['killerInstinct']),
       tendStrikingFrequency:
           serializer.fromJson<int>(json['tendStrikingFrequency']),
       tendTakedownFrequency:
@@ -1343,6 +1731,11 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       tendSubmissionAttempts:
           serializer.fromJson<int>(json['tendSubmissionAttempts']),
       tendGroundAndPound: serializer.fromJson<int>(json['tendGroundAndPound']),
+      tendPositionControl:
+          serializer.fromJson<int>(json['tendPositionControl']),
+      tendStandUpPreference:
+          serializer.fromJson<int>(json['tendStandUpPreference']),
+      tendWallWork: serializer.fromJson<int>(json['tendWallWork']),
       tendAggression: serializer.fromJson<int>(json['tendAggression']),
       tendCounterStriking:
           serializer.fromJson<int>(json['tendCounterStriking']),
@@ -1377,6 +1770,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       'weightClass': serializer.toJson<String>(weightClass),
       'heightInches': serializer.toJson<int>(heightInches),
       'weightLbs': serializer.toJson<int>(weightLbs),
+      'reachInches': serializer.toJson<int>(reachInches),
       'wins': serializer.toJson<int>(wins),
       'losses': serializer.toJson<int>(losses),
       'draws': serializer.toJson<int>(draws),
@@ -1386,10 +1780,20 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       'speed': serializer.toJson<int>(speed),
       'accuracy': serializer.toJson<int>(accuracy),
       'defense': serializer.toJson<int>(defense),
+      'headMovement': serializer.toJson<int>(headMovement),
+      'blocking': serializer.toJson<int>(blocking),
+      'footwork': serializer.toJson<int>(footwork),
       'takedowns': serializer.toJson<int>(takedowns),
       'takedownDefense': serializer.toJson<int>(takedownDefense),
       'wrestling': serializer.toJson<int>(wrestling),
+      'clinchStriking': serializer.toJson<int>(clinchStriking),
+      'clinchControl': serializer.toJson<int>(clinchControl),
+      'clinchDefense': serializer.toJson<int>(clinchDefense),
+      'topControl': serializer.toJson<int>(topControl),
       'groundAndPound': serializer.toJson<int>(groundAndPound),
+      'guardRetention': serializer.toJson<int>(guardRetention),
+      'sweeps': serializer.toJson<int>(sweeps),
+      'scrambling': serializer.toJson<int>(scrambling),
       'submissionOffense': serializer.toJson<int>(submissionOffense),
       'submissionDefense': serializer.toJson<int>(submissionDefense),
       'grappling': serializer.toJson<int>(grappling),
@@ -1401,6 +1805,9 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       'strength': serializer.toJson<int>(strength),
       'athleticism': serializer.toJson<int>(athleticism),
       'recovery': serializer.toJson<int>(recovery),
+      'explosiveness': serializer.toJson<int>(explosiveness),
+      'flexibility': serializer.toJson<int>(flexibility),
+      'gripStrength': serializer.toJson<int>(gripStrength),
       'fightIq': serializer.toJson<int>(fightIq),
       'composure': serializer.toJson<int>(composure),
       'aggression': serializer.toJson<int>(aggression),
@@ -1408,12 +1815,16 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       'confidence': serializer.toJson<int>(confidence),
       'heart': serializer.toJson<int>(heart),
       'adaptability': serializer.toJson<int>(adaptability),
+      'killerInstinct': serializer.toJson<int>(killerInstinct),
       'tendStrikingFrequency': serializer.toJson<int>(tendStrikingFrequency),
       'tendTakedownFrequency': serializer.toJson<int>(tendTakedownFrequency),
       'tendKickFrequency': serializer.toJson<int>(tendKickFrequency),
       'tendClinchFrequency': serializer.toJson<int>(tendClinchFrequency),
       'tendSubmissionAttempts': serializer.toJson<int>(tendSubmissionAttempts),
       'tendGroundAndPound': serializer.toJson<int>(tendGroundAndPound),
+      'tendPositionControl': serializer.toJson<int>(tendPositionControl),
+      'tendStandUpPreference': serializer.toJson<int>(tendStandUpPreference),
+      'tendWallWork': serializer.toJson<int>(tendWallWork),
       'tendAggression': serializer.toJson<int>(tendAggression),
       'tendCounterStriking': serializer.toJson<int>(tendCounterStriking),
       'tendHeadHunting': serializer.toJson<int>(tendHeadHunting),
@@ -1444,6 +1855,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           String? weightClass,
           int? heightInches,
           int? weightLbs,
+          int? reachInches,
           int? wins,
           int? losses,
           int? draws,
@@ -1453,10 +1865,20 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           int? speed,
           int? accuracy,
           int? defense,
+          int? headMovement,
+          int? blocking,
+          int? footwork,
           int? takedowns,
           int? takedownDefense,
           int? wrestling,
+          int? clinchStriking,
+          int? clinchControl,
+          int? clinchDefense,
+          int? topControl,
           int? groundAndPound,
+          int? guardRetention,
+          int? sweeps,
+          int? scrambling,
           int? submissionOffense,
           int? submissionDefense,
           int? grappling,
@@ -1468,6 +1890,9 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           int? strength,
           int? athleticism,
           int? recovery,
+          int? explosiveness,
+          int? flexibility,
+          int? gripStrength,
           int? fightIq,
           int? composure,
           int? aggression,
@@ -1475,12 +1900,16 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           int? confidence,
           int? heart,
           int? adaptability,
+          int? killerInstinct,
           int? tendStrikingFrequency,
           int? tendTakedownFrequency,
           int? tendKickFrequency,
           int? tendClinchFrequency,
           int? tendSubmissionAttempts,
           int? tendGroundAndPound,
+          int? tendPositionControl,
+          int? tendStandUpPreference,
+          int? tendWallWork,
           int? tendAggression,
           int? tendCounterStriking,
           int? tendHeadHunting,
@@ -1507,6 +1936,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
         weightClass: weightClass ?? this.weightClass,
         heightInches: heightInches ?? this.heightInches,
         weightLbs: weightLbs ?? this.weightLbs,
+        reachInches: reachInches ?? this.reachInches,
         wins: wins ?? this.wins,
         losses: losses ?? this.losses,
         draws: draws ?? this.draws,
@@ -1516,10 +1946,20 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
         speed: speed ?? this.speed,
         accuracy: accuracy ?? this.accuracy,
         defense: defense ?? this.defense,
+        headMovement: headMovement ?? this.headMovement,
+        blocking: blocking ?? this.blocking,
+        footwork: footwork ?? this.footwork,
         takedowns: takedowns ?? this.takedowns,
         takedownDefense: takedownDefense ?? this.takedownDefense,
         wrestling: wrestling ?? this.wrestling,
+        clinchStriking: clinchStriking ?? this.clinchStriking,
+        clinchControl: clinchControl ?? this.clinchControl,
+        clinchDefense: clinchDefense ?? this.clinchDefense,
+        topControl: topControl ?? this.topControl,
         groundAndPound: groundAndPound ?? this.groundAndPound,
+        guardRetention: guardRetention ?? this.guardRetention,
+        sweeps: sweeps ?? this.sweeps,
+        scrambling: scrambling ?? this.scrambling,
         submissionOffense: submissionOffense ?? this.submissionOffense,
         submissionDefense: submissionDefense ?? this.submissionDefense,
         grappling: grappling ?? this.grappling,
@@ -1531,6 +1971,9 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
         strength: strength ?? this.strength,
         athleticism: athleticism ?? this.athleticism,
         recovery: recovery ?? this.recovery,
+        explosiveness: explosiveness ?? this.explosiveness,
+        flexibility: flexibility ?? this.flexibility,
+        gripStrength: gripStrength ?? this.gripStrength,
         fightIq: fightIq ?? this.fightIq,
         composure: composure ?? this.composure,
         aggression: aggression ?? this.aggression,
@@ -1538,6 +1981,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
         confidence: confidence ?? this.confidence,
         heart: heart ?? this.heart,
         adaptability: adaptability ?? this.adaptability,
+        killerInstinct: killerInstinct ?? this.killerInstinct,
         tendStrikingFrequency:
             tendStrikingFrequency ?? this.tendStrikingFrequency,
         tendTakedownFrequency:
@@ -1547,6 +1991,10 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
         tendSubmissionAttempts:
             tendSubmissionAttempts ?? this.tendSubmissionAttempts,
         tendGroundAndPound: tendGroundAndPound ?? this.tendGroundAndPound,
+        tendPositionControl: tendPositionControl ?? this.tendPositionControl,
+        tendStandUpPreference:
+            tendStandUpPreference ?? this.tendStandUpPreference,
+        tendWallWork: tendWallWork ?? this.tendWallWork,
         tendAggression: tendAggression ?? this.tendAggression,
         tendCounterStriking: tendCounterStriking ?? this.tendCounterStriking,
         tendHeadHunting: tendHeadHunting ?? this.tendHeadHunting,
@@ -1582,6 +2030,8 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           ? data.heightInches.value
           : this.heightInches,
       weightLbs: data.weightLbs.present ? data.weightLbs.value : this.weightLbs,
+      reachInches:
+          data.reachInches.present ? data.reachInches.value : this.reachInches,
       wins: data.wins.present ? data.wins.value : this.wins,
       losses: data.losses.present ? data.losses.value : this.losses,
       draws: data.draws.present ? data.draws.value : this.draws,
@@ -1591,14 +2041,36 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       speed: data.speed.present ? data.speed.value : this.speed,
       accuracy: data.accuracy.present ? data.accuracy.value : this.accuracy,
       defense: data.defense.present ? data.defense.value : this.defense,
+      headMovement: data.headMovement.present
+          ? data.headMovement.value
+          : this.headMovement,
+      blocking: data.blocking.present ? data.blocking.value : this.blocking,
+      footwork: data.footwork.present ? data.footwork.value : this.footwork,
       takedowns: data.takedowns.present ? data.takedowns.value : this.takedowns,
       takedownDefense: data.takedownDefense.present
           ? data.takedownDefense.value
           : this.takedownDefense,
       wrestling: data.wrestling.present ? data.wrestling.value : this.wrestling,
+      clinchStriking: data.clinchStriking.present
+          ? data.clinchStriking.value
+          : this.clinchStriking,
+      clinchControl: data.clinchControl.present
+          ? data.clinchControl.value
+          : this.clinchControl,
+      clinchDefense: data.clinchDefense.present
+          ? data.clinchDefense.value
+          : this.clinchDefense,
+      topControl:
+          data.topControl.present ? data.topControl.value : this.topControl,
       groundAndPound: data.groundAndPound.present
           ? data.groundAndPound.value
           : this.groundAndPound,
+      guardRetention: data.guardRetention.present
+          ? data.guardRetention.value
+          : this.guardRetention,
+      sweeps: data.sweeps.present ? data.sweeps.value : this.sweeps,
+      scrambling:
+          data.scrambling.present ? data.scrambling.value : this.scrambling,
       submissionOffense: data.submissionOffense.present
           ? data.submissionOffense.value
           : this.submissionOffense,
@@ -1620,6 +2092,14 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       athleticism:
           data.athleticism.present ? data.athleticism.value : this.athleticism,
       recovery: data.recovery.present ? data.recovery.value : this.recovery,
+      explosiveness: data.explosiveness.present
+          ? data.explosiveness.value
+          : this.explosiveness,
+      flexibility:
+          data.flexibility.present ? data.flexibility.value : this.flexibility,
+      gripStrength: data.gripStrength.present
+          ? data.gripStrength.value
+          : this.gripStrength,
       fightIq: data.fightIq.present ? data.fightIq.value : this.fightIq,
       composure: data.composure.present ? data.composure.value : this.composure,
       aggression:
@@ -1632,6 +2112,9 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       adaptability: data.adaptability.present
           ? data.adaptability.value
           : this.adaptability,
+      killerInstinct: data.killerInstinct.present
+          ? data.killerInstinct.value
+          : this.killerInstinct,
       tendStrikingFrequency: data.tendStrikingFrequency.present
           ? data.tendStrikingFrequency.value
           : this.tendStrikingFrequency,
@@ -1650,6 +2133,15 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       tendGroundAndPound: data.tendGroundAndPound.present
           ? data.tendGroundAndPound.value
           : this.tendGroundAndPound,
+      tendPositionControl: data.tendPositionControl.present
+          ? data.tendPositionControl.value
+          : this.tendPositionControl,
+      tendStandUpPreference: data.tendStandUpPreference.present
+          ? data.tendStandUpPreference.value
+          : this.tendStandUpPreference,
+      tendWallWork: data.tendWallWork.present
+          ? data.tendWallWork.value
+          : this.tendWallWork,
       tendAggression: data.tendAggression.present
           ? data.tendAggression.value
           : this.tendAggression,
@@ -1701,6 +2193,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           ..write('weightClass: $weightClass, ')
           ..write('heightInches: $heightInches, ')
           ..write('weightLbs: $weightLbs, ')
+          ..write('reachInches: $reachInches, ')
           ..write('wins: $wins, ')
           ..write('losses: $losses, ')
           ..write('draws: $draws, ')
@@ -1710,10 +2203,20 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           ..write('speed: $speed, ')
           ..write('accuracy: $accuracy, ')
           ..write('defense: $defense, ')
+          ..write('headMovement: $headMovement, ')
+          ..write('blocking: $blocking, ')
+          ..write('footwork: $footwork, ')
           ..write('takedowns: $takedowns, ')
           ..write('takedownDefense: $takedownDefense, ')
           ..write('wrestling: $wrestling, ')
+          ..write('clinchStriking: $clinchStriking, ')
+          ..write('clinchControl: $clinchControl, ')
+          ..write('clinchDefense: $clinchDefense, ')
+          ..write('topControl: $topControl, ')
           ..write('groundAndPound: $groundAndPound, ')
+          ..write('guardRetention: $guardRetention, ')
+          ..write('sweeps: $sweeps, ')
+          ..write('scrambling: $scrambling, ')
           ..write('submissionOffense: $submissionOffense, ')
           ..write('submissionDefense: $submissionDefense, ')
           ..write('grappling: $grappling, ')
@@ -1725,6 +2228,9 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           ..write('strength: $strength, ')
           ..write('athleticism: $athleticism, ')
           ..write('recovery: $recovery, ')
+          ..write('explosiveness: $explosiveness, ')
+          ..write('flexibility: $flexibility, ')
+          ..write('gripStrength: $gripStrength, ')
           ..write('fightIq: $fightIq, ')
           ..write('composure: $composure, ')
           ..write('aggression: $aggression, ')
@@ -1732,12 +2238,16 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           ..write('confidence: $confidence, ')
           ..write('heart: $heart, ')
           ..write('adaptability: $adaptability, ')
+          ..write('killerInstinct: $killerInstinct, ')
           ..write('tendStrikingFrequency: $tendStrikingFrequency, ')
           ..write('tendTakedownFrequency: $tendTakedownFrequency, ')
           ..write('tendKickFrequency: $tendKickFrequency, ')
           ..write('tendClinchFrequency: $tendClinchFrequency, ')
           ..write('tendSubmissionAttempts: $tendSubmissionAttempts, ')
           ..write('tendGroundAndPound: $tendGroundAndPound, ')
+          ..write('tendPositionControl: $tendPositionControl, ')
+          ..write('tendStandUpPreference: $tendStandUpPreference, ')
+          ..write('tendWallWork: $tendWallWork, ')
           ..write('tendAggression: $tendAggression, ')
           ..write('tendCounterStriking: $tendCounterStriking, ')
           ..write('tendHeadHunting: $tendHeadHunting, ')
@@ -1769,6 +2279,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
         weightClass,
         heightInches,
         weightLbs,
+        reachInches,
         wins,
         losses,
         draws,
@@ -1778,10 +2289,20 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
         speed,
         accuracy,
         defense,
+        headMovement,
+        blocking,
+        footwork,
         takedowns,
         takedownDefense,
         wrestling,
+        clinchStriking,
+        clinchControl,
+        clinchDefense,
+        topControl,
         groundAndPound,
+        guardRetention,
+        sweeps,
+        scrambling,
         submissionOffense,
         submissionDefense,
         grappling,
@@ -1793,6 +2314,9 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
         strength,
         athleticism,
         recovery,
+        explosiveness,
+        flexibility,
+        gripStrength,
         fightIq,
         composure,
         aggression,
@@ -1800,12 +2324,16 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
         confidence,
         heart,
         adaptability,
+        killerInstinct,
         tendStrikingFrequency,
         tendTakedownFrequency,
         tendKickFrequency,
         tendClinchFrequency,
         tendSubmissionAttempts,
         tendGroundAndPound,
+        tendPositionControl,
+        tendStandUpPreference,
+        tendWallWork,
         tendAggression,
         tendCounterStriking,
         tendHeadHunting,
@@ -1836,6 +2364,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           other.weightClass == this.weightClass &&
           other.heightInches == this.heightInches &&
           other.weightLbs == this.weightLbs &&
+          other.reachInches == this.reachInches &&
           other.wins == this.wins &&
           other.losses == this.losses &&
           other.draws == this.draws &&
@@ -1845,10 +2374,20 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           other.speed == this.speed &&
           other.accuracy == this.accuracy &&
           other.defense == this.defense &&
+          other.headMovement == this.headMovement &&
+          other.blocking == this.blocking &&
+          other.footwork == this.footwork &&
           other.takedowns == this.takedowns &&
           other.takedownDefense == this.takedownDefense &&
           other.wrestling == this.wrestling &&
+          other.clinchStriking == this.clinchStriking &&
+          other.clinchControl == this.clinchControl &&
+          other.clinchDefense == this.clinchDefense &&
+          other.topControl == this.topControl &&
           other.groundAndPound == this.groundAndPound &&
+          other.guardRetention == this.guardRetention &&
+          other.sweeps == this.sweeps &&
+          other.scrambling == this.scrambling &&
           other.submissionOffense == this.submissionOffense &&
           other.submissionDefense == this.submissionDefense &&
           other.grappling == this.grappling &&
@@ -1860,6 +2399,9 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           other.strength == this.strength &&
           other.athleticism == this.athleticism &&
           other.recovery == this.recovery &&
+          other.explosiveness == this.explosiveness &&
+          other.flexibility == this.flexibility &&
+          other.gripStrength == this.gripStrength &&
           other.fightIq == this.fightIq &&
           other.composure == this.composure &&
           other.aggression == this.aggression &&
@@ -1867,12 +2409,16 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           other.confidence == this.confidence &&
           other.heart == this.heart &&
           other.adaptability == this.adaptability &&
+          other.killerInstinct == this.killerInstinct &&
           other.tendStrikingFrequency == this.tendStrikingFrequency &&
           other.tendTakedownFrequency == this.tendTakedownFrequency &&
           other.tendKickFrequency == this.tendKickFrequency &&
           other.tendClinchFrequency == this.tendClinchFrequency &&
           other.tendSubmissionAttempts == this.tendSubmissionAttempts &&
           other.tendGroundAndPound == this.tendGroundAndPound &&
+          other.tendPositionControl == this.tendPositionControl &&
+          other.tendStandUpPreference == this.tendStandUpPreference &&
+          other.tendWallWork == this.tendWallWork &&
           other.tendAggression == this.tendAggression &&
           other.tendCounterStriking == this.tendCounterStriking &&
           other.tendHeadHunting == this.tendHeadHunting &&
@@ -1901,6 +2447,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
   final Value<String> weightClass;
   final Value<int> heightInches;
   final Value<int> weightLbs;
+  final Value<int> reachInches;
   final Value<int> wins;
   final Value<int> losses;
   final Value<int> draws;
@@ -1910,10 +2457,20 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
   final Value<int> speed;
   final Value<int> accuracy;
   final Value<int> defense;
+  final Value<int> headMovement;
+  final Value<int> blocking;
+  final Value<int> footwork;
   final Value<int> takedowns;
   final Value<int> takedownDefense;
   final Value<int> wrestling;
+  final Value<int> clinchStriking;
+  final Value<int> clinchControl;
+  final Value<int> clinchDefense;
+  final Value<int> topControl;
   final Value<int> groundAndPound;
+  final Value<int> guardRetention;
+  final Value<int> sweeps;
+  final Value<int> scrambling;
   final Value<int> submissionOffense;
   final Value<int> submissionDefense;
   final Value<int> grappling;
@@ -1925,6 +2482,9 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
   final Value<int> strength;
   final Value<int> athleticism;
   final Value<int> recovery;
+  final Value<int> explosiveness;
+  final Value<int> flexibility;
+  final Value<int> gripStrength;
   final Value<int> fightIq;
   final Value<int> composure;
   final Value<int> aggression;
@@ -1932,12 +2492,16 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
   final Value<int> confidence;
   final Value<int> heart;
   final Value<int> adaptability;
+  final Value<int> killerInstinct;
   final Value<int> tendStrikingFrequency;
   final Value<int> tendTakedownFrequency;
   final Value<int> tendKickFrequency;
   final Value<int> tendClinchFrequency;
   final Value<int> tendSubmissionAttempts;
   final Value<int> tendGroundAndPound;
+  final Value<int> tendPositionControl;
+  final Value<int> tendStandUpPreference;
+  final Value<int> tendWallWork;
   final Value<int> tendAggression;
   final Value<int> tendCounterStriking;
   final Value<int> tendHeadHunting;
@@ -1965,6 +2529,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     this.weightClass = const Value.absent(),
     this.heightInches = const Value.absent(),
     this.weightLbs = const Value.absent(),
+    this.reachInches = const Value.absent(),
     this.wins = const Value.absent(),
     this.losses = const Value.absent(),
     this.draws = const Value.absent(),
@@ -1974,10 +2539,20 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     this.speed = const Value.absent(),
     this.accuracy = const Value.absent(),
     this.defense = const Value.absent(),
+    this.headMovement = const Value.absent(),
+    this.blocking = const Value.absent(),
+    this.footwork = const Value.absent(),
     this.takedowns = const Value.absent(),
     this.takedownDefense = const Value.absent(),
     this.wrestling = const Value.absent(),
+    this.clinchStriking = const Value.absent(),
+    this.clinchControl = const Value.absent(),
+    this.clinchDefense = const Value.absent(),
+    this.topControl = const Value.absent(),
     this.groundAndPound = const Value.absent(),
+    this.guardRetention = const Value.absent(),
+    this.sweeps = const Value.absent(),
+    this.scrambling = const Value.absent(),
     this.submissionOffense = const Value.absent(),
     this.submissionDefense = const Value.absent(),
     this.grappling = const Value.absent(),
@@ -1989,6 +2564,9 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     this.strength = const Value.absent(),
     this.athleticism = const Value.absent(),
     this.recovery = const Value.absent(),
+    this.explosiveness = const Value.absent(),
+    this.flexibility = const Value.absent(),
+    this.gripStrength = const Value.absent(),
     this.fightIq = const Value.absent(),
     this.composure = const Value.absent(),
     this.aggression = const Value.absent(),
@@ -1996,12 +2574,16 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     this.confidence = const Value.absent(),
     this.heart = const Value.absent(),
     this.adaptability = const Value.absent(),
+    this.killerInstinct = const Value.absent(),
     this.tendStrikingFrequency = const Value.absent(),
     this.tendTakedownFrequency = const Value.absent(),
     this.tendKickFrequency = const Value.absent(),
     this.tendClinchFrequency = const Value.absent(),
     this.tendSubmissionAttempts = const Value.absent(),
     this.tendGroundAndPound = const Value.absent(),
+    this.tendPositionControl = const Value.absent(),
+    this.tendStandUpPreference = const Value.absent(),
+    this.tendWallWork = const Value.absent(),
     this.tendAggression = const Value.absent(),
     this.tendCounterStriking = const Value.absent(),
     this.tendHeadHunting = const Value.absent(),
@@ -2030,6 +2612,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     required String weightClass,
     this.heightInches = const Value.absent(),
     this.weightLbs = const Value.absent(),
+    this.reachInches = const Value.absent(),
     this.wins = const Value.absent(),
     this.losses = const Value.absent(),
     this.draws = const Value.absent(),
@@ -2039,10 +2622,20 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     required int speed,
     required int accuracy,
     required int defense,
+    this.headMovement = const Value.absent(),
+    this.blocking = const Value.absent(),
+    this.footwork = const Value.absent(),
     required int takedowns,
     required int takedownDefense,
     required int wrestling,
+    this.clinchStriking = const Value.absent(),
+    this.clinchControl = const Value.absent(),
+    this.clinchDefense = const Value.absent(),
+    this.topControl = const Value.absent(),
     required int groundAndPound,
+    this.guardRetention = const Value.absent(),
+    this.sweeps = const Value.absent(),
+    this.scrambling = const Value.absent(),
     required int submissionOffense,
     required int submissionDefense,
     required int grappling,
@@ -2054,6 +2647,9 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     required int strength,
     required int athleticism,
     required int recovery,
+    this.explosiveness = const Value.absent(),
+    this.flexibility = const Value.absent(),
+    this.gripStrength = const Value.absent(),
     required int fightIq,
     required int composure,
     required int aggression,
@@ -2061,12 +2657,16 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     required int confidence,
     required int heart,
     required int adaptability,
+    this.killerInstinct = const Value.absent(),
     required int tendStrikingFrequency,
     required int tendTakedownFrequency,
     required int tendKickFrequency,
     required int tendClinchFrequency,
     required int tendSubmissionAttempts,
     required int tendGroundAndPound,
+    this.tendPositionControl = const Value.absent(),
+    this.tendStandUpPreference = const Value.absent(),
+    this.tendWallWork = const Value.absent(),
     required int tendAggression,
     required int tendCounterStriking,
     required int tendHeadHunting,
@@ -2138,6 +2738,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     Expression<String>? weightClass,
     Expression<int>? heightInches,
     Expression<int>? weightLbs,
+    Expression<int>? reachInches,
     Expression<int>? wins,
     Expression<int>? losses,
     Expression<int>? draws,
@@ -2147,10 +2748,20 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     Expression<int>? speed,
     Expression<int>? accuracy,
     Expression<int>? defense,
+    Expression<int>? headMovement,
+    Expression<int>? blocking,
+    Expression<int>? footwork,
     Expression<int>? takedowns,
     Expression<int>? takedownDefense,
     Expression<int>? wrestling,
+    Expression<int>? clinchStriking,
+    Expression<int>? clinchControl,
+    Expression<int>? clinchDefense,
+    Expression<int>? topControl,
     Expression<int>? groundAndPound,
+    Expression<int>? guardRetention,
+    Expression<int>? sweeps,
+    Expression<int>? scrambling,
     Expression<int>? submissionOffense,
     Expression<int>? submissionDefense,
     Expression<int>? grappling,
@@ -2162,6 +2773,9 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     Expression<int>? strength,
     Expression<int>? athleticism,
     Expression<int>? recovery,
+    Expression<int>? explosiveness,
+    Expression<int>? flexibility,
+    Expression<int>? gripStrength,
     Expression<int>? fightIq,
     Expression<int>? composure,
     Expression<int>? aggression,
@@ -2169,12 +2783,16 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     Expression<int>? confidence,
     Expression<int>? heart,
     Expression<int>? adaptability,
+    Expression<int>? killerInstinct,
     Expression<int>? tendStrikingFrequency,
     Expression<int>? tendTakedownFrequency,
     Expression<int>? tendKickFrequency,
     Expression<int>? tendClinchFrequency,
     Expression<int>? tendSubmissionAttempts,
     Expression<int>? tendGroundAndPound,
+    Expression<int>? tendPositionControl,
+    Expression<int>? tendStandUpPreference,
+    Expression<int>? tendWallWork,
     Expression<int>? tendAggression,
     Expression<int>? tendCounterStriking,
     Expression<int>? tendHeadHunting,
@@ -2203,6 +2821,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
       if (weightClass != null) 'weight_class': weightClass,
       if (heightInches != null) 'height_inches': heightInches,
       if (weightLbs != null) 'weight_lbs': weightLbs,
+      if (reachInches != null) 'reach_inches': reachInches,
       if (wins != null) 'wins': wins,
       if (losses != null) 'losses': losses,
       if (draws != null) 'draws': draws,
@@ -2212,10 +2831,20 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
       if (speed != null) 'speed': speed,
       if (accuracy != null) 'accuracy': accuracy,
       if (defense != null) 'defense': defense,
+      if (headMovement != null) 'head_movement': headMovement,
+      if (blocking != null) 'blocking': blocking,
+      if (footwork != null) 'footwork': footwork,
       if (takedowns != null) 'takedowns': takedowns,
       if (takedownDefense != null) 'takedown_defense': takedownDefense,
       if (wrestling != null) 'wrestling': wrestling,
+      if (clinchStriking != null) 'clinch_striking': clinchStriking,
+      if (clinchControl != null) 'clinch_control': clinchControl,
+      if (clinchDefense != null) 'clinch_defense': clinchDefense,
+      if (topControl != null) 'top_control': topControl,
       if (groundAndPound != null) 'ground_and_pound': groundAndPound,
+      if (guardRetention != null) 'guard_retention': guardRetention,
+      if (sweeps != null) 'sweeps': sweeps,
+      if (scrambling != null) 'scrambling': scrambling,
       if (submissionOffense != null) 'submission_offense': submissionOffense,
       if (submissionDefense != null) 'submission_defense': submissionDefense,
       if (grappling != null) 'grappling': grappling,
@@ -2227,6 +2856,9 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
       if (strength != null) 'strength': strength,
       if (athleticism != null) 'athleticism': athleticism,
       if (recovery != null) 'recovery': recovery,
+      if (explosiveness != null) 'explosiveness': explosiveness,
+      if (flexibility != null) 'flexibility': flexibility,
+      if (gripStrength != null) 'grip_strength': gripStrength,
       if (fightIq != null) 'fight_iq': fightIq,
       if (composure != null) 'composure': composure,
       if (aggression != null) 'aggression': aggression,
@@ -2234,6 +2866,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
       if (confidence != null) 'confidence': confidence,
       if (heart != null) 'heart': heart,
       if (adaptability != null) 'adaptability': adaptability,
+      if (killerInstinct != null) 'killer_instinct': killerInstinct,
       if (tendStrikingFrequency != null)
         'tend_striking_frequency': tendStrikingFrequency,
       if (tendTakedownFrequency != null)
@@ -2245,6 +2878,11 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
         'tend_submission_attempts': tendSubmissionAttempts,
       if (tendGroundAndPound != null)
         'tend_ground_and_pound': tendGroundAndPound,
+      if (tendPositionControl != null)
+        'tend_position_control': tendPositionControl,
+      if (tendStandUpPreference != null)
+        'tend_stand_up_preference': tendStandUpPreference,
+      if (tendWallWork != null) 'tend_wall_work': tendWallWork,
       if (tendAggression != null) 'tend_aggression': tendAggression,
       if (tendCounterStriking != null)
         'tend_counter_striking': tendCounterStriking,
@@ -2278,6 +2916,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
       Value<String>? weightClass,
       Value<int>? heightInches,
       Value<int>? weightLbs,
+      Value<int>? reachInches,
       Value<int>? wins,
       Value<int>? losses,
       Value<int>? draws,
@@ -2287,10 +2926,20 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
       Value<int>? speed,
       Value<int>? accuracy,
       Value<int>? defense,
+      Value<int>? headMovement,
+      Value<int>? blocking,
+      Value<int>? footwork,
       Value<int>? takedowns,
       Value<int>? takedownDefense,
       Value<int>? wrestling,
+      Value<int>? clinchStriking,
+      Value<int>? clinchControl,
+      Value<int>? clinchDefense,
+      Value<int>? topControl,
       Value<int>? groundAndPound,
+      Value<int>? guardRetention,
+      Value<int>? sweeps,
+      Value<int>? scrambling,
       Value<int>? submissionOffense,
       Value<int>? submissionDefense,
       Value<int>? grappling,
@@ -2302,6 +2951,9 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
       Value<int>? strength,
       Value<int>? athleticism,
       Value<int>? recovery,
+      Value<int>? explosiveness,
+      Value<int>? flexibility,
+      Value<int>? gripStrength,
       Value<int>? fightIq,
       Value<int>? composure,
       Value<int>? aggression,
@@ -2309,12 +2961,16 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
       Value<int>? confidence,
       Value<int>? heart,
       Value<int>? adaptability,
+      Value<int>? killerInstinct,
       Value<int>? tendStrikingFrequency,
       Value<int>? tendTakedownFrequency,
       Value<int>? tendKickFrequency,
       Value<int>? tendClinchFrequency,
       Value<int>? tendSubmissionAttempts,
       Value<int>? tendGroundAndPound,
+      Value<int>? tendPositionControl,
+      Value<int>? tendStandUpPreference,
+      Value<int>? tendWallWork,
       Value<int>? tendAggression,
       Value<int>? tendCounterStriking,
       Value<int>? tendHeadHunting,
@@ -2342,6 +2998,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
       weightClass: weightClass ?? this.weightClass,
       heightInches: heightInches ?? this.heightInches,
       weightLbs: weightLbs ?? this.weightLbs,
+      reachInches: reachInches ?? this.reachInches,
       wins: wins ?? this.wins,
       losses: losses ?? this.losses,
       draws: draws ?? this.draws,
@@ -2351,10 +3008,20 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
       speed: speed ?? this.speed,
       accuracy: accuracy ?? this.accuracy,
       defense: defense ?? this.defense,
+      headMovement: headMovement ?? this.headMovement,
+      blocking: blocking ?? this.blocking,
+      footwork: footwork ?? this.footwork,
       takedowns: takedowns ?? this.takedowns,
       takedownDefense: takedownDefense ?? this.takedownDefense,
       wrestling: wrestling ?? this.wrestling,
+      clinchStriking: clinchStriking ?? this.clinchStriking,
+      clinchControl: clinchControl ?? this.clinchControl,
+      clinchDefense: clinchDefense ?? this.clinchDefense,
+      topControl: topControl ?? this.topControl,
       groundAndPound: groundAndPound ?? this.groundAndPound,
+      guardRetention: guardRetention ?? this.guardRetention,
+      sweeps: sweeps ?? this.sweeps,
+      scrambling: scrambling ?? this.scrambling,
       submissionOffense: submissionOffense ?? this.submissionOffense,
       submissionDefense: submissionDefense ?? this.submissionDefense,
       grappling: grappling ?? this.grappling,
@@ -2366,6 +3033,9 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
       strength: strength ?? this.strength,
       athleticism: athleticism ?? this.athleticism,
       recovery: recovery ?? this.recovery,
+      explosiveness: explosiveness ?? this.explosiveness,
+      flexibility: flexibility ?? this.flexibility,
+      gripStrength: gripStrength ?? this.gripStrength,
       fightIq: fightIq ?? this.fightIq,
       composure: composure ?? this.composure,
       aggression: aggression ?? this.aggression,
@@ -2373,6 +3043,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
       confidence: confidence ?? this.confidence,
       heart: heart ?? this.heart,
       adaptability: adaptability ?? this.adaptability,
+      killerInstinct: killerInstinct ?? this.killerInstinct,
       tendStrikingFrequency:
           tendStrikingFrequency ?? this.tendStrikingFrequency,
       tendTakedownFrequency:
@@ -2382,6 +3053,10 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
       tendSubmissionAttempts:
           tendSubmissionAttempts ?? this.tendSubmissionAttempts,
       tendGroundAndPound: tendGroundAndPound ?? this.tendGroundAndPound,
+      tendPositionControl: tendPositionControl ?? this.tendPositionControl,
+      tendStandUpPreference:
+          tendStandUpPreference ?? this.tendStandUpPreference,
+      tendWallWork: tendWallWork ?? this.tendWallWork,
       tendAggression: tendAggression ?? this.tendAggression,
       tendCounterStriking: tendCounterStriking ?? this.tendCounterStriking,
       tendHeadHunting: tendHeadHunting ?? this.tendHeadHunting,
@@ -2429,6 +3104,9 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     if (weightLbs.present) {
       map['weight_lbs'] = Variable<int>(weightLbs.value);
     }
+    if (reachInches.present) {
+      map['reach_inches'] = Variable<int>(reachInches.value);
+    }
     if (wins.present) {
       map['wins'] = Variable<int>(wins.value);
     }
@@ -2456,6 +3134,15 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     if (defense.present) {
       map['defense'] = Variable<int>(defense.value);
     }
+    if (headMovement.present) {
+      map['head_movement'] = Variable<int>(headMovement.value);
+    }
+    if (blocking.present) {
+      map['blocking'] = Variable<int>(blocking.value);
+    }
+    if (footwork.present) {
+      map['footwork'] = Variable<int>(footwork.value);
+    }
     if (takedowns.present) {
       map['takedowns'] = Variable<int>(takedowns.value);
     }
@@ -2465,8 +3152,29 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     if (wrestling.present) {
       map['wrestling'] = Variable<int>(wrestling.value);
     }
+    if (clinchStriking.present) {
+      map['clinch_striking'] = Variable<int>(clinchStriking.value);
+    }
+    if (clinchControl.present) {
+      map['clinch_control'] = Variable<int>(clinchControl.value);
+    }
+    if (clinchDefense.present) {
+      map['clinch_defense'] = Variable<int>(clinchDefense.value);
+    }
+    if (topControl.present) {
+      map['top_control'] = Variable<int>(topControl.value);
+    }
     if (groundAndPound.present) {
       map['ground_and_pound'] = Variable<int>(groundAndPound.value);
+    }
+    if (guardRetention.present) {
+      map['guard_retention'] = Variable<int>(guardRetention.value);
+    }
+    if (sweeps.present) {
+      map['sweeps'] = Variable<int>(sweeps.value);
+    }
+    if (scrambling.present) {
+      map['scrambling'] = Variable<int>(scrambling.value);
     }
     if (submissionOffense.present) {
       map['submission_offense'] = Variable<int>(submissionOffense.value);
@@ -2501,6 +3209,15 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     if (recovery.present) {
       map['recovery'] = Variable<int>(recovery.value);
     }
+    if (explosiveness.present) {
+      map['explosiveness'] = Variable<int>(explosiveness.value);
+    }
+    if (flexibility.present) {
+      map['flexibility'] = Variable<int>(flexibility.value);
+    }
+    if (gripStrength.present) {
+      map['grip_strength'] = Variable<int>(gripStrength.value);
+    }
     if (fightIq.present) {
       map['fight_iq'] = Variable<int>(fightIq.value);
     }
@@ -2522,6 +3239,9 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     if (adaptability.present) {
       map['adaptability'] = Variable<int>(adaptability.value);
     }
+    if (killerInstinct.present) {
+      map['killer_instinct'] = Variable<int>(killerInstinct.value);
+    }
     if (tendStrikingFrequency.present) {
       map['tend_striking_frequency'] =
           Variable<int>(tendStrikingFrequency.value);
@@ -2542,6 +3262,16 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     }
     if (tendGroundAndPound.present) {
       map['tend_ground_and_pound'] = Variable<int>(tendGroundAndPound.value);
+    }
+    if (tendPositionControl.present) {
+      map['tend_position_control'] = Variable<int>(tendPositionControl.value);
+    }
+    if (tendStandUpPreference.present) {
+      map['tend_stand_up_preference'] =
+          Variable<int>(tendStandUpPreference.value);
+    }
+    if (tendWallWork.present) {
+      map['tend_wall_work'] = Variable<int>(tendWallWork.value);
     }
     if (tendAggression.present) {
       map['tend_aggression'] = Variable<int>(tendAggression.value);
@@ -2615,6 +3345,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
           ..write('weightClass: $weightClass, ')
           ..write('heightInches: $heightInches, ')
           ..write('weightLbs: $weightLbs, ')
+          ..write('reachInches: $reachInches, ')
           ..write('wins: $wins, ')
           ..write('losses: $losses, ')
           ..write('draws: $draws, ')
@@ -2624,10 +3355,20 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
           ..write('speed: $speed, ')
           ..write('accuracy: $accuracy, ')
           ..write('defense: $defense, ')
+          ..write('headMovement: $headMovement, ')
+          ..write('blocking: $blocking, ')
+          ..write('footwork: $footwork, ')
           ..write('takedowns: $takedowns, ')
           ..write('takedownDefense: $takedownDefense, ')
           ..write('wrestling: $wrestling, ')
+          ..write('clinchStriking: $clinchStriking, ')
+          ..write('clinchControl: $clinchControl, ')
+          ..write('clinchDefense: $clinchDefense, ')
+          ..write('topControl: $topControl, ')
           ..write('groundAndPound: $groundAndPound, ')
+          ..write('guardRetention: $guardRetention, ')
+          ..write('sweeps: $sweeps, ')
+          ..write('scrambling: $scrambling, ')
           ..write('submissionOffense: $submissionOffense, ')
           ..write('submissionDefense: $submissionDefense, ')
           ..write('grappling: $grappling, ')
@@ -2639,6 +3380,9 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
           ..write('strength: $strength, ')
           ..write('athleticism: $athleticism, ')
           ..write('recovery: $recovery, ')
+          ..write('explosiveness: $explosiveness, ')
+          ..write('flexibility: $flexibility, ')
+          ..write('gripStrength: $gripStrength, ')
           ..write('fightIq: $fightIq, ')
           ..write('composure: $composure, ')
           ..write('aggression: $aggression, ')
@@ -2646,12 +3390,16 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
           ..write('confidence: $confidence, ')
           ..write('heart: $heart, ')
           ..write('adaptability: $adaptability, ')
+          ..write('killerInstinct: $killerInstinct, ')
           ..write('tendStrikingFrequency: $tendStrikingFrequency, ')
           ..write('tendTakedownFrequency: $tendTakedownFrequency, ')
           ..write('tendKickFrequency: $tendKickFrequency, ')
           ..write('tendClinchFrequency: $tendClinchFrequency, ')
           ..write('tendSubmissionAttempts: $tendSubmissionAttempts, ')
           ..write('tendGroundAndPound: $tendGroundAndPound, ')
+          ..write('tendPositionControl: $tendPositionControl, ')
+          ..write('tendStandUpPreference: $tendStandUpPreference, ')
+          ..write('tendWallWork: $tendWallWork, ')
           ..write('tendAggression: $tendAggression, ')
           ..write('tendCounterStriking: $tendCounterStriking, ')
           ..write('tendHeadHunting: $tendHeadHunting, ')
@@ -4325,6 +5073,30 @@ class $FightsTable extends Fights with TableInfo<$FightsTable, FightRow> {
   late final GeneratedColumn<int> resultRound = GeneratedColumn<int>(
       'result_round', aliasedName, true,
       type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _resultTimeSecondsMeta =
+      const VerificationMeta('resultTimeSeconds');
+  @override
+  late final GeneratedColumn<int> resultTimeSeconds = GeneratedColumn<int>(
+      'result_time_seconds', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(300));
+  static const VerificationMeta _resultDecisionTypeMeta =
+      const VerificationMeta('resultDecisionType');
+  @override
+  late final GeneratedColumn<String> resultDecisionType =
+      GeneratedColumn<String>('result_decision_type', aliasedName, false,
+          type: DriftSqlType.string,
+          requiredDuringInsert: false,
+          defaultValue: const Constant('none'));
+  static const VerificationMeta _resultMethodDetailMeta =
+      const VerificationMeta('resultMethodDetail');
+  @override
+  late final GeneratedColumn<String> resultMethodDetail =
+      GeneratedColumn<String>('result_method_detail', aliasedName, false,
+          type: DriftSqlType.string,
+          requiredDuringInsert: false,
+          defaultValue: const Constant(''));
   static const VerificationMeta _winnerPerformanceRatingMeta =
       const VerificationMeta('winnerPerformanceRating');
   @override
@@ -4364,6 +5136,9 @@ class $FightsTable extends Fights with TableInfo<$FightsTable, FightRow> {
         resultWinnerId,
         resultMethod,
         resultRound,
+        resultTimeSeconds,
+        resultDecisionType,
+        resultMethodDetail,
         winnerPerformanceRating,
         loserPerformanceRating,
         resultFighterAInjury,
@@ -4458,6 +5233,24 @@ class $FightsTable extends Fights with TableInfo<$FightsTable, FightRow> {
           resultRound.isAcceptableOrUnknown(
               data['result_round']!, _resultRoundMeta));
     }
+    if (data.containsKey('result_time_seconds')) {
+      context.handle(
+          _resultTimeSecondsMeta,
+          resultTimeSeconds.isAcceptableOrUnknown(
+              data['result_time_seconds']!, _resultTimeSecondsMeta));
+    }
+    if (data.containsKey('result_decision_type')) {
+      context.handle(
+          _resultDecisionTypeMeta,
+          resultDecisionType.isAcceptableOrUnknown(
+              data['result_decision_type']!, _resultDecisionTypeMeta));
+    }
+    if (data.containsKey('result_method_detail')) {
+      context.handle(
+          _resultMethodDetailMeta,
+          resultMethodDetail.isAcceptableOrUnknown(
+              data['result_method_detail']!, _resultMethodDetailMeta));
+    }
     if (data.containsKey('winner_performance_rating')) {
       context.handle(
           _winnerPerformanceRatingMeta,
@@ -4518,6 +5311,12 @@ class $FightsTable extends Fights with TableInfo<$FightsTable, FightRow> {
           .read(DriftSqlType.string, data['${effectivePrefix}result_method']),
       resultRound: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}result_round']),
+      resultTimeSeconds: attachedDatabase.typeMapping.read(
+          DriftSqlType.int, data['${effectivePrefix}result_time_seconds'])!,
+      resultDecisionType: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}result_decision_type'])!,
+      resultMethodDetail: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}result_method_detail'])!,
       winnerPerformanceRating: attachedDatabase.typeMapping.read(
           DriftSqlType.int,
           data['${effectivePrefix}winner_performance_rating']),
@@ -4552,6 +5351,9 @@ class FightRow extends DataClass implements Insertable<FightRow> {
   final String? resultWinnerId;
   final String? resultMethod;
   final int? resultRound;
+  final int resultTimeSeconds;
+  final String resultDecisionType;
+  final String resultMethodDetail;
   final int? winnerPerformanceRating;
   final int? loserPerformanceRating;
   final String? resultFighterAInjury;
@@ -4570,6 +5372,9 @@ class FightRow extends DataClass implements Insertable<FightRow> {
       this.resultWinnerId,
       this.resultMethod,
       this.resultRound,
+      required this.resultTimeSeconds,
+      required this.resultDecisionType,
+      required this.resultMethodDetail,
       this.winnerPerformanceRating,
       this.loserPerformanceRating,
       this.resultFighterAInjury,
@@ -4596,6 +5401,9 @@ class FightRow extends DataClass implements Insertable<FightRow> {
     if (!nullToAbsent || resultRound != null) {
       map['result_round'] = Variable<int>(resultRound);
     }
+    map['result_time_seconds'] = Variable<int>(resultTimeSeconds);
+    map['result_decision_type'] = Variable<String>(resultDecisionType);
+    map['result_method_detail'] = Variable<String>(resultMethodDetail);
     if (!nullToAbsent || winnerPerformanceRating != null) {
       map['winner_performance_rating'] = Variable<int>(winnerPerformanceRating);
     }
@@ -4632,6 +5440,9 @@ class FightRow extends DataClass implements Insertable<FightRow> {
       resultRound: resultRound == null && nullToAbsent
           ? const Value.absent()
           : Value(resultRound),
+      resultTimeSeconds: Value(resultTimeSeconds),
+      resultDecisionType: Value(resultDecisionType),
+      resultMethodDetail: Value(resultMethodDetail),
       winnerPerformanceRating: winnerPerformanceRating == null && nullToAbsent
           ? const Value.absent()
           : Value(winnerPerformanceRating),
@@ -4664,6 +5475,11 @@ class FightRow extends DataClass implements Insertable<FightRow> {
       resultWinnerId: serializer.fromJson<String?>(json['resultWinnerId']),
       resultMethod: serializer.fromJson<String?>(json['resultMethod']),
       resultRound: serializer.fromJson<int?>(json['resultRound']),
+      resultTimeSeconds: serializer.fromJson<int>(json['resultTimeSeconds']),
+      resultDecisionType:
+          serializer.fromJson<String>(json['resultDecisionType']),
+      resultMethodDetail:
+          serializer.fromJson<String>(json['resultMethodDetail']),
       winnerPerformanceRating:
           serializer.fromJson<int?>(json['winnerPerformanceRating']),
       loserPerformanceRating:
@@ -4691,6 +5507,9 @@ class FightRow extends DataClass implements Insertable<FightRow> {
       'resultWinnerId': serializer.toJson<String?>(resultWinnerId),
       'resultMethod': serializer.toJson<String?>(resultMethod),
       'resultRound': serializer.toJson<int?>(resultRound),
+      'resultTimeSeconds': serializer.toJson<int>(resultTimeSeconds),
+      'resultDecisionType': serializer.toJson<String>(resultDecisionType),
+      'resultMethodDetail': serializer.toJson<String>(resultMethodDetail),
       'winnerPerformanceRating':
           serializer.toJson<int?>(winnerPerformanceRating),
       'loserPerformanceRating': serializer.toJson<int?>(loserPerformanceRating),
@@ -4713,6 +5532,9 @@ class FightRow extends DataClass implements Insertable<FightRow> {
           Value<String?> resultWinnerId = const Value.absent(),
           Value<String?> resultMethod = const Value.absent(),
           Value<int?> resultRound = const Value.absent(),
+          int? resultTimeSeconds,
+          String? resultDecisionType,
+          String? resultMethodDetail,
           Value<int?> winnerPerformanceRating = const Value.absent(),
           Value<int?> loserPerformanceRating = const Value.absent(),
           Value<String?> resultFighterAInjury = const Value.absent(),
@@ -4733,6 +5555,9 @@ class FightRow extends DataClass implements Insertable<FightRow> {
         resultMethod:
             resultMethod.present ? resultMethod.value : this.resultMethod,
         resultRound: resultRound.present ? resultRound.value : this.resultRound,
+        resultTimeSeconds: resultTimeSeconds ?? this.resultTimeSeconds,
+        resultDecisionType: resultDecisionType ?? this.resultDecisionType,
+        resultMethodDetail: resultMethodDetail ?? this.resultMethodDetail,
         winnerPerformanceRating: winnerPerformanceRating.present
             ? winnerPerformanceRating.value
             : this.winnerPerformanceRating,
@@ -4774,6 +5599,15 @@ class FightRow extends DataClass implements Insertable<FightRow> {
           : this.resultMethod,
       resultRound:
           data.resultRound.present ? data.resultRound.value : this.resultRound,
+      resultTimeSeconds: data.resultTimeSeconds.present
+          ? data.resultTimeSeconds.value
+          : this.resultTimeSeconds,
+      resultDecisionType: data.resultDecisionType.present
+          ? data.resultDecisionType.value
+          : this.resultDecisionType,
+      resultMethodDetail: data.resultMethodDetail.present
+          ? data.resultMethodDetail.value
+          : this.resultMethodDetail,
       winnerPerformanceRating: data.winnerPerformanceRating.present
           ? data.winnerPerformanceRating.value
           : this.winnerPerformanceRating,
@@ -4805,6 +5639,9 @@ class FightRow extends DataClass implements Insertable<FightRow> {
           ..write('resultWinnerId: $resultWinnerId, ')
           ..write('resultMethod: $resultMethod, ')
           ..write('resultRound: $resultRound, ')
+          ..write('resultTimeSeconds: $resultTimeSeconds, ')
+          ..write('resultDecisionType: $resultDecisionType, ')
+          ..write('resultMethodDetail: $resultMethodDetail, ')
           ..write('winnerPerformanceRating: $winnerPerformanceRating, ')
           ..write('loserPerformanceRating: $loserPerformanceRating, ')
           ..write('resultFighterAInjury: $resultFighterAInjury, ')
@@ -4828,6 +5665,9 @@ class FightRow extends DataClass implements Insertable<FightRow> {
       resultWinnerId,
       resultMethod,
       resultRound,
+      resultTimeSeconds,
+      resultDecisionType,
+      resultMethodDetail,
       winnerPerformanceRating,
       loserPerformanceRating,
       resultFighterAInjury,
@@ -4849,6 +5689,9 @@ class FightRow extends DataClass implements Insertable<FightRow> {
           other.resultWinnerId == this.resultWinnerId &&
           other.resultMethod == this.resultMethod &&
           other.resultRound == this.resultRound &&
+          other.resultTimeSeconds == this.resultTimeSeconds &&
+          other.resultDecisionType == this.resultDecisionType &&
+          other.resultMethodDetail == this.resultMethodDetail &&
           other.winnerPerformanceRating == this.winnerPerformanceRating &&
           other.loserPerformanceRating == this.loserPerformanceRating &&
           other.resultFighterAInjury == this.resultFighterAInjury &&
@@ -4869,6 +5712,9 @@ class FightsCompanion extends UpdateCompanion<FightRow> {
   final Value<String?> resultWinnerId;
   final Value<String?> resultMethod;
   final Value<int?> resultRound;
+  final Value<int> resultTimeSeconds;
+  final Value<String> resultDecisionType;
+  final Value<String> resultMethodDetail;
   final Value<int?> winnerPerformanceRating;
   final Value<int?> loserPerformanceRating;
   final Value<String?> resultFighterAInjury;
@@ -4888,6 +5734,9 @@ class FightsCompanion extends UpdateCompanion<FightRow> {
     this.resultWinnerId = const Value.absent(),
     this.resultMethod = const Value.absent(),
     this.resultRound = const Value.absent(),
+    this.resultTimeSeconds = const Value.absent(),
+    this.resultDecisionType = const Value.absent(),
+    this.resultMethodDetail = const Value.absent(),
     this.winnerPerformanceRating = const Value.absent(),
     this.loserPerformanceRating = const Value.absent(),
     this.resultFighterAInjury = const Value.absent(),
@@ -4908,6 +5757,9 @@ class FightsCompanion extends UpdateCompanion<FightRow> {
     this.resultWinnerId = const Value.absent(),
     this.resultMethod = const Value.absent(),
     this.resultRound = const Value.absent(),
+    this.resultTimeSeconds = const Value.absent(),
+    this.resultDecisionType = const Value.absent(),
+    this.resultMethodDetail = const Value.absent(),
     this.winnerPerformanceRating = const Value.absent(),
     this.loserPerformanceRating = const Value.absent(),
     this.resultFighterAInjury = const Value.absent(),
@@ -4932,6 +5784,9 @@ class FightsCompanion extends UpdateCompanion<FightRow> {
     Expression<String>? resultWinnerId,
     Expression<String>? resultMethod,
     Expression<int>? resultRound,
+    Expression<int>? resultTimeSeconds,
+    Expression<String>? resultDecisionType,
+    Expression<String>? resultMethodDetail,
     Expression<int>? winnerPerformanceRating,
     Expression<int>? loserPerformanceRating,
     Expression<String>? resultFighterAInjury,
@@ -4952,6 +5807,11 @@ class FightsCompanion extends UpdateCompanion<FightRow> {
       if (resultWinnerId != null) 'result_winner_id': resultWinnerId,
       if (resultMethod != null) 'result_method': resultMethod,
       if (resultRound != null) 'result_round': resultRound,
+      if (resultTimeSeconds != null) 'result_time_seconds': resultTimeSeconds,
+      if (resultDecisionType != null)
+        'result_decision_type': resultDecisionType,
+      if (resultMethodDetail != null)
+        'result_method_detail': resultMethodDetail,
       if (winnerPerformanceRating != null)
         'winner_performance_rating': winnerPerformanceRating,
       if (loserPerformanceRating != null)
@@ -4978,6 +5838,9 @@ class FightsCompanion extends UpdateCompanion<FightRow> {
       Value<String?>? resultWinnerId,
       Value<String?>? resultMethod,
       Value<int?>? resultRound,
+      Value<int>? resultTimeSeconds,
+      Value<String>? resultDecisionType,
+      Value<String>? resultMethodDetail,
       Value<int?>? winnerPerformanceRating,
       Value<int?>? loserPerformanceRating,
       Value<String?>? resultFighterAInjury,
@@ -4997,6 +5860,9 @@ class FightsCompanion extends UpdateCompanion<FightRow> {
       resultWinnerId: resultWinnerId ?? this.resultWinnerId,
       resultMethod: resultMethod ?? this.resultMethod,
       resultRound: resultRound ?? this.resultRound,
+      resultTimeSeconds: resultTimeSeconds ?? this.resultTimeSeconds,
+      resultDecisionType: resultDecisionType ?? this.resultDecisionType,
+      resultMethodDetail: resultMethodDetail ?? this.resultMethodDetail,
       winnerPerformanceRating:
           winnerPerformanceRating ?? this.winnerPerformanceRating,
       loserPerformanceRating:
@@ -5049,6 +5915,15 @@ class FightsCompanion extends UpdateCompanion<FightRow> {
     if (resultRound.present) {
       map['result_round'] = Variable<int>(resultRound.value);
     }
+    if (resultTimeSeconds.present) {
+      map['result_time_seconds'] = Variable<int>(resultTimeSeconds.value);
+    }
+    if (resultDecisionType.present) {
+      map['result_decision_type'] = Variable<String>(resultDecisionType.value);
+    }
+    if (resultMethodDetail.present) {
+      map['result_method_detail'] = Variable<String>(resultMethodDetail.value);
+    }
     if (winnerPerformanceRating.present) {
       map['winner_performance_rating'] =
           Variable<int>(winnerPerformanceRating.value);
@@ -5087,6 +5962,9 @@ class FightsCompanion extends UpdateCompanion<FightRow> {
           ..write('resultWinnerId: $resultWinnerId, ')
           ..write('resultMethod: $resultMethod, ')
           ..write('resultRound: $resultRound, ')
+          ..write('resultTimeSeconds: $resultTimeSeconds, ')
+          ..write('resultDecisionType: $resultDecisionType, ')
+          ..write('resultMethodDetail: $resultMethodDetail, ')
           ..write('winnerPerformanceRating: $winnerPerformanceRating, ')
           ..write('loserPerformanceRating: $loserPerformanceRating, ')
           ..write('resultFighterAInjury: $resultFighterAInjury, ')
@@ -5575,6 +6453,7 @@ typedef $$FightersTableCreateCompanionBuilder = FightersCompanion Function({
   required String weightClass,
   Value<int> heightInches,
   Value<int> weightLbs,
+  Value<int> reachInches,
   Value<int> wins,
   Value<int> losses,
   Value<int> draws,
@@ -5584,10 +6463,20 @@ typedef $$FightersTableCreateCompanionBuilder = FightersCompanion Function({
   required int speed,
   required int accuracy,
   required int defense,
+  Value<int> headMovement,
+  Value<int> blocking,
+  Value<int> footwork,
   required int takedowns,
   required int takedownDefense,
   required int wrestling,
+  Value<int> clinchStriking,
+  Value<int> clinchControl,
+  Value<int> clinchDefense,
+  Value<int> topControl,
   required int groundAndPound,
+  Value<int> guardRetention,
+  Value<int> sweeps,
+  Value<int> scrambling,
   required int submissionOffense,
   required int submissionDefense,
   required int grappling,
@@ -5599,6 +6488,9 @@ typedef $$FightersTableCreateCompanionBuilder = FightersCompanion Function({
   required int strength,
   required int athleticism,
   required int recovery,
+  Value<int> explosiveness,
+  Value<int> flexibility,
+  Value<int> gripStrength,
   required int fightIq,
   required int composure,
   required int aggression,
@@ -5606,12 +6498,16 @@ typedef $$FightersTableCreateCompanionBuilder = FightersCompanion Function({
   required int confidence,
   required int heart,
   required int adaptability,
+  Value<int> killerInstinct,
   required int tendStrikingFrequency,
   required int tendTakedownFrequency,
   required int tendKickFrequency,
   required int tendClinchFrequency,
   required int tendSubmissionAttempts,
   required int tendGroundAndPound,
+  Value<int> tendPositionControl,
+  Value<int> tendStandUpPreference,
+  Value<int> tendWallWork,
   required int tendAggression,
   required int tendCounterStriking,
   required int tendHeadHunting,
@@ -5640,6 +6536,7 @@ typedef $$FightersTableUpdateCompanionBuilder = FightersCompanion Function({
   Value<String> weightClass,
   Value<int> heightInches,
   Value<int> weightLbs,
+  Value<int> reachInches,
   Value<int> wins,
   Value<int> losses,
   Value<int> draws,
@@ -5649,10 +6546,20 @@ typedef $$FightersTableUpdateCompanionBuilder = FightersCompanion Function({
   Value<int> speed,
   Value<int> accuracy,
   Value<int> defense,
+  Value<int> headMovement,
+  Value<int> blocking,
+  Value<int> footwork,
   Value<int> takedowns,
   Value<int> takedownDefense,
   Value<int> wrestling,
+  Value<int> clinchStriking,
+  Value<int> clinchControl,
+  Value<int> clinchDefense,
+  Value<int> topControl,
   Value<int> groundAndPound,
+  Value<int> guardRetention,
+  Value<int> sweeps,
+  Value<int> scrambling,
   Value<int> submissionOffense,
   Value<int> submissionDefense,
   Value<int> grappling,
@@ -5664,6 +6571,9 @@ typedef $$FightersTableUpdateCompanionBuilder = FightersCompanion Function({
   Value<int> strength,
   Value<int> athleticism,
   Value<int> recovery,
+  Value<int> explosiveness,
+  Value<int> flexibility,
+  Value<int> gripStrength,
   Value<int> fightIq,
   Value<int> composure,
   Value<int> aggression,
@@ -5671,12 +6581,16 @@ typedef $$FightersTableUpdateCompanionBuilder = FightersCompanion Function({
   Value<int> confidence,
   Value<int> heart,
   Value<int> adaptability,
+  Value<int> killerInstinct,
   Value<int> tendStrikingFrequency,
   Value<int> tendTakedownFrequency,
   Value<int> tendKickFrequency,
   Value<int> tendClinchFrequency,
   Value<int> tendSubmissionAttempts,
   Value<int> tendGroundAndPound,
+  Value<int> tendPositionControl,
+  Value<int> tendStandUpPreference,
+  Value<int> tendWallWork,
   Value<int> tendAggression,
   Value<int> tendCounterStriking,
   Value<int> tendHeadHunting,
@@ -5728,6 +6642,9 @@ class $$FightersTableFilterComposer
   ColumnFilters<int> get weightLbs => $composableBuilder(
       column: $table.weightLbs, builder: (column) => ColumnFilters(column));
 
+  ColumnFilters<int> get reachInches => $composableBuilder(
+      column: $table.reachInches, builder: (column) => ColumnFilters(column));
+
   ColumnFilters<int> get wins => $composableBuilder(
       column: $table.wins, builder: (column) => ColumnFilters(column));
 
@@ -5755,6 +6672,15 @@ class $$FightersTableFilterComposer
   ColumnFilters<int> get defense => $composableBuilder(
       column: $table.defense, builder: (column) => ColumnFilters(column));
 
+  ColumnFilters<int> get headMovement => $composableBuilder(
+      column: $table.headMovement, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get blocking => $composableBuilder(
+      column: $table.blocking, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get footwork => $composableBuilder(
+      column: $table.footwork, builder: (column) => ColumnFilters(column));
+
   ColumnFilters<int> get takedowns => $composableBuilder(
       column: $table.takedowns, builder: (column) => ColumnFilters(column));
 
@@ -5765,9 +6691,32 @@ class $$FightersTableFilterComposer
   ColumnFilters<int> get wrestling => $composableBuilder(
       column: $table.wrestling, builder: (column) => ColumnFilters(column));
 
+  ColumnFilters<int> get clinchStriking => $composableBuilder(
+      column: $table.clinchStriking,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get clinchControl => $composableBuilder(
+      column: $table.clinchControl, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get clinchDefense => $composableBuilder(
+      column: $table.clinchDefense, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get topControl => $composableBuilder(
+      column: $table.topControl, builder: (column) => ColumnFilters(column));
+
   ColumnFilters<int> get groundAndPound => $composableBuilder(
       column: $table.groundAndPound,
       builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get guardRetention => $composableBuilder(
+      column: $table.guardRetention,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get sweeps => $composableBuilder(
+      column: $table.sweeps, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get scrambling => $composableBuilder(
+      column: $table.scrambling, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<int> get submissionOffense => $composableBuilder(
       column: $table.submissionOffense,
@@ -5804,6 +6753,15 @@ class $$FightersTableFilterComposer
   ColumnFilters<int> get recovery => $composableBuilder(
       column: $table.recovery, builder: (column) => ColumnFilters(column));
 
+  ColumnFilters<int> get explosiveness => $composableBuilder(
+      column: $table.explosiveness, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get flexibility => $composableBuilder(
+      column: $table.flexibility, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get gripStrength => $composableBuilder(
+      column: $table.gripStrength, builder: (column) => ColumnFilters(column));
+
   ColumnFilters<int> get fightIq => $composableBuilder(
       column: $table.fightIq, builder: (column) => ColumnFilters(column));
 
@@ -5824,6 +6782,10 @@ class $$FightersTableFilterComposer
 
   ColumnFilters<int> get adaptability => $composableBuilder(
       column: $table.adaptability, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get killerInstinct => $composableBuilder(
+      column: $table.killerInstinct,
+      builder: (column) => ColumnFilters(column));
 
   ColumnFilters<int> get tendStrikingFrequency => $composableBuilder(
       column: $table.tendStrikingFrequency,
@@ -5848,6 +6810,17 @@ class $$FightersTableFilterComposer
   ColumnFilters<int> get tendGroundAndPound => $composableBuilder(
       column: $table.tendGroundAndPound,
       builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get tendPositionControl => $composableBuilder(
+      column: $table.tendPositionControl,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get tendStandUpPreference => $composableBuilder(
+      column: $table.tendStandUpPreference,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get tendWallWork => $composableBuilder(
+      column: $table.tendWallWork, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<int> get tendAggression => $composableBuilder(
       column: $table.tendAggression,
@@ -5943,6 +6916,9 @@ class $$FightersTableOrderingComposer
   ColumnOrderings<int> get weightLbs => $composableBuilder(
       column: $table.weightLbs, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<int> get reachInches => $composableBuilder(
+      column: $table.reachInches, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<int> get wins => $composableBuilder(
       column: $table.wins, builder: (column) => ColumnOrderings(column));
 
@@ -5970,6 +6946,16 @@ class $$FightersTableOrderingComposer
   ColumnOrderings<int> get defense => $composableBuilder(
       column: $table.defense, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<int> get headMovement => $composableBuilder(
+      column: $table.headMovement,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get blocking => $composableBuilder(
+      column: $table.blocking, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get footwork => $composableBuilder(
+      column: $table.footwork, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<int> get takedowns => $composableBuilder(
       column: $table.takedowns, builder: (column) => ColumnOrderings(column));
 
@@ -5980,9 +6966,34 @@ class $$FightersTableOrderingComposer
   ColumnOrderings<int> get wrestling => $composableBuilder(
       column: $table.wrestling, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<int> get clinchStriking => $composableBuilder(
+      column: $table.clinchStriking,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get clinchControl => $composableBuilder(
+      column: $table.clinchControl,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get clinchDefense => $composableBuilder(
+      column: $table.clinchDefense,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get topControl => $composableBuilder(
+      column: $table.topControl, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<int> get groundAndPound => $composableBuilder(
       column: $table.groundAndPound,
       builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get guardRetention => $composableBuilder(
+      column: $table.guardRetention,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get sweeps => $composableBuilder(
+      column: $table.sweeps, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get scrambling => $composableBuilder(
+      column: $table.scrambling, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<int> get submissionOffense => $composableBuilder(
       column: $table.submissionOffense,
@@ -6021,6 +7032,17 @@ class $$FightersTableOrderingComposer
   ColumnOrderings<int> get recovery => $composableBuilder(
       column: $table.recovery, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<int> get explosiveness => $composableBuilder(
+      column: $table.explosiveness,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get flexibility => $composableBuilder(
+      column: $table.flexibility, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get gripStrength => $composableBuilder(
+      column: $table.gripStrength,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<int> get fightIq => $composableBuilder(
       column: $table.fightIq, builder: (column) => ColumnOrderings(column));
 
@@ -6041,6 +7063,10 @@ class $$FightersTableOrderingComposer
 
   ColumnOrderings<int> get adaptability => $composableBuilder(
       column: $table.adaptability,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get killerInstinct => $composableBuilder(
+      column: $table.killerInstinct,
       builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<int> get tendStrikingFrequency => $composableBuilder(
@@ -6065,6 +7091,18 @@ class $$FightersTableOrderingComposer
 
   ColumnOrderings<int> get tendGroundAndPound => $composableBuilder(
       column: $table.tendGroundAndPound,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get tendPositionControl => $composableBuilder(
+      column: $table.tendPositionControl,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get tendStandUpPreference => $composableBuilder(
+      column: $table.tendStandUpPreference,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get tendWallWork => $composableBuilder(
+      column: $table.tendWallWork,
       builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<int> get tendAggression => $composableBuilder(
@@ -6161,6 +7199,9 @@ class $$FightersTableAnnotationComposer
   GeneratedColumn<int> get weightLbs =>
       $composableBuilder(column: $table.weightLbs, builder: (column) => column);
 
+  GeneratedColumn<int> get reachInches => $composableBuilder(
+      column: $table.reachInches, builder: (column) => column);
+
   GeneratedColumn<int> get wins =>
       $composableBuilder(column: $table.wins, builder: (column) => column);
 
@@ -6188,6 +7229,15 @@ class $$FightersTableAnnotationComposer
   GeneratedColumn<int> get defense =>
       $composableBuilder(column: $table.defense, builder: (column) => column);
 
+  GeneratedColumn<int> get headMovement => $composableBuilder(
+      column: $table.headMovement, builder: (column) => column);
+
+  GeneratedColumn<int> get blocking =>
+      $composableBuilder(column: $table.blocking, builder: (column) => column);
+
+  GeneratedColumn<int> get footwork =>
+      $composableBuilder(column: $table.footwork, builder: (column) => column);
+
   GeneratedColumn<int> get takedowns =>
       $composableBuilder(column: $table.takedowns, builder: (column) => column);
 
@@ -6197,8 +7247,29 @@ class $$FightersTableAnnotationComposer
   GeneratedColumn<int> get wrestling =>
       $composableBuilder(column: $table.wrestling, builder: (column) => column);
 
+  GeneratedColumn<int> get clinchStriking => $composableBuilder(
+      column: $table.clinchStriking, builder: (column) => column);
+
+  GeneratedColumn<int> get clinchControl => $composableBuilder(
+      column: $table.clinchControl, builder: (column) => column);
+
+  GeneratedColumn<int> get clinchDefense => $composableBuilder(
+      column: $table.clinchDefense, builder: (column) => column);
+
+  GeneratedColumn<int> get topControl => $composableBuilder(
+      column: $table.topControl, builder: (column) => column);
+
   GeneratedColumn<int> get groundAndPound => $composableBuilder(
       column: $table.groundAndPound, builder: (column) => column);
+
+  GeneratedColumn<int> get guardRetention => $composableBuilder(
+      column: $table.guardRetention, builder: (column) => column);
+
+  GeneratedColumn<int> get sweeps =>
+      $composableBuilder(column: $table.sweeps, builder: (column) => column);
+
+  GeneratedColumn<int> get scrambling => $composableBuilder(
+      column: $table.scrambling, builder: (column) => column);
 
   GeneratedColumn<int> get submissionOffense => $composableBuilder(
       column: $table.submissionOffense, builder: (column) => column);
@@ -6233,6 +7304,15 @@ class $$FightersTableAnnotationComposer
   GeneratedColumn<int> get recovery =>
       $composableBuilder(column: $table.recovery, builder: (column) => column);
 
+  GeneratedColumn<int> get explosiveness => $composableBuilder(
+      column: $table.explosiveness, builder: (column) => column);
+
+  GeneratedColumn<int> get flexibility => $composableBuilder(
+      column: $table.flexibility, builder: (column) => column);
+
+  GeneratedColumn<int> get gripStrength => $composableBuilder(
+      column: $table.gripStrength, builder: (column) => column);
+
   GeneratedColumn<int> get fightIq =>
       $composableBuilder(column: $table.fightIq, builder: (column) => column);
 
@@ -6254,6 +7334,9 @@ class $$FightersTableAnnotationComposer
   GeneratedColumn<int> get adaptability => $composableBuilder(
       column: $table.adaptability, builder: (column) => column);
 
+  GeneratedColumn<int> get killerInstinct => $composableBuilder(
+      column: $table.killerInstinct, builder: (column) => column);
+
   GeneratedColumn<int> get tendStrikingFrequency => $composableBuilder(
       column: $table.tendStrikingFrequency, builder: (column) => column);
 
@@ -6271,6 +7354,15 @@ class $$FightersTableAnnotationComposer
 
   GeneratedColumn<int> get tendGroundAndPound => $composableBuilder(
       column: $table.tendGroundAndPound, builder: (column) => column);
+
+  GeneratedColumn<int> get tendPositionControl => $composableBuilder(
+      column: $table.tendPositionControl, builder: (column) => column);
+
+  GeneratedColumn<int> get tendStandUpPreference => $composableBuilder(
+      column: $table.tendStandUpPreference, builder: (column) => column);
+
+  GeneratedColumn<int> get tendWallWork => $composableBuilder(
+      column: $table.tendWallWork, builder: (column) => column);
 
   GeneratedColumn<int> get tendAggression => $composableBuilder(
       column: $table.tendAggression, builder: (column) => column);
@@ -6357,6 +7449,7 @@ class $$FightersTableTableManager extends RootTableManager<
             Value<String> weightClass = const Value.absent(),
             Value<int> heightInches = const Value.absent(),
             Value<int> weightLbs = const Value.absent(),
+            Value<int> reachInches = const Value.absent(),
             Value<int> wins = const Value.absent(),
             Value<int> losses = const Value.absent(),
             Value<int> draws = const Value.absent(),
@@ -6366,10 +7459,20 @@ class $$FightersTableTableManager extends RootTableManager<
             Value<int> speed = const Value.absent(),
             Value<int> accuracy = const Value.absent(),
             Value<int> defense = const Value.absent(),
+            Value<int> headMovement = const Value.absent(),
+            Value<int> blocking = const Value.absent(),
+            Value<int> footwork = const Value.absent(),
             Value<int> takedowns = const Value.absent(),
             Value<int> takedownDefense = const Value.absent(),
             Value<int> wrestling = const Value.absent(),
+            Value<int> clinchStriking = const Value.absent(),
+            Value<int> clinchControl = const Value.absent(),
+            Value<int> clinchDefense = const Value.absent(),
+            Value<int> topControl = const Value.absent(),
             Value<int> groundAndPound = const Value.absent(),
+            Value<int> guardRetention = const Value.absent(),
+            Value<int> sweeps = const Value.absent(),
+            Value<int> scrambling = const Value.absent(),
             Value<int> submissionOffense = const Value.absent(),
             Value<int> submissionDefense = const Value.absent(),
             Value<int> grappling = const Value.absent(),
@@ -6381,6 +7484,9 @@ class $$FightersTableTableManager extends RootTableManager<
             Value<int> strength = const Value.absent(),
             Value<int> athleticism = const Value.absent(),
             Value<int> recovery = const Value.absent(),
+            Value<int> explosiveness = const Value.absent(),
+            Value<int> flexibility = const Value.absent(),
+            Value<int> gripStrength = const Value.absent(),
             Value<int> fightIq = const Value.absent(),
             Value<int> composure = const Value.absent(),
             Value<int> aggression = const Value.absent(),
@@ -6388,12 +7494,16 @@ class $$FightersTableTableManager extends RootTableManager<
             Value<int> confidence = const Value.absent(),
             Value<int> heart = const Value.absent(),
             Value<int> adaptability = const Value.absent(),
+            Value<int> killerInstinct = const Value.absent(),
             Value<int> tendStrikingFrequency = const Value.absent(),
             Value<int> tendTakedownFrequency = const Value.absent(),
             Value<int> tendKickFrequency = const Value.absent(),
             Value<int> tendClinchFrequency = const Value.absent(),
             Value<int> tendSubmissionAttempts = const Value.absent(),
             Value<int> tendGroundAndPound = const Value.absent(),
+            Value<int> tendPositionControl = const Value.absent(),
+            Value<int> tendStandUpPreference = const Value.absent(),
+            Value<int> tendWallWork = const Value.absent(),
             Value<int> tendAggression = const Value.absent(),
             Value<int> tendCounterStriking = const Value.absent(),
             Value<int> tendHeadHunting = const Value.absent(),
@@ -6422,6 +7532,7 @@ class $$FightersTableTableManager extends RootTableManager<
             weightClass: weightClass,
             heightInches: heightInches,
             weightLbs: weightLbs,
+            reachInches: reachInches,
             wins: wins,
             losses: losses,
             draws: draws,
@@ -6431,10 +7542,20 @@ class $$FightersTableTableManager extends RootTableManager<
             speed: speed,
             accuracy: accuracy,
             defense: defense,
+            headMovement: headMovement,
+            blocking: blocking,
+            footwork: footwork,
             takedowns: takedowns,
             takedownDefense: takedownDefense,
             wrestling: wrestling,
+            clinchStriking: clinchStriking,
+            clinchControl: clinchControl,
+            clinchDefense: clinchDefense,
+            topControl: topControl,
             groundAndPound: groundAndPound,
+            guardRetention: guardRetention,
+            sweeps: sweeps,
+            scrambling: scrambling,
             submissionOffense: submissionOffense,
             submissionDefense: submissionDefense,
             grappling: grappling,
@@ -6446,6 +7567,9 @@ class $$FightersTableTableManager extends RootTableManager<
             strength: strength,
             athleticism: athleticism,
             recovery: recovery,
+            explosiveness: explosiveness,
+            flexibility: flexibility,
+            gripStrength: gripStrength,
             fightIq: fightIq,
             composure: composure,
             aggression: aggression,
@@ -6453,12 +7577,16 @@ class $$FightersTableTableManager extends RootTableManager<
             confidence: confidence,
             heart: heart,
             adaptability: adaptability,
+            killerInstinct: killerInstinct,
             tendStrikingFrequency: tendStrikingFrequency,
             tendTakedownFrequency: tendTakedownFrequency,
             tendKickFrequency: tendKickFrequency,
             tendClinchFrequency: tendClinchFrequency,
             tendSubmissionAttempts: tendSubmissionAttempts,
             tendGroundAndPound: tendGroundAndPound,
+            tendPositionControl: tendPositionControl,
+            tendStandUpPreference: tendStandUpPreference,
+            tendWallWork: tendWallWork,
             tendAggression: tendAggression,
             tendCounterStriking: tendCounterStriking,
             tendHeadHunting: tendHeadHunting,
@@ -6487,6 +7615,7 @@ class $$FightersTableTableManager extends RootTableManager<
             required String weightClass,
             Value<int> heightInches = const Value.absent(),
             Value<int> weightLbs = const Value.absent(),
+            Value<int> reachInches = const Value.absent(),
             Value<int> wins = const Value.absent(),
             Value<int> losses = const Value.absent(),
             Value<int> draws = const Value.absent(),
@@ -6496,10 +7625,20 @@ class $$FightersTableTableManager extends RootTableManager<
             required int speed,
             required int accuracy,
             required int defense,
+            Value<int> headMovement = const Value.absent(),
+            Value<int> blocking = const Value.absent(),
+            Value<int> footwork = const Value.absent(),
             required int takedowns,
             required int takedownDefense,
             required int wrestling,
+            Value<int> clinchStriking = const Value.absent(),
+            Value<int> clinchControl = const Value.absent(),
+            Value<int> clinchDefense = const Value.absent(),
+            Value<int> topControl = const Value.absent(),
             required int groundAndPound,
+            Value<int> guardRetention = const Value.absent(),
+            Value<int> sweeps = const Value.absent(),
+            Value<int> scrambling = const Value.absent(),
             required int submissionOffense,
             required int submissionDefense,
             required int grappling,
@@ -6511,6 +7650,9 @@ class $$FightersTableTableManager extends RootTableManager<
             required int strength,
             required int athleticism,
             required int recovery,
+            Value<int> explosiveness = const Value.absent(),
+            Value<int> flexibility = const Value.absent(),
+            Value<int> gripStrength = const Value.absent(),
             required int fightIq,
             required int composure,
             required int aggression,
@@ -6518,12 +7660,16 @@ class $$FightersTableTableManager extends RootTableManager<
             required int confidence,
             required int heart,
             required int adaptability,
+            Value<int> killerInstinct = const Value.absent(),
             required int tendStrikingFrequency,
             required int tendTakedownFrequency,
             required int tendKickFrequency,
             required int tendClinchFrequency,
             required int tendSubmissionAttempts,
             required int tendGroundAndPound,
+            Value<int> tendPositionControl = const Value.absent(),
+            Value<int> tendStandUpPreference = const Value.absent(),
+            Value<int> tendWallWork = const Value.absent(),
             required int tendAggression,
             required int tendCounterStriking,
             required int tendHeadHunting,
@@ -6552,6 +7698,7 @@ class $$FightersTableTableManager extends RootTableManager<
             weightClass: weightClass,
             heightInches: heightInches,
             weightLbs: weightLbs,
+            reachInches: reachInches,
             wins: wins,
             losses: losses,
             draws: draws,
@@ -6561,10 +7708,20 @@ class $$FightersTableTableManager extends RootTableManager<
             speed: speed,
             accuracy: accuracy,
             defense: defense,
+            headMovement: headMovement,
+            blocking: blocking,
+            footwork: footwork,
             takedowns: takedowns,
             takedownDefense: takedownDefense,
             wrestling: wrestling,
+            clinchStriking: clinchStriking,
+            clinchControl: clinchControl,
+            clinchDefense: clinchDefense,
+            topControl: topControl,
             groundAndPound: groundAndPound,
+            guardRetention: guardRetention,
+            sweeps: sweeps,
+            scrambling: scrambling,
             submissionOffense: submissionOffense,
             submissionDefense: submissionDefense,
             grappling: grappling,
@@ -6576,6 +7733,9 @@ class $$FightersTableTableManager extends RootTableManager<
             strength: strength,
             athleticism: athleticism,
             recovery: recovery,
+            explosiveness: explosiveness,
+            flexibility: flexibility,
+            gripStrength: gripStrength,
             fightIq: fightIq,
             composure: composure,
             aggression: aggression,
@@ -6583,12 +7743,16 @@ class $$FightersTableTableManager extends RootTableManager<
             confidence: confidence,
             heart: heart,
             adaptability: adaptability,
+            killerInstinct: killerInstinct,
             tendStrikingFrequency: tendStrikingFrequency,
             tendTakedownFrequency: tendTakedownFrequency,
             tendKickFrequency: tendKickFrequency,
             tendClinchFrequency: tendClinchFrequency,
             tendSubmissionAttempts: tendSubmissionAttempts,
             tendGroundAndPound: tendGroundAndPound,
+            tendPositionControl: tendPositionControl,
+            tendStandUpPreference: tendStandUpPreference,
+            tendWallWork: tendWallWork,
             tendAggression: tendAggression,
             tendCounterStriking: tendCounterStriking,
             tendHeadHunting: tendHeadHunting,
@@ -7379,6 +8543,9 @@ typedef $$FightsTableCreateCompanionBuilder = FightsCompanion Function({
   Value<String?> resultWinnerId,
   Value<String?> resultMethod,
   Value<int?> resultRound,
+  Value<int> resultTimeSeconds,
+  Value<String> resultDecisionType,
+  Value<String> resultMethodDetail,
   Value<int?> winnerPerformanceRating,
   Value<int?> loserPerformanceRating,
   Value<String?> resultFighterAInjury,
@@ -7399,6 +8566,9 @@ typedef $$FightsTableUpdateCompanionBuilder = FightsCompanion Function({
   Value<String?> resultWinnerId,
   Value<String?> resultMethod,
   Value<int?> resultRound,
+  Value<int> resultTimeSeconds,
+  Value<String> resultDecisionType,
+  Value<String> resultMethodDetail,
   Value<int?> winnerPerformanceRating,
   Value<int?> loserPerformanceRating,
   Value<String?> resultFighterAInjury,
@@ -7455,6 +8625,18 @@ class $$FightsTableFilterComposer
 
   ColumnFilters<int> get resultRound => $composableBuilder(
       column: $table.resultRound, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get resultTimeSeconds => $composableBuilder(
+      column: $table.resultTimeSeconds,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get resultDecisionType => $composableBuilder(
+      column: $table.resultDecisionType,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get resultMethodDetail => $composableBuilder(
+      column: $table.resultMethodDetail,
+      builder: (column) => ColumnFilters(column));
 
   ColumnFilters<int> get winnerPerformanceRating => $composableBuilder(
       column: $table.winnerPerformanceRating,
@@ -7525,6 +8707,18 @@ class $$FightsTableOrderingComposer
   ColumnOrderings<int> get resultRound => $composableBuilder(
       column: $table.resultRound, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<int> get resultTimeSeconds => $composableBuilder(
+      column: $table.resultTimeSeconds,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get resultDecisionType => $composableBuilder(
+      column: $table.resultDecisionType,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get resultMethodDetail => $composableBuilder(
+      column: $table.resultMethodDetail,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<int> get winnerPerformanceRating => $composableBuilder(
       column: $table.winnerPerformanceRating,
       builder: (column) => ColumnOrderings(column));
@@ -7590,6 +8784,15 @@ class $$FightsTableAnnotationComposer
   GeneratedColumn<int> get resultRound => $composableBuilder(
       column: $table.resultRound, builder: (column) => column);
 
+  GeneratedColumn<int> get resultTimeSeconds => $composableBuilder(
+      column: $table.resultTimeSeconds, builder: (column) => column);
+
+  GeneratedColumn<String> get resultDecisionType => $composableBuilder(
+      column: $table.resultDecisionType, builder: (column) => column);
+
+  GeneratedColumn<String> get resultMethodDetail => $composableBuilder(
+      column: $table.resultMethodDetail, builder: (column) => column);
+
   GeneratedColumn<int> get winnerPerformanceRating => $composableBuilder(
       column: $table.winnerPerformanceRating, builder: (column) => column);
 
@@ -7639,6 +8842,9 @@ class $$FightsTableTableManager extends RootTableManager<
             Value<String?> resultWinnerId = const Value.absent(),
             Value<String?> resultMethod = const Value.absent(),
             Value<int?> resultRound = const Value.absent(),
+            Value<int> resultTimeSeconds = const Value.absent(),
+            Value<String> resultDecisionType = const Value.absent(),
+            Value<String> resultMethodDetail = const Value.absent(),
             Value<int?> winnerPerformanceRating = const Value.absent(),
             Value<int?> loserPerformanceRating = const Value.absent(),
             Value<String?> resultFighterAInjury = const Value.absent(),
@@ -7659,6 +8865,9 @@ class $$FightsTableTableManager extends RootTableManager<
             resultWinnerId: resultWinnerId,
             resultMethod: resultMethod,
             resultRound: resultRound,
+            resultTimeSeconds: resultTimeSeconds,
+            resultDecisionType: resultDecisionType,
+            resultMethodDetail: resultMethodDetail,
             winnerPerformanceRating: winnerPerformanceRating,
             loserPerformanceRating: loserPerformanceRating,
             resultFighterAInjury: resultFighterAInjury,
@@ -7679,6 +8888,9 @@ class $$FightsTableTableManager extends RootTableManager<
             Value<String?> resultWinnerId = const Value.absent(),
             Value<String?> resultMethod = const Value.absent(),
             Value<int?> resultRound = const Value.absent(),
+            Value<int> resultTimeSeconds = const Value.absent(),
+            Value<String> resultDecisionType = const Value.absent(),
+            Value<String> resultMethodDetail = const Value.absent(),
             Value<int?> winnerPerformanceRating = const Value.absent(),
             Value<int?> loserPerformanceRating = const Value.absent(),
             Value<String?> resultFighterAInjury = const Value.absent(),
@@ -7699,6 +8911,9 @@ class $$FightsTableTableManager extends RootTableManager<
             resultWinnerId: resultWinnerId,
             resultMethod: resultMethod,
             resultRound: resultRound,
+            resultTimeSeconds: resultTimeSeconds,
+            resultDecisionType: resultDecisionType,
+            resultMethodDetail: resultMethodDetail,
             winnerPerformanceRating: winnerPerformanceRating,
             loserPerformanceRating: loserPerformanceRating,
             resultFighterAInjury: resultFighterAInjury,

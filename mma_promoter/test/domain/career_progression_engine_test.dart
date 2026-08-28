@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mma_promoter/data/models/models.dart';
 import 'package:mma_promoter/domain/career/career_progression_engine.dart';
 
+import '../support/fighter_fixtures.dart';
+
 Fighter _fighter({
   int age = 27,
   int potential = 70,
@@ -12,69 +14,14 @@ Fighter _fighter({
   InjuryStatus injuryStatus = InjuryStatus.healthy,
   bool retired = false,
 }) {
-  return Fighter(
-    id: 'f1',
-    name: 'Test Fighter',
+  return testFighter(
+    'f1',
+    stat: 60,
     age: age,
-    nationality: 'USA',
-    weightClass: WeightClass.lightweight,
-    heightInches: 70,
-    weightLbs: 155,
-    record: const FightRecord(wins: 10, losses: 2),
-    fightingStats: const FightingStats(
-      punching: 60,
-      kicking: 60,
-      power: 60,
-      speed: 60,
-      accuracy: 60,
-      defense: 60,
-      takedowns: 60,
-      takedownDefense: 60,
-      wrestling: 60,
-      groundAndPound: 60,
-      submissionOffense: 60,
-      submissionDefense: 60,
-      grappling: 60,
-    ),
-    physicalStats: const PhysicalStats(
-      cardio: 60,
-      durability: 60,
-      chin: 60,
-      bodyToughness: 60,
-      legToughness: 60,
-      strength: 60,
-      athleticism: 60,
-      recovery: 60,
-    ),
-    mentalStats: const MentalStats(
-      fightIq: 60,
-      composure: 60,
-      aggression: 60,
-      discipline: 60,
-      confidence: 60,
-      heart: 60,
-      adaptability: 60,
-    ),
-    style: FightingStyle.wellRounded,
-    tendencies: const Tendencies(
-      strikingFrequency: 50,
-      takedownFrequency: 50,
-      kickFrequency: 50,
-      clinchFrequency: 50,
-      submissionAttempts: 50,
-      groundAndPound: 50,
-      aggression: 50,
-      counterStriking: 50,
-      headHunting: 50,
-      bodyAttacks: 50,
-      legAttacks: 50,
-    ),
     potential: potential,
-    popularity: 40,
-    morale: 70,
-    injuryStatus: injuryStatus,
     winStreak: winStreak,
     lossStreak: lossStreak,
+    injuryStatus: injuryStatus,
     retired: retired,
   );
 }

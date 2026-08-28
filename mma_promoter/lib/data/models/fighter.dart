@@ -11,6 +11,12 @@ class Fighter {
   final WeightClass weightClass;
   final int heightInches;
   final int weightLbs; // walk-around weight, a bit above the class limit.
+
+  /// Arm span in inches. Usually within a couple of inches of height; a
+  /// big reach advantage is a real edge at striking range. Stored as 0
+  /// for fighters created before reach existed — read [reach] instead,
+  /// which falls back to height.
+  final int reachInches;
   final FightRecord record;
   final FightingStats fightingStats;
   final PhysicalStats physicalStats;
@@ -48,6 +54,7 @@ class Fighter {
     required this.heightInches,
     required this.weightLbs,
     required this.record,
+    this.reachInches = 0,
     required this.fightingStats,
     required this.physicalStats,
     required this.mentalStats,
@@ -82,6 +89,12 @@ class Fighter {
     return '$feet\'$inches"';
   }
 
+  /// Reach to actually use in the sim — falls back to height for fighters
+  /// saved before reach was tracked.
+  int get reach => reachInches > 0 ? reachInches : heightInches;
+
+  String get reachDisplay => '$reach"';
+
   Fighter copyWith({
     String? id,
     String? name,
@@ -90,6 +103,7 @@ class Fighter {
     WeightClass? weightClass,
     int? heightInches,
     int? weightLbs,
+    int? reachInches,
     FightRecord? record,
     FightingStats? fightingStats,
     PhysicalStats? physicalStats,
@@ -119,6 +133,7 @@ class Fighter {
       weightClass: weightClass ?? this.weightClass,
       heightInches: heightInches ?? this.heightInches,
       weightLbs: weightLbs ?? this.weightLbs,
+      reachInches: reachInches ?? this.reachInches,
       record: record ?? this.record,
       fightingStats: fightingStats ?? this.fightingStats,
       physicalStats: physicalStats ?? this.physicalStats,

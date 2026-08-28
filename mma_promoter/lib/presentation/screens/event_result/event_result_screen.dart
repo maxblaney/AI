@@ -389,7 +389,8 @@ class _FightResultTile extends StatelessWidget {
         subtitle: Text(
           result.isDraw
               ? 'Draw / No Contest'
-              : '$winnerName wins by ${result.method.label}, Round ${result.round}',
+              : '$winnerName def. by ${result.methodDisplay} · '
+                  'R${result.round} ${result.timeDisplay}',
         ),
         trailing: result.momentumTicks.isEmpty
             ? null

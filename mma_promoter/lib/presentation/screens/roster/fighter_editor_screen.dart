@@ -8,20 +8,38 @@ import '../../../data/models/models.dart';
 import '../../../data/seed/roster_seed.dart';
 import '../../state/game_controller.dart';
 
-const List<(String, String)> _fightingStatFields = [
+const List<(String, String)> _strikingStatFields = [
   ('punching', 'Punching'),
   ('kicking', 'Kicking'),
   ('power', 'Power'),
   ('speed', 'Speed'),
   ('accuracy', 'Accuracy'),
   ('defense', 'Defense'),
+  ('headMovement', 'Head Movement'),
+  ('blocking', 'Blocking / Checks'),
+  ('footwork', 'Footwork'),
+];
+
+const List<(String, String)> _grapplingStatFields = [
   ('takedowns', 'Takedowns'),
   ('takedownDefense', 'Takedown Defense'),
   ('wrestling', 'Wrestling'),
+  ('clinchStriking', 'Clinch Striking'),
+  ('clinchControl', 'Clinch Control'),
+  ('clinchDefense', 'Clinch Defense'),
+  ('topControl', 'Top Control'),
   ('groundAndPound', 'Ground & Pound'),
+  ('guardRetention', 'Guard Retention'),
+  ('sweeps', 'Sweeps'),
+  ('scrambling', 'Scrambling'),
   ('submissionOffense', 'Submission Offense'),
   ('submissionDefense', 'Submission Defense'),
   ('grappling', 'Grappling'),
+];
+
+const List<(String, String)> _fightingStatFields = [
+  ..._strikingStatFields,
+  ..._grapplingStatFields,
 ];
 
 const List<(String, String)> _physicalStatFields = [
@@ -33,6 +51,9 @@ const List<(String, String)> _physicalStatFields = [
   ('strength', 'Strength'),
   ('athleticism', 'Athleticism'),
   ('recovery', 'Recovery'),
+  ('explosiveness', 'Explosiveness'),
+  ('flexibility', 'Flexibility'),
+  ('gripStrength', 'Grip Strength'),
 ];
 
 const List<(String, String)> _mentalStatFields = [
@@ -43,6 +64,7 @@ const List<(String, String)> _mentalStatFields = [
   ('confidence', 'Confidence'),
   ('heart', 'Heart'),
   ('adaptability', 'Adaptability'),
+  ('killerInstinct', 'Killer Instinct'),
 ];
 
 const List<(String, String)> _tendencyFields = [
@@ -52,6 +74,9 @@ const List<(String, String)> _tendencyFields = [
   ('clinchFrequency', 'Clinch Frequency'),
   ('submissionAttempts', 'Submission Attempts'),
   ('groundAndPound', 'Ground & Pound'),
+  ('positionControl', 'Position Control'),
+  ('standUpPreference', 'Stand-Up Preference'),
+  ('wallWork', 'Wall Work'),
   ('aggression', 'Aggression'),
   ('counterStriking', 'Counter Striking'),
   ('headHunting', 'Head Hunting'),
@@ -82,6 +107,7 @@ class _FighterEditorScreenState extends State<FighterEditorScreen>
   late FightingStyle _style;
   late int _heightInches;
   late int _weightLbs;
+  late int _reachInches;
   late int _wins;
   late int _losses;
   late int _draws;
@@ -98,7 +124,7 @@ class _FighterEditorScreenState extends State<FighterEditorScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
     final f = widget.existingFighter;
     _nameController = TextEditingController(text: f?.name ?? '');
     _age = f?.age ?? 25;
@@ -149,7 +175,8 @@ class _FighterEditorScreenState extends State<FighterEditorScreen>
           isScrollable: true,
           tabs: const [
             Tab(text: 'Bio'),
-            Tab(text: 'Fighting'),
+            Tab(text: 'Striking'),
+            Tab(text: 'Grappling'),
             Tab(text: 'Physical'),
             Tab(text: 'Mental'),
             Tab(text: 'Style'),
@@ -160,7 +187,8 @@ class _FighterEditorScreenState extends State<FighterEditorScreen>
         controller: _tabController,
         children: [
           _buildBioTab(),
-          _buildStatTab(_fightingStatFields, _fighting),
+          _buildStatTab(_strikingStatFields, _fighting),
+          _buildStatTab(_grapplingStatFields, _fighting),
           _buildStatTab(_physicalStatFields, _physical),
           _buildStatTab(_mentalStatFields, _mental),
           _buildStyleTab(),
@@ -228,6 +256,15 @@ class _FighterEditorScreenState extends State<FighterEditorScreen>
           divisions: 24,
           label: _heightDisplay(_heightInches),
           onChanged: (v) => setState(() => _heightInches = v.round()),
+        ),
+        Text('Reach: $_reachInches"'),
+        Slider(
+          value: _reachInches.toDouble(),
+          min: 58,
+          max: 88,
+          divisions: 30,
+          label: '$_reachInches"',
+          onChanged: (v) => setState(() => _reachInches = v.round()),
         ),
         Text('Weight: $_weightLbs lbs'),
         Slider(
@@ -320,10 +357,20 @@ class _FighterEditorScreenState extends State<FighterEditorScreen>
       speed: _fighting['speed']!,
       accuracy: _fighting['accuracy']!,
       defense: _fighting['defense']!,
+      headMovement: _fighting['headMovement']!,
+      blocking: _fighting['blocking']!,
+      footwork: _fighting['footwork']!,
       takedowns: _fighting['takedowns']!,
       takedownDefense: _fighting['takedownDefense']!,
       wrestling: _fighting['wrestling']!,
+      clinchStriking: _fighting['clinchStriking']!,
+      clinchControl: _fighting['clinchControl']!,
+      clinchDefense: _fighting['clinchDefense']!,
+      topControl: _fighting['topControl']!,
       groundAndPound: _fighting['groundAndPound']!,
+      guardRetention: _fighting['guardRetention']!,
+      sweeps: _fighting['sweeps']!,
+      scrambling: _fighting['scrambling']!,
       submissionOffense: _fighting['submissionOffense']!,
       submissionDefense: _fighting['submissionDefense']!,
       grappling: _fighting['grappling']!,
@@ -338,6 +385,9 @@ class _FighterEditorScreenState extends State<FighterEditorScreen>
       strength: _physical['strength']!,
       athleticism: _physical['athleticism']!,
       recovery: _physical['recovery']!,
+      explosiveness: _physical['explosiveness']!,
+      flexibility: _physical['flexibility']!,
+      gripStrength: _physical['gripStrength']!,
     );
 
     final mentalStats = MentalStats(
@@ -348,6 +398,7 @@ class _FighterEditorScreenState extends State<FighterEditorScreen>
       confidence: _mental['confidence']!,
       heart: _mental['heart']!,
       adaptability: _mental['adaptability']!,
+      killerInstinct: _mental['killerInstinct']!,
     );
 
     final tendencies = Tendencies(
@@ -357,6 +408,9 @@ class _FighterEditorScreenState extends State<FighterEditorScreen>
       clinchFrequency: _tendencies['clinchFrequency']!,
       submissionAttempts: _tendencies['submissionAttempts']!,
       groundAndPound: _tendencies['groundAndPound']!,
+      positionControl: _tendencies['positionControl']!,
+      standUpPreference: _tendencies['standUpPreference']!,
+      wallWork: _tendencies['wallWork']!,
       aggression: _tendencies['aggression']!,
       counterStriking: _tendencies['counterStriking']!,
       headHunting: _tendencies['headHunting']!,
@@ -375,6 +429,7 @@ class _FighterEditorScreenState extends State<FighterEditorScreen>
             weightClass: _weightClass,
             heightInches: _heightInches,
             weightLbs: _weightLbs,
+            reachInches: _reachInches,
             record: record,
             fightingStats: fightingStats,
             physicalStats: physicalStats,
@@ -394,6 +449,7 @@ class _FighterEditorScreenState extends State<FighterEditorScreen>
             weightClass: _weightClass,
             heightInches: _heightInches,
             weightLbs: _weightLbs,
+            reachInches: _reachInches,
             record: record,
             fightingStats: fightingStats,
             physicalStats: physicalStats,
@@ -420,10 +476,20 @@ class _FighterEditorScreenState extends State<FighterEditorScreen>
       case 'speed': return stats.speed;
       case 'accuracy': return stats.accuracy;
       case 'defense': return stats.defense;
+      case 'headMovement': return stats.headMovement;
+      case 'blocking': return stats.blocking;
+      case 'footwork': return stats.footwork;
       case 'takedowns': return stats.takedowns;
       case 'takedownDefense': return stats.takedownDefense;
       case 'wrestling': return stats.wrestling;
+      case 'clinchStriking': return stats.clinchStriking;
+      case 'clinchControl': return stats.clinchControl;
+      case 'clinchDefense': return stats.clinchDefense;
+      case 'topControl': return stats.topControl;
       case 'groundAndPound': return stats.groundAndPound;
+      case 'guardRetention': return stats.guardRetention;
+      case 'sweeps': return stats.sweeps;
+      case 'scrambling': return stats.scrambling;
       case 'submissionOffense': return stats.submissionOffense;
       case 'submissionDefense': return stats.submissionDefense;
       case 'grappling': return stats.grappling;
@@ -442,6 +508,9 @@ class _FighterEditorScreenState extends State<FighterEditorScreen>
       case 'strength': return stats.strength;
       case 'athleticism': return stats.athleticism;
       case 'recovery': return stats.recovery;
+      case 'explosiveness': return stats.explosiveness;
+      case 'flexibility': return stats.flexibility;
+      case 'gripStrength': return stats.gripStrength;
     }
     return null;
   }
@@ -456,6 +525,7 @@ class _FighterEditorScreenState extends State<FighterEditorScreen>
       case 'confidence': return stats.confidence;
       case 'heart': return stats.heart;
       case 'adaptability': return stats.adaptability;
+      case 'killerInstinct': return stats.killerInstinct;
     }
     return null;
   }
@@ -469,6 +539,9 @@ class _FighterEditorScreenState extends State<FighterEditorScreen>
       case 'clinchFrequency': return t.clinchFrequency;
       case 'submissionAttempts': return t.submissionAttempts;
       case 'groundAndPound': return t.groundAndPound;
+      case 'positionControl': return t.positionControl;
+      case 'standUpPreference': return t.standUpPreference;
+      case 'wallWork': return t.wallWork;
       case 'aggression': return t.aggression;
       case 'counterStriking': return t.counterStriking;
       case 'headHunting': return t.headHunting;

@@ -15,26 +15,39 @@ class Fighters extends Table {
   IntColumn get heightInches => integer().withDefault(const Constant(70))();
   IntColumn get weightLbs => integer().withDefault(const Constant(155))();
 
+  /// 0 means "not recorded" — the model falls back to height.
+  IntColumn get reachInches => integer().withDefault(const Constant(0))();
+
   IntColumn get wins => integer().withDefault(const Constant(0))();
   IntColumn get losses => integer().withDefault(const Constant(0))();
   IntColumn get draws => integer().withDefault(const Constant(0))();
 
-  // -- Fighting stats (13) --
+  // -- Fighting stats (23) --
   IntColumn get punching => integer()();
   IntColumn get kicking => integer()();
   IntColumn get power => integer()();
   IntColumn get speed => integer()();
   IntColumn get accuracy => integer()();
   IntColumn get defense => integer()();
+  IntColumn get headMovement => integer().withDefault(const Constant(50))();
+  IntColumn get blocking => integer().withDefault(const Constant(50))();
+  IntColumn get footwork => integer().withDefault(const Constant(50))();
   IntColumn get takedowns => integer()();
   IntColumn get takedownDefense => integer()();
   IntColumn get wrestling => integer()();
+  IntColumn get clinchStriking => integer().withDefault(const Constant(50))();
+  IntColumn get clinchControl => integer().withDefault(const Constant(50))();
+  IntColumn get clinchDefense => integer().withDefault(const Constant(50))();
+  IntColumn get topControl => integer().withDefault(const Constant(50))();
   IntColumn get groundAndPound => integer()();
+  IntColumn get guardRetention => integer().withDefault(const Constant(50))();
+  IntColumn get sweeps => integer().withDefault(const Constant(50))();
+  IntColumn get scrambling => integer().withDefault(const Constant(50))();
   IntColumn get submissionOffense => integer()();
   IntColumn get submissionDefense => integer()();
   IntColumn get grappling => integer()();
 
-  // -- Physical stats (8) --
+  // -- Physical stats (11) --
   IntColumn get cardio => integer()();
   IntColumn get durability => integer()();
   IntColumn get chin => integer()();
@@ -43,8 +56,11 @@ class Fighters extends Table {
   IntColumn get strength => integer()();
   IntColumn get athleticism => integer()();
   IntColumn get recovery => integer()();
+  IntColumn get explosiveness => integer().withDefault(const Constant(50))();
+  IntColumn get flexibility => integer().withDefault(const Constant(50))();
+  IntColumn get gripStrength => integer().withDefault(const Constant(50))();
 
-  // -- Mental stats (7) --
+  // -- Mental stats (8) --
   IntColumn get fightIq => integer()();
   IntColumn get composure => integer()();
   IntColumn get aggression => integer()();
@@ -52,14 +68,18 @@ class Fighters extends Table {
   IntColumn get confidence => integer()();
   IntColumn get heart => integer()();
   IntColumn get adaptability => integer()();
+  IntColumn get killerInstinct => integer().withDefault(const Constant(50))();
 
-  // -- Tendencies (11) --
+  // -- Tendencies (14) --
   IntColumn get tendStrikingFrequency => integer()();
   IntColumn get tendTakedownFrequency => integer()();
   IntColumn get tendKickFrequency => integer()();
   IntColumn get tendClinchFrequency => integer()();
   IntColumn get tendSubmissionAttempts => integer()();
   IntColumn get tendGroundAndPound => integer()();
+  IntColumn get tendPositionControl => integer().withDefault(const Constant(50))();
+  IntColumn get tendStandUpPreference => integer().withDefault(const Constant(50))();
+  IntColumn get tendWallWork => integer().withDefault(const Constant(50))();
   IntColumn get tendAggression => integer()();
   IntColumn get tendCounterStriking => integer()();
   IntColumn get tendHeadHunting => integer()();
@@ -160,6 +180,11 @@ class Fights extends Table {
   TextColumn get resultWinnerId => text().nullable()();
   TextColumn get resultMethod => text().nullable()();
   IntColumn get resultRound => integer().nullable()();
+  IntColumn get resultTimeSeconds => integer().withDefault(const Constant(300))();
+  TextColumn get resultDecisionType =>
+      text().withDefault(const Constant('none'))();
+  TextColumn get resultMethodDetail =>
+      text().withDefault(const Constant(''))();
   IntColumn get winnerPerformanceRating => integer().nullable()();
   IntColumn get loserPerformanceRating => integer().nullable()();
   TextColumn get resultFighterAInjury => text().nullable()();
