@@ -193,7 +193,8 @@ Contract contractFromRow(ContractRow row) {
     id: row.id,
     fighterId: row.fighterId,
     fightsRemaining: row.fightsRemaining,
-    payPerFight: row.payPerFight,
+    showMoney: row.showMoney,
+    winBonus: row.winBonus,
     exclusive: row.exclusive,
     signedOn: row.signedOn,
   );
@@ -204,7 +205,8 @@ ContractsCompanion contractToCompanion(Contract contract) {
     id: contract.id,
     fighterId: contract.fighterId,
     fightsRemaining: contract.fightsRemaining,
-    payPerFight: contract.payPerFight,
+    showMoney: contract.showMoney,
+    winBonus: contract.winBonus,
     exclusive: Value(contract.exclusive),
     signedOn: contract.signedOn,
   );

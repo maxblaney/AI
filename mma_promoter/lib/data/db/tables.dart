@@ -117,7 +117,8 @@ class Contracts extends Table {
   TextColumn get id => text()();
   TextColumn get fighterId => text()();
   IntColumn get fightsRemaining => integer()();
-  IntColumn get payPerFight => integer()();
+  IntColumn get showMoney => integer()();
+  IntColumn get winBonus => integer()();
   BoolColumn get exclusive => boolean().withDefault(const Constant(true))();
   DateTimeColumn get signedOn => dateTime()();
 

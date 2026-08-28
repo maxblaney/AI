@@ -235,30 +235,31 @@ class GameController extends ChangeNotifier {
 
   // ---- Roster management ------------------------------------------------
 
-  /// Signs [fighter] to the roster. Charges a one-time signing bonus equal
-  /// to [payPerFight] on top of the ongoing per-fight pay in their contract.
+  /// Signs [fighter] to the roster on a show-money/win-bonus contract.
+  /// Charges a one-time signing bonus equal to [showMoney] up front — the
+  /// org can go into debt over this (see [advanceWeek]'s interest charge),
+  /// there's no hard cash floor blocking a signing.
   Future<String?> signFighter(
     Fighter fighter, {
-    required int payPerFight,
+    required int showMoney,
+    required int winBonus,
     required int fightsInDeal,
     bool exclusive = true,
   }) async {
     final org = organization;
     if (org == null) return 'No active organization.';
-    if (org.cashBalance < payPerFight) {
-      return 'Not enough cash for the signing bonus.';
-    }
 
     final contract = Contract(
       id: newId(),
       fighterId: fighter.id,
       fightsRemaining: fightsInDeal,
-      payPerFight: payPerFight,
+      showMoney: showMoney,
+      winBonus: winBonus,
       exclusive: exclusive,
-      signedOn: DateTime.now(),
+      signedOn: GameCalendar.dateForWeek(org.currentWeek),
     );
     await _fighterRepo.sign(fighter, contract);
-    await _orgRepo.save(org.copyWith(cashBalance: org.cashBalance - payPerFight));
+    await _orgRepo.save(org.copyWith(cashBalance: org.cashBalance - showMoney));
     await _maybeTriggerRandomEvent();
     return null;
   }
@@ -408,6 +409,7 @@ class GameController extends ChangeNotifier {
     }
 
     var updated = org.copyWith(currentWeek: org.currentWeek + 1);
+    updated = _applyDebtInterest(updated);
     await _orgRepo.save(updated);
     organization = updated;
 
@@ -418,6 +420,20 @@ class GameController extends ChangeNotifier {
     organization = updated;
     notifyListeners();
     return null;
+  }
+
+  /// Running a promotion in the red isn't free — a negative cash balance
+  /// accrues interest every week, same as any other debt. 1%/week compounds
+  /// to a real bite (~68% APR) if left unpaid, which is the point: debt is
+  /// a tool for a cash crunch, not a way to permanently outspend income.
+  /// Public so the Finance screen can show the player the rate they're
+  /// paying.
+  static const double weeklyDebtInterestRate = 0.01;
+
+  Organization _applyDebtInterest(Organization org) {
+    if (org.cashBalance >= 0) return org;
+    final interest = (-org.cashBalance * weeklyDebtInterestRate).round();
+    return org.copyWith(cashBalance: org.cashBalance - interest);
   }
 
   /// Tops up the talent pool with ~10 fresh free agents for every 4 game

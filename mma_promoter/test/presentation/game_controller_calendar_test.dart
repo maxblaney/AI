@@ -17,7 +17,7 @@ Future<GameController> _newGame() async {
 Future<void> _signTwo(GameController controller, WeightClass weightClass) async {
   final pair = controller.talentPool.where((f) => f.weightClass == weightClass).take(2).toList();
   for (final fighter in pair) {
-    await controller.signFighter(fighter, payPerFight: 1000, fightsInDeal: 3);
+    await controller.signFighter(fighter, showMoney: 500, winBonus: 500, fightsInDeal: 3);
   }
   await pumpEventQueue();
 }

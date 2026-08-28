@@ -5,9 +5,10 @@ import '../../../data/models/models.dart';
 import '../../state/game_controller.dart';
 import '../roster/fighter_profile_screen.dart';
 
-/// Elo-based rankings, one list per weight class. A fighter shows up here
-/// as soon as they've had a single fight in that division — no minimum
-/// fight count required.
+/// Elo-based rankings — one ladder per weight class, plus a
+/// Pound-for-Pound ladder that ranks every signed fighter against each
+/// other regardless of division. A fighter shows up here as soon as
+/// they've had a single fight — no minimum fight count required.
 class RankingsScreen extends StatefulWidget {
   const RankingsScreen({super.key});
 
@@ -16,19 +17,16 @@ class RankingsScreen extends StatefulWidget {
 }
 
 class _RankingsScreenState extends State<RankingsScreen> {
-  late WeightClass _weightClass;
-
-  @override
-  void initState() {
-    super.initState();
-    _weightClass = WeightClass.values.first;
-  }
+  /// Null means Pound-for-Pound — every division ranked together on one
+  /// Elo ladder — otherwise the selected division only.
+  WeightClass? _weightClass;
 
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<GameController>();
+    final isP4P = _weightClass == null;
     final ranked = controller.rankedFighters
-        .where((f) => f.weightClass == _weightClass)
+        .where((f) => isP4P || f.weightClass == _weightClass)
         .toList()
       ..sort((a, b) => b.eloRating.compareTo(a.eloRating));
 
@@ -44,6 +42,11 @@ class _RankingsScreenState extends State<RankingsScreen> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
+                  ChoiceChip(
+                    label: const Text('Pound-for-Pound'),
+                    selected: isP4P,
+                    onSelected: (_) => setState(() => _weightClass = null),
+                  ),
                   for (final w in WeightClass.values)
                     ChoiceChip(
                       label: Text(w.label),
@@ -57,8 +60,12 @@ class _RankingsScreenState extends State<RankingsScreen> {
           const Divider(height: 1),
           Expanded(
             child: ranked.isEmpty
-                ? const Center(
-                    child: Text('No ranked fighters yet in this division.'),
+                ? Center(
+                    child: Text(
+                      isP4P
+                          ? 'No ranked fighters yet.'
+                          : 'No ranked fighters yet in this division.',
+                    ),
                   )
                 : ListView.builder(
                     itemCount: ranked.length,
@@ -70,7 +77,9 @@ class _RankingsScreenState extends State<RankingsScreen> {
                         ),
                         title: Text(fighter.name),
                         subtitle: Text(
-                          '${fighter.record.display} · ${fighter.style.label}',
+                          isP4P
+                              ? '${fighter.weightClass.label} · ${fighter.record.display} · ${fighter.style.label}'
+                              : '${fighter.record.display} · ${fighter.style.label}',
                         ),
                         trailing: Text(
                           '${fighter.eloRating}',

@@ -99,7 +99,6 @@ class AppTheme {
       brightness: Brightness.dark,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: AppColors.background,
-      splashFactory: InkSparkle.splashFactory,
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.background,
         foregroundColor: Colors.white,

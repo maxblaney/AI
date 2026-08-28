@@ -24,6 +24,9 @@ class FinanceScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         children: [
           Card(
+            color: (org?.cashBalance ?? 0) < 0
+                ? Theme.of(context).colorScheme.tertiaryContainer
+                : null,
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -34,6 +37,16 @@ class FinanceScreen extends StatelessWidget {
                     currency.format(org?.cashBalance ?? 0),
                     style: Theme.of(context).textTheme.headlineMedium,
                   ),
+                  if (org != null && org.cashBalance < 0) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'In debt — ${(GameController.weeklyDebtInterestRate * 100).toStringAsFixed(0)}% '
+                      'interest compounds every week (about '
+                      '${currency.format((-org.cashBalance * GameController.weeklyDebtInterestRate).round())} '
+                      'next week) until the balance is positive again.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
                 ],
               ),
             ),

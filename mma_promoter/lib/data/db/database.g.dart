@@ -3497,11 +3497,17 @@ class $ContractsTable extends Contracts
   late final GeneratedColumn<int> fightsRemaining = GeneratedColumn<int>(
       'fights_remaining', aliasedName, false,
       type: DriftSqlType.int, requiredDuringInsert: true);
-  static const VerificationMeta _payPerFightMeta =
-      const VerificationMeta('payPerFight');
+  static const VerificationMeta _showMoneyMeta =
+      const VerificationMeta('showMoney');
   @override
-  late final GeneratedColumn<int> payPerFight = GeneratedColumn<int>(
-      'pay_per_fight', aliasedName, false,
+  late final GeneratedColumn<int> showMoney = GeneratedColumn<int>(
+      'show_money', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _winBonusMeta =
+      const VerificationMeta('winBonus');
+  @override
+  late final GeneratedColumn<int> winBonus = GeneratedColumn<int>(
+      'win_bonus', aliasedName, false,
       type: DriftSqlType.int, requiredDuringInsert: true);
   static const VerificationMeta _exclusiveMeta =
       const VerificationMeta('exclusive');
@@ -3520,8 +3526,15 @@ class $ContractsTable extends Contracts
       'signed_on', aliasedName, false,
       type: DriftSqlType.dateTime, requiredDuringInsert: true);
   @override
-  List<GeneratedColumn> get $columns =>
-      [id, fighterId, fightsRemaining, payPerFight, exclusive, signedOn];
+  List<GeneratedColumn> get $columns => [
+        id,
+        fighterId,
+        fightsRemaining,
+        showMoney,
+        winBonus,
+        exclusive,
+        signedOn
+      ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -3551,13 +3564,17 @@ class $ContractsTable extends Contracts
     } else if (isInserting) {
       context.missing(_fightsRemainingMeta);
     }
-    if (data.containsKey('pay_per_fight')) {
-      context.handle(
-          _payPerFightMeta,
-          payPerFight.isAcceptableOrUnknown(
-              data['pay_per_fight']!, _payPerFightMeta));
+    if (data.containsKey('show_money')) {
+      context.handle(_showMoneyMeta,
+          showMoney.isAcceptableOrUnknown(data['show_money']!, _showMoneyMeta));
     } else if (isInserting) {
-      context.missing(_payPerFightMeta);
+      context.missing(_showMoneyMeta);
+    }
+    if (data.containsKey('win_bonus')) {
+      context.handle(_winBonusMeta,
+          winBonus.isAcceptableOrUnknown(data['win_bonus']!, _winBonusMeta));
+    } else if (isInserting) {
+      context.missing(_winBonusMeta);
     }
     if (data.containsKey('exclusive')) {
       context.handle(_exclusiveMeta,
@@ -3584,8 +3601,10 @@ class $ContractsTable extends Contracts
           .read(DriftSqlType.string, data['${effectivePrefix}fighter_id'])!,
       fightsRemaining: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}fights_remaining'])!,
-      payPerFight: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}pay_per_fight'])!,
+      showMoney: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}show_money'])!,
+      winBonus: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}win_bonus'])!,
       exclusive: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}exclusive'])!,
       signedOn: attachedDatabase.typeMapping
@@ -3603,14 +3622,16 @@ class ContractRow extends DataClass implements Insertable<ContractRow> {
   final String id;
   final String fighterId;
   final int fightsRemaining;
-  final int payPerFight;
+  final int showMoney;
+  final int winBonus;
   final bool exclusive;
   final DateTime signedOn;
   const ContractRow(
       {required this.id,
       required this.fighterId,
       required this.fightsRemaining,
-      required this.payPerFight,
+      required this.showMoney,
+      required this.winBonus,
       required this.exclusive,
       required this.signedOn});
   @override
@@ -3619,7 +3640,8 @@ class ContractRow extends DataClass implements Insertable<ContractRow> {
     map['id'] = Variable<String>(id);
     map['fighter_id'] = Variable<String>(fighterId);
     map['fights_remaining'] = Variable<int>(fightsRemaining);
-    map['pay_per_fight'] = Variable<int>(payPerFight);
+    map['show_money'] = Variable<int>(showMoney);
+    map['win_bonus'] = Variable<int>(winBonus);
     map['exclusive'] = Variable<bool>(exclusive);
     map['signed_on'] = Variable<DateTime>(signedOn);
     return map;
@@ -3630,7 +3652,8 @@ class ContractRow extends DataClass implements Insertable<ContractRow> {
       id: Value(id),
       fighterId: Value(fighterId),
       fightsRemaining: Value(fightsRemaining),
-      payPerFight: Value(payPerFight),
+      showMoney: Value(showMoney),
+      winBonus: Value(winBonus),
       exclusive: Value(exclusive),
       signedOn: Value(signedOn),
     );
@@ -3643,7 +3666,8 @@ class ContractRow extends DataClass implements Insertable<ContractRow> {
       id: serializer.fromJson<String>(json['id']),
       fighterId: serializer.fromJson<String>(json['fighterId']),
       fightsRemaining: serializer.fromJson<int>(json['fightsRemaining']),
-      payPerFight: serializer.fromJson<int>(json['payPerFight']),
+      showMoney: serializer.fromJson<int>(json['showMoney']),
+      winBonus: serializer.fromJson<int>(json['winBonus']),
       exclusive: serializer.fromJson<bool>(json['exclusive']),
       signedOn: serializer.fromJson<DateTime>(json['signedOn']),
     );
@@ -3655,7 +3679,8 @@ class ContractRow extends DataClass implements Insertable<ContractRow> {
       'id': serializer.toJson<String>(id),
       'fighterId': serializer.toJson<String>(fighterId),
       'fightsRemaining': serializer.toJson<int>(fightsRemaining),
-      'payPerFight': serializer.toJson<int>(payPerFight),
+      'showMoney': serializer.toJson<int>(showMoney),
+      'winBonus': serializer.toJson<int>(winBonus),
       'exclusive': serializer.toJson<bool>(exclusive),
       'signedOn': serializer.toJson<DateTime>(signedOn),
     };
@@ -3665,14 +3690,16 @@ class ContractRow extends DataClass implements Insertable<ContractRow> {
           {String? id,
           String? fighterId,
           int? fightsRemaining,
-          int? payPerFight,
+          int? showMoney,
+          int? winBonus,
           bool? exclusive,
           DateTime? signedOn}) =>
       ContractRow(
         id: id ?? this.id,
         fighterId: fighterId ?? this.fighterId,
         fightsRemaining: fightsRemaining ?? this.fightsRemaining,
-        payPerFight: payPerFight ?? this.payPerFight,
+        showMoney: showMoney ?? this.showMoney,
+        winBonus: winBonus ?? this.winBonus,
         exclusive: exclusive ?? this.exclusive,
         signedOn: signedOn ?? this.signedOn,
       );
@@ -3683,8 +3710,8 @@ class ContractRow extends DataClass implements Insertable<ContractRow> {
       fightsRemaining: data.fightsRemaining.present
           ? data.fightsRemaining.value
           : this.fightsRemaining,
-      payPerFight:
-          data.payPerFight.present ? data.payPerFight.value : this.payPerFight,
+      showMoney: data.showMoney.present ? data.showMoney.value : this.showMoney,
+      winBonus: data.winBonus.present ? data.winBonus.value : this.winBonus,
       exclusive: data.exclusive.present ? data.exclusive.value : this.exclusive,
       signedOn: data.signedOn.present ? data.signedOn.value : this.signedOn,
     );
@@ -3696,7 +3723,8 @@ class ContractRow extends DataClass implements Insertable<ContractRow> {
           ..write('id: $id, ')
           ..write('fighterId: $fighterId, ')
           ..write('fightsRemaining: $fightsRemaining, ')
-          ..write('payPerFight: $payPerFight, ')
+          ..write('showMoney: $showMoney, ')
+          ..write('winBonus: $winBonus, ')
           ..write('exclusive: $exclusive, ')
           ..write('signedOn: $signedOn')
           ..write(')'))
@@ -3705,7 +3733,7 @@ class ContractRow extends DataClass implements Insertable<ContractRow> {
 
   @override
   int get hashCode => Object.hash(
-      id, fighterId, fightsRemaining, payPerFight, exclusive, signedOn);
+      id, fighterId, fightsRemaining, showMoney, winBonus, exclusive, signedOn);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3713,7 +3741,8 @@ class ContractRow extends DataClass implements Insertable<ContractRow> {
           other.id == this.id &&
           other.fighterId == this.fighterId &&
           other.fightsRemaining == this.fightsRemaining &&
-          other.payPerFight == this.payPerFight &&
+          other.showMoney == this.showMoney &&
+          other.winBonus == this.winBonus &&
           other.exclusive == this.exclusive &&
           other.signedOn == this.signedOn);
 }
@@ -3722,7 +3751,8 @@ class ContractsCompanion extends UpdateCompanion<ContractRow> {
   final Value<String> id;
   final Value<String> fighterId;
   final Value<int> fightsRemaining;
-  final Value<int> payPerFight;
+  final Value<int> showMoney;
+  final Value<int> winBonus;
   final Value<bool> exclusive;
   final Value<DateTime> signedOn;
   final Value<int> rowid;
@@ -3730,7 +3760,8 @@ class ContractsCompanion extends UpdateCompanion<ContractRow> {
     this.id = const Value.absent(),
     this.fighterId = const Value.absent(),
     this.fightsRemaining = const Value.absent(),
-    this.payPerFight = const Value.absent(),
+    this.showMoney = const Value.absent(),
+    this.winBonus = const Value.absent(),
     this.exclusive = const Value.absent(),
     this.signedOn = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -3739,20 +3770,23 @@ class ContractsCompanion extends UpdateCompanion<ContractRow> {
     required String id,
     required String fighterId,
     required int fightsRemaining,
-    required int payPerFight,
+    required int showMoney,
+    required int winBonus,
     this.exclusive = const Value.absent(),
     required DateTime signedOn,
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         fighterId = Value(fighterId),
         fightsRemaining = Value(fightsRemaining),
-        payPerFight = Value(payPerFight),
+        showMoney = Value(showMoney),
+        winBonus = Value(winBonus),
         signedOn = Value(signedOn);
   static Insertable<ContractRow> custom({
     Expression<String>? id,
     Expression<String>? fighterId,
     Expression<int>? fightsRemaining,
-    Expression<int>? payPerFight,
+    Expression<int>? showMoney,
+    Expression<int>? winBonus,
     Expression<bool>? exclusive,
     Expression<DateTime>? signedOn,
     Expression<int>? rowid,
@@ -3761,7 +3795,8 @@ class ContractsCompanion extends UpdateCompanion<ContractRow> {
       if (id != null) 'id': id,
       if (fighterId != null) 'fighter_id': fighterId,
       if (fightsRemaining != null) 'fights_remaining': fightsRemaining,
-      if (payPerFight != null) 'pay_per_fight': payPerFight,
+      if (showMoney != null) 'show_money': showMoney,
+      if (winBonus != null) 'win_bonus': winBonus,
       if (exclusive != null) 'exclusive': exclusive,
       if (signedOn != null) 'signed_on': signedOn,
       if (rowid != null) 'rowid': rowid,
@@ -3772,7 +3807,8 @@ class ContractsCompanion extends UpdateCompanion<ContractRow> {
       {Value<String>? id,
       Value<String>? fighterId,
       Value<int>? fightsRemaining,
-      Value<int>? payPerFight,
+      Value<int>? showMoney,
+      Value<int>? winBonus,
       Value<bool>? exclusive,
       Value<DateTime>? signedOn,
       Value<int>? rowid}) {
@@ -3780,7 +3816,8 @@ class ContractsCompanion extends UpdateCompanion<ContractRow> {
       id: id ?? this.id,
       fighterId: fighterId ?? this.fighterId,
       fightsRemaining: fightsRemaining ?? this.fightsRemaining,
-      payPerFight: payPerFight ?? this.payPerFight,
+      showMoney: showMoney ?? this.showMoney,
+      winBonus: winBonus ?? this.winBonus,
       exclusive: exclusive ?? this.exclusive,
       signedOn: signedOn ?? this.signedOn,
       rowid: rowid ?? this.rowid,
@@ -3799,8 +3836,11 @@ class ContractsCompanion extends UpdateCompanion<ContractRow> {
     if (fightsRemaining.present) {
       map['fights_remaining'] = Variable<int>(fightsRemaining.value);
     }
-    if (payPerFight.present) {
-      map['pay_per_fight'] = Variable<int>(payPerFight.value);
+    if (showMoney.present) {
+      map['show_money'] = Variable<int>(showMoney.value);
+    }
+    if (winBonus.present) {
+      map['win_bonus'] = Variable<int>(winBonus.value);
     }
     if (exclusive.present) {
       map['exclusive'] = Variable<bool>(exclusive.value);
@@ -3820,7 +3860,8 @@ class ContractsCompanion extends UpdateCompanion<ContractRow> {
           ..write('id: $id, ')
           ..write('fighterId: $fighterId, ')
           ..write('fightsRemaining: $fightsRemaining, ')
-          ..write('payPerFight: $payPerFight, ')
+          ..write('showMoney: $showMoney, ')
+          ..write('winBonus: $winBonus, ')
           ..write('exclusive: $exclusive, ')
           ..write('signedOn: $signedOn, ')
           ..write('rowid: $rowid')
@@ -8302,7 +8343,8 @@ typedef $$ContractsTableCreateCompanionBuilder = ContractsCompanion Function({
   required String id,
   required String fighterId,
   required int fightsRemaining,
-  required int payPerFight,
+  required int showMoney,
+  required int winBonus,
   Value<bool> exclusive,
   required DateTime signedOn,
   Value<int> rowid,
@@ -8311,7 +8353,8 @@ typedef $$ContractsTableUpdateCompanionBuilder = ContractsCompanion Function({
   Value<String> id,
   Value<String> fighterId,
   Value<int> fightsRemaining,
-  Value<int> payPerFight,
+  Value<int> showMoney,
+  Value<int> winBonus,
   Value<bool> exclusive,
   Value<DateTime> signedOn,
   Value<int> rowid,
@@ -8336,8 +8379,11 @@ class $$ContractsTableFilterComposer
       column: $table.fightsRemaining,
       builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<int> get payPerFight => $composableBuilder(
-      column: $table.payPerFight, builder: (column) => ColumnFilters(column));
+  ColumnFilters<int> get showMoney => $composableBuilder(
+      column: $table.showMoney, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get winBonus => $composableBuilder(
+      column: $table.winBonus, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<bool> get exclusive => $composableBuilder(
       column: $table.exclusive, builder: (column) => ColumnFilters(column));
@@ -8365,8 +8411,11 @@ class $$ContractsTableOrderingComposer
       column: $table.fightsRemaining,
       builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<int> get payPerFight => $composableBuilder(
-      column: $table.payPerFight, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<int> get showMoney => $composableBuilder(
+      column: $table.showMoney, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get winBonus => $composableBuilder(
+      column: $table.winBonus, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<bool> get exclusive => $composableBuilder(
       column: $table.exclusive, builder: (column) => ColumnOrderings(column));
@@ -8393,8 +8442,11 @@ class $$ContractsTableAnnotationComposer
   GeneratedColumn<int> get fightsRemaining => $composableBuilder(
       column: $table.fightsRemaining, builder: (column) => column);
 
-  GeneratedColumn<int> get payPerFight => $composableBuilder(
-      column: $table.payPerFight, builder: (column) => column);
+  GeneratedColumn<int> get showMoney =>
+      $composableBuilder(column: $table.showMoney, builder: (column) => column);
+
+  GeneratedColumn<int> get winBonus =>
+      $composableBuilder(column: $table.winBonus, builder: (column) => column);
 
   GeneratedColumn<bool> get exclusive =>
       $composableBuilder(column: $table.exclusive, builder: (column) => column);
@@ -8429,7 +8481,8 @@ class $$ContractsTableTableManager extends RootTableManager<
             Value<String> id = const Value.absent(),
             Value<String> fighterId = const Value.absent(),
             Value<int> fightsRemaining = const Value.absent(),
-            Value<int> payPerFight = const Value.absent(),
+            Value<int> showMoney = const Value.absent(),
+            Value<int> winBonus = const Value.absent(),
             Value<bool> exclusive = const Value.absent(),
             Value<DateTime> signedOn = const Value.absent(),
             Value<int> rowid = const Value.absent(),
@@ -8438,7 +8491,8 @@ class $$ContractsTableTableManager extends RootTableManager<
             id: id,
             fighterId: fighterId,
             fightsRemaining: fightsRemaining,
-            payPerFight: payPerFight,
+            showMoney: showMoney,
+            winBonus: winBonus,
             exclusive: exclusive,
             signedOn: signedOn,
             rowid: rowid,
@@ -8447,7 +8501,8 @@ class $$ContractsTableTableManager extends RootTableManager<
             required String id,
             required String fighterId,
             required int fightsRemaining,
-            required int payPerFight,
+            required int showMoney,
+            required int winBonus,
             Value<bool> exclusive = const Value.absent(),
             required DateTime signedOn,
             Value<int> rowid = const Value.absent(),
@@ -8456,7 +8511,8 @@ class $$ContractsTableTableManager extends RootTableManager<
             id: id,
             fighterId: fighterId,
             fightsRemaining: fightsRemaining,
-            payPerFight: payPerFight,
+            showMoney: showMoney,
+            winBonus: winBonus,
             exclusive: exclusive,
             signedOn: signedOn,
             rowid: rowid,

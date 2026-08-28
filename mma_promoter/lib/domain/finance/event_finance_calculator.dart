@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import '../../data/models/models.dart';
+import 'pay_scale.dart';
 
 class EventFinanceResult {
   final int attendance;
@@ -94,15 +95,16 @@ class EventFinanceCalculator {
 
     final revenue = ticketRevenue + ppvRevenue;
 
-    final purses = card.expand((f) => [f.fighterAId, f.fighterBId]).fold<int>(
-      0,
-      (sum, id) {
-        final fighter = fighterLookup[id];
-        final pay = fighter?.contract?.payPerFight ??
-            (500 + (fighter?.popularity ?? 10) * 20);
-        return sum + pay;
-      },
-    );
+    // Each fighter takes home their contract's show money no matter what,
+    // plus the win bonus on top if they actually won this fight.
+    final purses = card.fold<int>(0, (sum, fight) {
+      final result = fight.result;
+      final aWon = result != null && !result.isDraw && result.winnerId == fight.fighterAId;
+      final bWon = result != null && !result.isDraw && result.winnerId == fight.fighterBId;
+      return sum +
+          _purseFor(fighterLookup[fight.fighterAId], won: aWon) +
+          _purseFor(fighterLookup[fight.fighterBId], won: bWon);
+    });
     final expenses = venue.baseCost + purses + promotionBudgetSpent;
 
     final reputationChange = _reputationChange(
@@ -118,6 +120,22 @@ class EventFinanceCalculator {
       expenses: expenses,
       reputationChange: reputationChange,
     );
+  }
+
+  /// What [fighter] actually takes home from this fight — their contract's
+  /// show money, plus the win bonus if [won]. A fighter with no contract
+  /// on file (shouldn't normally happen mid-card) falls back to market
+  /// rate off [PayScale].
+  int _purseFor(Fighter? fighter, {required bool won}) {
+    final contract = fighter?.contract;
+    if (contract != null) {
+      return won ? contract.payOnWin : contract.showMoney;
+    }
+    final suggested = PayScale.suggest(
+      overall: fighter?.overall ?? 50,
+      popularity: fighter?.popularity ?? 10,
+    );
+    return won ? suggested.total : suggested.showMoney;
   }
 
   double _averagePopularity(List<Fighter?> fighters) {

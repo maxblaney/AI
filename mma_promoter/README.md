@@ -223,7 +223,9 @@ the native mobile app with real persistence.
   (`CareerProgressionEngine.updateElo`, standard formula, K=32). A fighter
   becomes "ranked" — and shows up on the **Rankings** tab — after their
   first fight in a division; the tab lists the top fighters per weight
-  class by Elo.
+  class by Elo, plus a **Pound-for-Pound** ladder (the default view) that
+  ranks every signed fighter against each other on the same Elo scale
+  regardless of division.
 - **Retirement**: `CareerProgressionEngine.maybeRetire` rolls a retirement
   chance after every fight, driven by age (34+), a long losing streak
   (3+), and major injuries — any combination stacks, capped at 90%.
@@ -275,6 +277,23 @@ the native mobile app with real persistence.
 - **Fight history**: a fighter's profile lists their past fights (opponent,
   method, round, event/date) next to their contract, queried live from
   every event's card.
+- **Fighter pay**: contracts are show money + a win bonus, not a flat
+  per-fight rate — a fighter takes home `showMoney` no matter what, and
+  `showMoney + winBonus` if they actually win. `PayScale.suggest` sets the
+  market rate the sign dialog pre-fills (and what an unsigned fighter costs
+  in the finance calculator): a fighter's `overall` sets a baseline "before
+  popularity" purse via a piecewise curve — roughly $1,000 for a 25-55
+  overall prospect, $2,500-5,000 for 56-65, ~$12,000 for 65-75,
+  $50,000-100,000 for 75-85, and climbing well past $100,000 for the rare
+  90+ legend tier — then `popularity` scales that up to +67% at 100
+  popularity, since a mediocre fighter with a following draws money a
+  similarly-skilled unknown doesn't. The suggestion is a starting point,
+  not a floor — the sign dialog lets the player over- or under-cut it.
+- **Debt**: cash can go negative — there's no hard floor blocking a
+  signing or an expensive card — but a negative balance accrues 1%
+  interest every week (`GameController._applyDebtInterest`, ~68% APR if
+  left unpaid), shown on the **Finance** tab. Debt is a tool for riding out
+  a cash crunch, not a way to permanently outspend income.
 
 ## Simulation model
 

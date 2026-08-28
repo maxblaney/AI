@@ -6,7 +6,12 @@ import 'package:mma_promoter/domain/finance/event_finance_calculator.dart';
 
 import '../support/fighter_fixtures.dart';
 
-Fighter _fighter(String id, {required int popularity, int payPerFight = 2000}) {
+Fighter _fighter(
+  String id, {
+  required int popularity,
+  int showMoney = 1000,
+  int winBonus = 1000,
+}) {
   return testFighter(
     id,
     stat: 70,
@@ -15,7 +20,8 @@ Fighter _fighter(String id, {required int popularity, int payPerFight = 2000}) {
       id: '$id-contract',
       fighterId: id,
       fightsRemaining: 3,
-      payPerFight: payPerFight,
+      showMoney: showMoney,
+      winBonus: winBonus,
       exclusive: true,
       signedOn: DateTime(2026, 1, 1),
     ),
@@ -133,8 +139,8 @@ void main() {
 
     test('a tiny venue with expensive stars runs at a loss', () {
       final calculator = EventFinanceCalculator(random: Random(2));
-      final a = _fighter('a', popularity: 90, payPerFight: 100000);
-      final b = _fighter('b', popularity: 90, payPerFight: 100000);
+      final a = _fighter('a', popularity: 90, showMoney: 50000, winBonus: 50000);
+      final b = _fighter('b', popularity: 90, showMoney: 50000, winBonus: 50000);
       final fight = _mainEventFight('a', 'b');
       final org = _organization(fanbaseSize: 100);
 

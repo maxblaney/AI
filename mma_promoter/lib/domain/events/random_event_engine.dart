@@ -138,8 +138,10 @@ class RandomEventEngine {
 
   RandomEventOutcome _resolveDispute(String choiceId, Fighter fighter) {
     if (choiceId == _disputeChoiceRaise) {
-      final updatedContract = fighter.contract?.copyWith(
-        payPerFight: (fighter.contract!.payPerFight * 1.25).round(),
+      final current = fighter.contract!;
+      final updatedContract = current.copyWith(
+        showMoney: (current.showMoney * 1.25).round(),
+        winBonus: (current.winBonus * 1.25).round(),
       );
       return RandomEventOutcome(
         updatedFighter: fighter.copyWith(

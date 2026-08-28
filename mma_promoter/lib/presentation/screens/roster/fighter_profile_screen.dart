@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/models/models.dart';
+import '../../../domain/finance/pay_scale.dart';
 import '../../state/game_controller.dart';
 import 'fighter_editor_screen.dart';
 
@@ -238,37 +239,58 @@ class FighterProfileScreen extends StatelessWidget {
 
   void _showSignDialog(BuildContext context, Fighter fighter) {
     final controller = context.read<GameController>();
-    final suggestedPay = 1000 + fighter.popularity * 40;
-    final payController = TextEditingController(text: '$suggestedPay');
+    final suggested = PayScale.suggest(
+      overall: fighter.overall,
+      popularity: fighter.popularity,
+    );
+    final showController = TextEditingController(text: '${suggested.showMoney}');
+    final winController = TextEditingController(text: '${suggested.winBonus}');
     var fightsInDeal = 4;
+    final currency = NumberFormat.simpleCurrency();
 
     showDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setState) => AlertDialog(
           title: Text('Sign ${fighter.name}'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextField(
-                controller: payController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Pay per fight (also charged now as signing bonus)',
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Market rate for this fighter: ${currency.format(suggested.showMoney)} '
+                  'to show, ${currency.format(suggested.winBonus)} to win.',
+                  style: Theme.of(dialogContext).textTheme.bodySmall,
                 ),
-              ),
-              const SizedBox(height: 12),
-              Text('Fights in deal: $fightsInDeal'),
-              Slider(
-                value: fightsInDeal.toDouble(),
-                min: 1,
-                max: 8,
-                divisions: 7,
-                label: '$fightsInDeal',
-                onChanged: (v) => setState(() => fightsInDeal = v.round()),
-              ),
-            ],
+                const SizedBox(height: 12),
+                TextField(
+                  controller: showController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Show money (charged now as signing bonus)',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: winController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Win bonus (paid only when they win)',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text('Fights in deal: $fightsInDeal'),
+                Slider(
+                  value: fightsInDeal.toDouble(),
+                  min: 1,
+                  max: 8,
+                  divisions: 7,
+                  label: '$fightsInDeal',
+                  onChanged: (v) => setState(() => fightsInDeal = v.round()),
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -277,10 +299,12 @@ class FighterProfileScreen extends StatelessWidget {
             ),
             FilledButton(
               onPressed: () async {
-                final pay = int.tryParse(payController.text) ?? suggestedPay;
+                final show = int.tryParse(showController.text) ?? suggested.showMoney;
+                final win = int.tryParse(winController.text) ?? suggested.winBonus;
                 final error = await controller.signFighter(
                   fighter,
-                  payPerFight: pay,
+                  showMoney: show,
+                  winBonus: win,
                   fightsInDeal: fightsInDeal,
                 );
                 if (dialogContext.mounted) Navigator.of(dialogContext).pop();
@@ -312,7 +336,9 @@ class _ContractSection extends StatelessWidget {
       children: [
         Text('Contract', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
-        Text('Pay per fight: ${currency.format(contract.payPerFight)}'),
+        Text('Show money: ${currency.format(contract.showMoney)}'),
+        Text('Win bonus: ${currency.format(contract.winBonus)}'),
+        Text('Pay on a win: ${currency.format(contract.payOnWin)}'),
         Text('Fights remaining: ${contract.fightsRemaining}'),
         Text('Exclusive: ${contract.exclusive ? 'Yes' : 'No'}'),
         const SizedBox(height: 16),

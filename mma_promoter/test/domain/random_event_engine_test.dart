@@ -9,7 +9,8 @@ import '../support/fighter_fixtures.dart';
 Fighter _signedFighter({
   InjuryStatus injuryStatus = InjuryStatus.healthy,
   int morale = 70,
-  int payPerFight = 2000,
+  int showMoney = 2000,
+  int winBonus = 2000,
 }) {
   return testFighter(
     'f1',
@@ -22,7 +23,8 @@ Fighter _signedFighter({
       id: 'c1',
       fighterId: 'f1',
       fightsRemaining: 3,
-      payPerFight: payPerFight,
+      showMoney: showMoney,
+      winBonus: winBonus,
       exclusive: true,
       signedOn: DateTime(2026, 1, 1),
     ),
@@ -71,9 +73,9 @@ void main() {
       expect(outcome.cashDelta, lessThan(0));
     });
 
-    test('granting a raise increases the fighter\'s per-fight pay', () {
+    test('granting a raise increases both show money and win bonus', () {
       final engine = RandomEventEngine(random: Random(4));
-      final fighter = _signedFighter(payPerFight: 2000);
+      final fighter = _signedFighter(showMoney: 2000, winBonus: 2000);
       final event = RandomEvent(
         id: 'e2',
         type: RandomEventType.contractDispute,
@@ -89,12 +91,13 @@ void main() {
 
       final outcome = engine.resolveChoice(event, 'grant_raise', fighter);
 
-      expect(outcome.updatedFighter.contract!.payPerFight, greaterThan(2000));
+      expect(outcome.updatedFighter.contract!.showMoney, greaterThan(2000));
+      expect(outcome.updatedFighter.contract!.winBonus, greaterThan(2000));
     });
 
     test('holding firm drops morale and leaves pay unchanged', () {
       final engine = RandomEventEngine(random: Random(5));
-      final fighter = _signedFighter(morale: 70, payPerFight: 2000);
+      final fighter = _signedFighter(morale: 70, showMoney: 2000, winBonus: 2000);
       final event = RandomEvent(
         id: 'e3',
         type: RandomEventType.contractDispute,
@@ -111,7 +114,8 @@ void main() {
       final outcome = engine.resolveChoice(event, 'hold_firm', fighter);
 
       expect(outcome.updatedFighter.morale, lessThan(70));
-      expect(outcome.updatedFighter.contract!.payPerFight, 2000);
+      expect(outcome.updatedFighter.contract!.showMoney, 2000);
+      expect(outcome.updatedFighter.contract!.winBonus, 2000);
     });
   });
 }
