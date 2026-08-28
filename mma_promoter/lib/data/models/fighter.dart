@@ -31,6 +31,10 @@ class Fighter {
   final int popularity; // 0-100, drives ticket/PPV draw.
   final int morale; // 0-100, drifts with events, affects performance.
   final InjuryStatus injuryStatus;
+
+  /// Absolute game week ([GameCalendar]) this fighter's current injury
+  /// clears on its own. Null when healthy or the injury has no countdown.
+  final int? injuryClearsAtWeek;
   final int winStreak;
   final int lossStreak;
   final Contract? contract; // null = unsigned / in the free talent pool.
@@ -64,6 +68,7 @@ class Fighter {
     required this.popularity,
     required this.morale,
     required this.injuryStatus,
+    this.injuryClearsAtWeek,
     required this.winStreak,
     this.lossStreak = 0,
     this.contract,
@@ -114,6 +119,8 @@ class Fighter {
     int? popularity,
     int? morale,
     InjuryStatus? injuryStatus,
+    int? injuryClearsAtWeek,
+    bool clearInjuryClearsAtWeek = false,
     int? winStreak,
     int? lossStreak,
     Contract? contract,
@@ -144,6 +151,9 @@ class Fighter {
       popularity: popularity ?? this.popularity,
       morale: morale ?? this.morale,
       injuryStatus: injuryStatus ?? this.injuryStatus,
+      injuryClearsAtWeek: clearInjuryClearsAtWeek
+          ? null
+          : (injuryClearsAtWeek ?? this.injuryClearsAtWeek),
       winStreak: winStreak ?? this.winStreak,
       lossStreak: lossStreak ?? this.lossStreak,
       contract: clearContract ? null : (contract ?? this.contract),

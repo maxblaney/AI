@@ -439,7 +439,7 @@ const Map<FightingStyle, Map<_GroundPlan, double>> _groundPlanWeights = {
 /// most are mid-tier prospects and journeymen — enough variety to make
 /// early signing decisions interesting.
 List<Fighter> generateStartingRoster({
-  int fightersPerWeightClass = 8,
+  int fightersPerWeightClass = 20,
   Random? random,
 }) {
   final rng = random ?? Random();
@@ -462,6 +462,19 @@ List<Fighter> generateMonthlyTalentPool({int count = 10, Random? random}) {
   );
 }
 
+/// Talent tiers driving each fighter's stat center. Weighted so the pool
+/// averages roughly a 72 overall, with a real "best of the best" slice
+/// that peaks in the low-to-mid 90s and a vanishingly rare legend tier
+/// that's the only way to see a 95+ overall.
+int _rollStatCenter(Random rng) {
+  final roll = rng.nextDouble();
+  if (roll < 0.005) return 95 + rng.nextInt(5); // legend: 95-99
+  if (roll < 0.04) return 84 + rng.nextInt(10); // elite: 84-93
+  if (roll < 0.28) return 75 + rng.nextInt(11); // above average: 75-85
+  if (roll < 0.75) return 65 + rng.nextInt(15); // average: 65-79
+  return 48 + rng.nextInt(21); // prospect/journeyman: 48-68
+}
+
 Fighter _generateFighter(WeightClass weightClass, Random rng) {
   final age = 21 + rng.nextInt(15); // 21-35
   final int experienceFights = max(0, (age - 20)) * (1 + rng.nextInt(3));
@@ -469,11 +482,13 @@ Fighter _generateFighter(WeightClass weightClass, Random rng) {
   final wins = (experienceFights * winRate).round();
   final losses = experienceFights - wins;
 
-  // Younger/inexperienced fighters skew toward raw-but-uneven stats;
-  // veterans skew toward higher, more balanced stats.
-  final int skillFloor = 35 + min(experienceFights, 20);
-  final int skillCeiling = min(95, skillFloor + 35);
-  int stat() => skillFloor + rng.nextInt(max(1, skillCeiling - skillFloor));
+  // Every fighter has a talent-tier "center" their stats cluster around.
+  // Young/inexperienced fighters swing wider around that center (raw,
+  // uneven tools); veterans are tighter and more consistent — but neither
+  // shifts the *average*, only how much a given stat can stray from it.
+  final int center = _rollStatCenter(rng);
+  final int band = 12 - min(experienceFights, 6); // 12 (green) down to 6 (veteran)
+  int stat() => (center + rng.nextInt(band * 2 + 1) - band).clamp(15, 99);
   int tendency() => 20 + rng.nextInt(41); // 20-60 baseline
 
   final style = FightingStyle.values[rng.nextInt(FightingStyle.values.length)];
@@ -682,7 +697,6 @@ int generateReach(int heightInches, Random rng) {
 Organization generateStartingOrganization({
   required String name,
   required ReputationTier tier,
-  DateTime? asOf,
 }) {
   return Organization(
     id: newId(),
@@ -693,6 +707,7 @@ Organization generateStartingOrganization({
     fanbaseSize: tier.startingFanbase,
     homeRegion: 'Midwest, USA',
     promotionBudget: (tier.startingCash * 0.1).round(),
-    lastTalentRefresh: asOf ?? DateTime.now(),
+    lastTalentRefreshWeek: 1,
+    currentWeek: 1,
   );
 }

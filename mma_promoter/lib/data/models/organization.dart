@@ -11,9 +11,15 @@ class Organization {
   final String homeRegion;
   final int promotionBudget; // spendable resource for hype actions.
 
-  /// The last calendar month the talent pool got its ~10-fighter refresh.
-  /// Advances whenever a simulated event's date crosses into a new month.
-  final DateTime lastTalentRefresh;
+  /// The absolute week number the talent pool last got its ~10-fighter
+  /// refresh. Advances whenever [currentWeek] crosses into a new "month"
+  /// (every 4 weeks).
+  final int lastTalentRefreshWeek;
+
+  /// The game's own clock — an absolute week count starting at 1. This is
+  /// the single source of truth for "now"; nothing in the game reads the
+  /// real wall clock. See [GameCalendar].
+  final int currentWeek;
 
   const Organization({
     required this.id,
@@ -24,7 +30,8 @@ class Organization {
     required this.fanbaseSize,
     required this.homeRegion,
     required this.promotionBudget,
-    required this.lastTalentRefresh,
+    this.lastTalentRefreshWeek = 1,
+    this.currentWeek = 1,
   });
 
   Organization copyWith({
@@ -36,7 +43,8 @@ class Organization {
     int? fanbaseSize,
     String? homeRegion,
     int? promotionBudget,
-    DateTime? lastTalentRefresh,
+    int? lastTalentRefreshWeek,
+    int? currentWeek,
   }) {
     return Organization(
       id: id ?? this.id,
@@ -47,7 +55,8 @@ class Organization {
       fanbaseSize: fanbaseSize ?? this.fanbaseSize,
       homeRegion: homeRegion ?? this.homeRegion,
       promotionBudget: promotionBudget ?? this.promotionBudget,
-      lastTalentRefresh: lastTalentRefresh ?? this.lastTalentRefresh,
+      lastTalentRefreshWeek: lastTalentRefreshWeek ?? this.lastTalentRefreshWeek,
+      currentWeek: currentWeek ?? this.currentWeek,
     );
   }
 }

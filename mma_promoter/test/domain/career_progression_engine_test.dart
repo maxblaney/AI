@@ -134,4 +134,27 @@ void main() {
       expect(retiredSomewhere, isTrue);
     });
   });
+
+  group('CareerProgressionEngine.rollHealingWeeks', () {
+    test('healthy never gets a countdown', () {
+      final engine = CareerProgressionEngine(random: Random(5));
+      expect(engine.rollHealingWeeks(InjuryStatus.healthy), 0);
+    });
+
+    test('minor injuries heal within a short window', () {
+      final engine = CareerProgressionEngine(random: Random(6));
+      for (var i = 0; i < 50; i++) {
+        final weeks = engine.rollHealingWeeks(InjuryStatus.minor);
+        expect(weeks, inInclusiveRange(2, 6));
+      }
+    });
+
+    test('major injuries take much longer than minor ones', () {
+      final engine = CareerProgressionEngine(random: Random(7));
+      for (var i = 0; i < 50; i++) {
+        final weeks = engine.rollHealingWeeks(InjuryStatus.major);
+        expect(weeks, inInclusiveRange(10, 24));
+      }
+    });
+  });
 }

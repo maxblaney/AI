@@ -36,7 +36,6 @@ Organization _organization({
     fanbaseSize: fanbaseSize,
     homeRegion: 'Midwest, USA',
     promotionBudget: 20000,
-    lastTalentRefresh: DateTime(2026, 1, 1),
   );
 }
 

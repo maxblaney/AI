@@ -36,3 +36,9 @@ abstract class RandomEventRepositoryContract {
   Stream<List<RandomEvent>> watchUnresolved();
   Future<void> save(RandomEvent event);
 }
+
+abstract class InboxItemRepositoryContract {
+  Stream<List<InboxItem>> watchAll();
+  Future<void> save(InboxItem item);
+  Future<void> markRead(String id);
+}

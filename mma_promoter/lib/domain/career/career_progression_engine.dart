@@ -77,4 +77,18 @@ class CareerProgressionEngine {
     }
     return fighter;
   }
+
+  /// How many game weeks a fresh injury of [status] takes to heal on its
+  /// own. Minor injuries are a short layoff; major injuries are a serious
+  /// absence. Healthy never gets a countdown.
+  int rollHealingWeeks(InjuryStatus status) {
+    switch (status) {
+      case InjuryStatus.minor:
+        return 2 + _random.nextInt(5); // 2-6 weeks
+      case InjuryStatus.major:
+        return 10 + _random.nextInt(15); // 10-24 weeks
+      case InjuryStatus.healthy:
+        return 0;
+    }
+  }
 }

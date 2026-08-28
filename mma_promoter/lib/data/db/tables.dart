@@ -93,6 +93,9 @@ class Fighters extends Table {
   IntColumn get morale => integer().withDefault(const Constant(70))();
   TextColumn get injuryStatus =>
       text().withDefault(const Constant('healthy'))();
+  /// Absolute game week this fighter's current injury clears on its own.
+  /// Null when healthy or when the injury has no active countdown.
+  IntColumn get injuryClearsAtWeek => integer().nullable()();
   IntColumn get winStreak => integer().withDefault(const Constant(0))();
   IntColumn get lossStreak => integer().withDefault(const Constant(0))();
 
@@ -134,7 +137,8 @@ class Organizations extends Table {
   IntColumn get fanbaseSize => integer().withDefault(const Constant(0))();
   TextColumn get homeRegion => text()();
   IntColumn get promotionBudget => integer().withDefault(const Constant(0))();
-  DateTimeColumn get lastTalentRefresh => dateTime()();
+  IntColumn get lastTalentRefreshWeek => integer().withDefault(const Constant(1))();
+  IntColumn get currentWeek => integer().withDefault(const Constant(1))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -206,6 +210,22 @@ class RandomEvents extends Table {
   TextColumn get choicesJson => text()();
   TextColumn get chosenChoiceId => text().nullable()();
   DateTimeColumn get occurredOn => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Notifications about the player's own roster — injuries, retirements,
+/// and fighters wanting a booking. See [InboxItem].
+@DataClassName('InboxItemRow')
+class InboxItems extends Table {
+  TextColumn get id => text()();
+  TextColumn get type => text()();
+  IntColumn get week => integer()();
+  TextColumn get title => text()();
+  TextColumn get body => text()();
+  TextColumn get fighterId => text().nullable()();
+  BoolColumn get read => boolean().withDefault(const Constant(false))();
 
   @override
   Set<Column> get primaryKey => {id};

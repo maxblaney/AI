@@ -89,6 +89,7 @@ Fighter fighterFromRow(FighterRow row, ContractRow? contractRow) {
     popularity: row.popularity,
     morale: row.morale,
     injuryStatus: InjuryStatus.values.byName(row.injuryStatus),
+    injuryClearsAtWeek: row.injuryClearsAtWeek,
     winStreak: row.winStreak,
     lossStreak: row.lossStreak,
     contract: contractRow == null ? null : contractFromRow(contractRow),
@@ -175,6 +176,7 @@ FightersCompanion fighterToCompanion(Fighter fighter) {
     popularity: Value(fighter.popularity),
     morale: Value(fighter.morale),
     injuryStatus: Value(fighter.injuryStatus.name),
+    injuryClearsAtWeek: Value(fighter.injuryClearsAtWeek),
     winStreak: Value(fighter.winStreak),
     lossStreak: Value(fighter.lossStreak),
     eloRating: Value(fighter.eloRating),
@@ -218,7 +220,8 @@ Organization organizationFromRow(OrganizationRow row) {
     fanbaseSize: row.fanbaseSize,
     homeRegion: row.homeRegion,
     promotionBudget: row.promotionBudget,
-    lastTalentRefresh: row.lastTalentRefresh,
+    lastTalentRefreshWeek: row.lastTalentRefreshWeek,
+    currentWeek: row.currentWeek,
   );
 }
 
@@ -232,7 +235,8 @@ OrganizationsCompanion organizationToCompanion(Organization org) {
     fanbaseSize: Value(org.fanbaseSize),
     homeRegion: org.homeRegion,
     promotionBudget: Value(org.promotionBudget),
-    lastTalentRefresh: org.lastTalentRefresh,
+    lastTalentRefreshWeek: Value(org.lastTalentRefreshWeek),
+    currentWeek: Value(org.currentWeek),
   );
 }
 
@@ -375,5 +379,29 @@ RandomEventsCompanion randomEventToCompanion(RandomEvent event) {
     choicesJson: choicesJson,
     chosenChoiceId: Value(event.chosenChoiceId),
     occurredOn: event.occurredOn,
+  );
+}
+
+InboxItem inboxItemFromRow(InboxItemRow row) {
+  return InboxItem(
+    id: row.id,
+    type: InboxItemType.values.byName(row.type),
+    week: row.week,
+    title: row.title,
+    body: row.body,
+    fighterId: row.fighterId,
+    read: row.read,
+  );
+}
+
+InboxItemsCompanion inboxItemToCompanion(InboxItem item) {
+  return InboxItemsCompanion.insert(
+    id: item.id,
+    type: item.type.name,
+    week: item.week,
+    title: item.title,
+    body: item.body,
+    fighterId: Value(item.fighterId),
+    read: Value(item.read),
   );
 }

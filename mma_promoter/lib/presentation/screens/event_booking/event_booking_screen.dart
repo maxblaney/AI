@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/utils/id_generator.dart';
 import '../../../data/models/models.dart';
+import '../../../domain/calendar/game_calendar.dart';
 import '../../state/game_controller.dart';
 
 class EventBookingScreen extends StatefulWidget {
@@ -16,7 +16,11 @@ class EventBookingScreen extends StatefulWidget {
 class _EventBookingScreenState extends State<EventBookingScreen> {
   late final TextEditingController _nameController;
   late final TextEditingController _ticketPriceController;
-  DateTime _date = DateTime.now().add(const Duration(days: 14));
+
+  /// How many weeks out from the org's current week to book this event.
+  /// Booking is always relative to the game clock, never a free-form
+  /// calendar date — this is what keeps the timeline linear.
+  int _weeksFromNow = 2;
   Venue _venue = Venue.regionalUsa;
   bool _ticketPriceEdited = false;
   final List<Fight> _card = [];
@@ -60,6 +64,8 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
         .where((f) => f.injuryStatus != InjuryStatus.major)
         .toList();
     final bookableClasses = _bookableWeightClasses(roster);
+    final currentWeek = controller.organization?.currentWeek ?? 1;
+    final bookedWeek = currentWeek + _weeksFromNow;
 
     final mainCard = <Fight>[];
     final prelims = <Fight>[];
@@ -77,13 +83,35 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
             decoration: const InputDecoration(labelText: 'Event Name'),
           ),
           const SizedBox(height: 16),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Date'),
-            subtitle: Text(DateFormat.yMMMd().format(_date)),
-            trailing: const Icon(Icons.edit_calendar),
-            onTap: _pickDate,
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Book for', style: Theme.of(context).textTheme.bodySmall),
+                  Text(
+                    GameCalendar.label(bookedWeek),
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  Slider(
+                    value: _weeksFromNow.toDouble(),
+                    min: 1,
+                    max: 26,
+                    divisions: 25,
+                    label: '$_weeksFromNow week${_weeksFromNow == 1 ? '' : 's'} out',
+                    onChanged: (v) => setState(() => _weeksFromNow = v.round()),
+                  ),
+                  Text(
+                    '$_weeksFromNow week${_weeksFromNow == 1 ? '' : 's'} from now '
+                    '(currently ${GameCalendar.label(currentWeek)})',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
           ),
+          const SizedBox(height: 16),
           DropdownButtonFormField<Venue>(
             value: _venue,
             decoration: const InputDecoration(labelText: 'Venue'),
@@ -184,16 +212,6 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
         if (_coMainEventFightId == fight.id) _coMainEventFightId = null;
       }),
     );
-  }
-
-  Future<void> _pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _date,
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-    );
-    if (picked != null) setState(() => _date = picked);
   }
 
   void _addFight(List<Fighter> roster, List<WeightClass> bookableClasses) {
@@ -336,11 +354,12 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
     ];
 
     final controller = context.read<GameController>();
+    final currentWeek = controller.organization?.currentWeek ?? 1;
     final error = await controller.bookEvent(
       name: _nameController.text.trim().isEmpty
           ? 'Fight Night'
           : _nameController.text.trim(),
-      date: _date,
+      date: GameCalendar.dateForWeek(currentWeek + _weeksFromNow),
       venue: _venue,
       ticketPrice: ticketPrice,
       card: card,

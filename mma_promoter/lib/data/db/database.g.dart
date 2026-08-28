@@ -483,6 +483,12 @@ class $FightersTable extends Fighters
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant('healthy'));
+  static const VerificationMeta _injuryClearsAtWeekMeta =
+      const VerificationMeta('injuryClearsAtWeek');
+  @override
+  late final GeneratedColumn<int> injuryClearsAtWeek = GeneratedColumn<int>(
+      'injury_clears_at_week', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
   static const VerificationMeta _winStreakMeta =
       const VerificationMeta('winStreak');
   @override
@@ -623,6 +629,7 @@ class $FightersTable extends Fighters
         popularity,
         morale,
         injuryStatus,
+        injuryClearsAtWeek,
         winStreak,
         lossStreak,
         eloRating,
@@ -1103,6 +1110,12 @@ class $FightersTable extends Fighters
           injuryStatus.isAcceptableOrUnknown(
               data['injury_status']!, _injuryStatusMeta));
     }
+    if (data.containsKey('injury_clears_at_week')) {
+      context.handle(
+          _injuryClearsAtWeekMeta,
+          injuryClearsAtWeek.isAcceptableOrUnknown(
+              data['injury_clears_at_week']!, _injuryClearsAtWeekMeta));
+    }
     if (data.containsKey('win_streak')) {
       context.handle(_winStreakMeta,
           winStreak.isAcceptableOrUnknown(data['win_streak']!, _winStreakMeta));
@@ -1298,6 +1311,8 @@ class $FightersTable extends Fighters
           .read(DriftSqlType.int, data['${effectivePrefix}morale'])!,
       injuryStatus: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}injury_status'])!,
+      injuryClearsAtWeek: attachedDatabase.typeMapping.read(
+          DriftSqlType.int, data['${effectivePrefix}injury_clears_at_week']),
       winStreak: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}win_streak'])!,
       lossStreak: attachedDatabase.typeMapping
@@ -1399,6 +1414,10 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
   final int popularity;
   final int morale;
   final String injuryStatus;
+
+  /// Absolute game week this fighter's current injury clears on its own.
+  /// Null when healthy or when the injury has no active countdown.
+  final int? injuryClearsAtWeek;
   final int winStreak;
   final int lossStreak;
   final int eloRating;
@@ -1480,6 +1499,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       required this.popularity,
       required this.morale,
       required this.injuryStatus,
+      this.injuryClearsAtWeek,
       required this.winStreak,
       required this.lossStreak,
       required this.eloRating,
@@ -1563,6 +1583,9 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
     map['popularity'] = Variable<int>(popularity);
     map['morale'] = Variable<int>(morale);
     map['injury_status'] = Variable<String>(injuryStatus);
+    if (!nullToAbsent || injuryClearsAtWeek != null) {
+      map['injury_clears_at_week'] = Variable<int>(injuryClearsAtWeek);
+    }
     map['win_streak'] = Variable<int>(winStreak);
     map['loss_streak'] = Variable<int>(lossStreak);
     map['elo_rating'] = Variable<int>(eloRating);
@@ -1651,6 +1674,9 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       popularity: Value(popularity),
       morale: Value(morale),
       injuryStatus: Value(injuryStatus),
+      injuryClearsAtWeek: injuryClearsAtWeek == null && nullToAbsent
+          ? const Value.absent()
+          : Value(injuryClearsAtWeek),
       winStreak: Value(winStreak),
       lossStreak: Value(lossStreak),
       eloRating: Value(eloRating),
@@ -1747,6 +1773,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       popularity: serializer.fromJson<int>(json['popularity']),
       morale: serializer.fromJson<int>(json['morale']),
       injuryStatus: serializer.fromJson<String>(json['injuryStatus']),
+      injuryClearsAtWeek: serializer.fromJson<int?>(json['injuryClearsAtWeek']),
       winStreak: serializer.fromJson<int>(json['winStreak']),
       lossStreak: serializer.fromJson<int>(json['lossStreak']),
       eloRating: serializer.fromJson<int>(json['eloRating']),
@@ -1835,6 +1862,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       'popularity': serializer.toJson<int>(popularity),
       'morale': serializer.toJson<int>(morale),
       'injuryStatus': serializer.toJson<String>(injuryStatus),
+      'injuryClearsAtWeek': serializer.toJson<int?>(injuryClearsAtWeek),
       'winStreak': serializer.toJson<int>(winStreak),
       'lossStreak': serializer.toJson<int>(lossStreak),
       'eloRating': serializer.toJson<int>(eloRating),
@@ -1920,6 +1948,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           int? popularity,
           int? morale,
           String? injuryStatus,
+          Value<int?> injuryClearsAtWeek = const Value.absent(),
           int? winStreak,
           int? lossStreak,
           int? eloRating,
@@ -2005,6 +2034,9 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
         popularity: popularity ?? this.popularity,
         morale: morale ?? this.morale,
         injuryStatus: injuryStatus ?? this.injuryStatus,
+        injuryClearsAtWeek: injuryClearsAtWeek.present
+            ? injuryClearsAtWeek.value
+            : this.injuryClearsAtWeek,
         winStreak: winStreak ?? this.winStreak,
         lossStreak: lossStreak ?? this.lossStreak,
         eloRating: eloRating ?? this.eloRating,
@@ -2165,6 +2197,9 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       injuryStatus: data.injuryStatus.present
           ? data.injuryStatus.value
           : this.injuryStatus,
+      injuryClearsAtWeek: data.injuryClearsAtWeek.present
+          ? data.injuryClearsAtWeek.value
+          : this.injuryClearsAtWeek,
       winStreak: data.winStreak.present ? data.winStreak.value : this.winStreak,
       lossStreak:
           data.lossStreak.present ? data.lossStreak.value : this.lossStreak,
@@ -2258,6 +2293,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           ..write('popularity: $popularity, ')
           ..write('morale: $morale, ')
           ..write('injuryStatus: $injuryStatus, ')
+          ..write('injuryClearsAtWeek: $injuryClearsAtWeek, ')
           ..write('winStreak: $winStreak, ')
           ..write('lossStreak: $lossStreak, ')
           ..write('eloRating: $eloRating, ')
@@ -2344,6 +2380,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
         popularity,
         morale,
         injuryStatus,
+        injuryClearsAtWeek,
         winStreak,
         lossStreak,
         eloRating,
@@ -2429,6 +2466,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           other.popularity == this.popularity &&
           other.morale == this.morale &&
           other.injuryStatus == this.injuryStatus &&
+          other.injuryClearsAtWeek == this.injuryClearsAtWeek &&
           other.winStreak == this.winStreak &&
           other.lossStreak == this.lossStreak &&
           other.eloRating == this.eloRating &&
@@ -2512,6 +2550,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
   final Value<int> popularity;
   final Value<int> morale;
   final Value<String> injuryStatus;
+  final Value<int?> injuryClearsAtWeek;
   final Value<int> winStreak;
   final Value<int> lossStreak;
   final Value<int> eloRating;
@@ -2594,6 +2633,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     this.popularity = const Value.absent(),
     this.morale = const Value.absent(),
     this.injuryStatus = const Value.absent(),
+    this.injuryClearsAtWeek = const Value.absent(),
     this.winStreak = const Value.absent(),
     this.lossStreak = const Value.absent(),
     this.eloRating = const Value.absent(),
@@ -2677,6 +2717,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     this.popularity = const Value.absent(),
     this.morale = const Value.absent(),
     this.injuryStatus = const Value.absent(),
+    this.injuryClearsAtWeek = const Value.absent(),
     this.winStreak = const Value.absent(),
     this.lossStreak = const Value.absent(),
     this.eloRating = const Value.absent(),
@@ -2803,6 +2844,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     Expression<int>? popularity,
     Expression<int>? morale,
     Expression<String>? injuryStatus,
+    Expression<int>? injuryClearsAtWeek,
     Expression<int>? winStreak,
     Expression<int>? lossStreak,
     Expression<int>? eloRating,
@@ -2894,6 +2936,8 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
       if (popularity != null) 'popularity': popularity,
       if (morale != null) 'morale': morale,
       if (injuryStatus != null) 'injury_status': injuryStatus,
+      if (injuryClearsAtWeek != null)
+        'injury_clears_at_week': injuryClearsAtWeek,
       if (winStreak != null) 'win_streak': winStreak,
       if (lossStreak != null) 'loss_streak': lossStreak,
       if (eloRating != null) 'elo_rating': eloRating,
@@ -2981,6 +3025,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
       Value<int>? popularity,
       Value<int>? morale,
       Value<String>? injuryStatus,
+      Value<int?>? injuryClearsAtWeek,
       Value<int>? winStreak,
       Value<int>? lossStreak,
       Value<int>? eloRating,
@@ -3067,6 +3112,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
       popularity: popularity ?? this.popularity,
       morale: morale ?? this.morale,
       injuryStatus: injuryStatus ?? this.injuryStatus,
+      injuryClearsAtWeek: injuryClearsAtWeek ?? this.injuryClearsAtWeek,
       winStreak: winStreak ?? this.winStreak,
       lossStreak: lossStreak ?? this.lossStreak,
       eloRating: eloRating ?? this.eloRating,
@@ -3303,6 +3349,9 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     if (injuryStatus.present) {
       map['injury_status'] = Variable<String>(injuryStatus.value);
     }
+    if (injuryClearsAtWeek.present) {
+      map['injury_clears_at_week'] = Variable<int>(injuryClearsAtWeek.value);
+    }
     if (winStreak.present) {
       map['win_streak'] = Variable<int>(winStreak.value);
     }
@@ -3410,6 +3459,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
           ..write('popularity: $popularity, ')
           ..write('morale: $morale, ')
           ..write('injuryStatus: $injuryStatus, ')
+          ..write('injuryClearsAtWeek: $injuryClearsAtWeek, ')
           ..write('winStreak: $winStreak, ')
           ..write('lossStreak: $lossStreak, ')
           ..write('eloRating: $eloRating, ')
@@ -3839,12 +3889,22 @@ class $OrganizationsTable extends Organizations
       type: DriftSqlType.int,
       requiredDuringInsert: false,
       defaultValue: const Constant(0));
-  static const VerificationMeta _lastTalentRefreshMeta =
-      const VerificationMeta('lastTalentRefresh');
+  static const VerificationMeta _lastTalentRefreshWeekMeta =
+      const VerificationMeta('lastTalentRefreshWeek');
   @override
-  late final GeneratedColumn<DateTime> lastTalentRefresh =
-      GeneratedColumn<DateTime>('last_talent_refresh', aliasedName, false,
-          type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  late final GeneratedColumn<int> lastTalentRefreshWeek = GeneratedColumn<int>(
+      'last_talent_refresh_week', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(1));
+  static const VerificationMeta _currentWeekMeta =
+      const VerificationMeta('currentWeek');
+  @override
+  late final GeneratedColumn<int> currentWeek = GeneratedColumn<int>(
+      'current_week', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(1));
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -3855,7 +3915,8 @@ class $OrganizationsTable extends Organizations
         fanbaseSize,
         homeRegion,
         promotionBudget,
-        lastTalentRefresh
+        lastTalentRefreshWeek,
+        currentWeek
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3918,13 +3979,17 @@ class $OrganizationsTable extends Organizations
           promotionBudget.isAcceptableOrUnknown(
               data['promotion_budget']!, _promotionBudgetMeta));
     }
-    if (data.containsKey('last_talent_refresh')) {
+    if (data.containsKey('last_talent_refresh_week')) {
       context.handle(
-          _lastTalentRefreshMeta,
-          lastTalentRefresh.isAcceptableOrUnknown(
-              data['last_talent_refresh']!, _lastTalentRefreshMeta));
-    } else if (isInserting) {
-      context.missing(_lastTalentRefreshMeta);
+          _lastTalentRefreshWeekMeta,
+          lastTalentRefreshWeek.isAcceptableOrUnknown(
+              data['last_talent_refresh_week']!, _lastTalentRefreshWeekMeta));
+    }
+    if (data.containsKey('current_week')) {
+      context.handle(
+          _currentWeekMeta,
+          currentWeek.isAcceptableOrUnknown(
+              data['current_week']!, _currentWeekMeta));
     }
     return context;
   }
@@ -3951,9 +4016,10 @@ class $OrganizationsTable extends Organizations
           .read(DriftSqlType.string, data['${effectivePrefix}home_region'])!,
       promotionBudget: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}promotion_budget'])!,
-      lastTalentRefresh: attachedDatabase.typeMapping.read(
-          DriftSqlType.dateTime,
-          data['${effectivePrefix}last_talent_refresh'])!,
+      lastTalentRefreshWeek: attachedDatabase.typeMapping.read(DriftSqlType.int,
+          data['${effectivePrefix}last_talent_refresh_week'])!,
+      currentWeek: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}current_week'])!,
     );
   }
 
@@ -3972,7 +4038,8 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
   final int fanbaseSize;
   final String homeRegion;
   final int promotionBudget;
-  final DateTime lastTalentRefresh;
+  final int lastTalentRefreshWeek;
+  final int currentWeek;
   const OrganizationRow(
       {required this.id,
       required this.name,
@@ -3982,7 +4049,8 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
       required this.fanbaseSize,
       required this.homeRegion,
       required this.promotionBudget,
-      required this.lastTalentRefresh});
+      required this.lastTalentRefreshWeek,
+      required this.currentWeek});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -3994,7 +4062,8 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
     map['fanbase_size'] = Variable<int>(fanbaseSize);
     map['home_region'] = Variable<String>(homeRegion);
     map['promotion_budget'] = Variable<int>(promotionBudget);
-    map['last_talent_refresh'] = Variable<DateTime>(lastTalentRefresh);
+    map['last_talent_refresh_week'] = Variable<int>(lastTalentRefreshWeek);
+    map['current_week'] = Variable<int>(currentWeek);
     return map;
   }
 
@@ -4008,7 +4077,8 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
       fanbaseSize: Value(fanbaseSize),
       homeRegion: Value(homeRegion),
       promotionBudget: Value(promotionBudget),
-      lastTalentRefresh: Value(lastTalentRefresh),
+      lastTalentRefreshWeek: Value(lastTalentRefreshWeek),
+      currentWeek: Value(currentWeek),
     );
   }
 
@@ -4024,8 +4094,9 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
       fanbaseSize: serializer.fromJson<int>(json['fanbaseSize']),
       homeRegion: serializer.fromJson<String>(json['homeRegion']),
       promotionBudget: serializer.fromJson<int>(json['promotionBudget']),
-      lastTalentRefresh:
-          serializer.fromJson<DateTime>(json['lastTalentRefresh']),
+      lastTalentRefreshWeek:
+          serializer.fromJson<int>(json['lastTalentRefreshWeek']),
+      currentWeek: serializer.fromJson<int>(json['currentWeek']),
     );
   }
   @override
@@ -4040,7 +4111,8 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
       'fanbaseSize': serializer.toJson<int>(fanbaseSize),
       'homeRegion': serializer.toJson<String>(homeRegion),
       'promotionBudget': serializer.toJson<int>(promotionBudget),
-      'lastTalentRefresh': serializer.toJson<DateTime>(lastTalentRefresh),
+      'lastTalentRefreshWeek': serializer.toJson<int>(lastTalentRefreshWeek),
+      'currentWeek': serializer.toJson<int>(currentWeek),
     };
   }
 
@@ -4053,7 +4125,8 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
           int? fanbaseSize,
           String? homeRegion,
           int? promotionBudget,
-          DateTime? lastTalentRefresh}) =>
+          int? lastTalentRefreshWeek,
+          int? currentWeek}) =>
       OrganizationRow(
         id: id ?? this.id,
         name: name ?? this.name,
@@ -4063,7 +4136,9 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
         fanbaseSize: fanbaseSize ?? this.fanbaseSize,
         homeRegion: homeRegion ?? this.homeRegion,
         promotionBudget: promotionBudget ?? this.promotionBudget,
-        lastTalentRefresh: lastTalentRefresh ?? this.lastTalentRefresh,
+        lastTalentRefreshWeek:
+            lastTalentRefreshWeek ?? this.lastTalentRefreshWeek,
+        currentWeek: currentWeek ?? this.currentWeek,
       );
   OrganizationRow copyWithCompanion(OrganizationsCompanion data) {
     return OrganizationRow(
@@ -4084,9 +4159,11 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
       promotionBudget: data.promotionBudget.present
           ? data.promotionBudget.value
           : this.promotionBudget,
-      lastTalentRefresh: data.lastTalentRefresh.present
-          ? data.lastTalentRefresh.value
-          : this.lastTalentRefresh,
+      lastTalentRefreshWeek: data.lastTalentRefreshWeek.present
+          ? data.lastTalentRefreshWeek.value
+          : this.lastTalentRefreshWeek,
+      currentWeek:
+          data.currentWeek.present ? data.currentWeek.value : this.currentWeek,
     );
   }
 
@@ -4101,14 +4178,24 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
           ..write('fanbaseSize: $fanbaseSize, ')
           ..write('homeRegion: $homeRegion, ')
           ..write('promotionBudget: $promotionBudget, ')
-          ..write('lastTalentRefresh: $lastTalentRefresh')
+          ..write('lastTalentRefreshWeek: $lastTalentRefreshWeek, ')
+          ..write('currentWeek: $currentWeek')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, reputationTier, reputationPoints,
-      cashBalance, fanbaseSize, homeRegion, promotionBudget, lastTalentRefresh);
+  int get hashCode => Object.hash(
+      id,
+      name,
+      reputationTier,
+      reputationPoints,
+      cashBalance,
+      fanbaseSize,
+      homeRegion,
+      promotionBudget,
+      lastTalentRefreshWeek,
+      currentWeek);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -4121,7 +4208,8 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
           other.fanbaseSize == this.fanbaseSize &&
           other.homeRegion == this.homeRegion &&
           other.promotionBudget == this.promotionBudget &&
-          other.lastTalentRefresh == this.lastTalentRefresh);
+          other.lastTalentRefreshWeek == this.lastTalentRefreshWeek &&
+          other.currentWeek == this.currentWeek);
 }
 
 class OrganizationsCompanion extends UpdateCompanion<OrganizationRow> {
@@ -4133,7 +4221,8 @@ class OrganizationsCompanion extends UpdateCompanion<OrganizationRow> {
   final Value<int> fanbaseSize;
   final Value<String> homeRegion;
   final Value<int> promotionBudget;
-  final Value<DateTime> lastTalentRefresh;
+  final Value<int> lastTalentRefreshWeek;
+  final Value<int> currentWeek;
   final Value<int> rowid;
   const OrganizationsCompanion({
     this.id = const Value.absent(),
@@ -4144,7 +4233,8 @@ class OrganizationsCompanion extends UpdateCompanion<OrganizationRow> {
     this.fanbaseSize = const Value.absent(),
     this.homeRegion = const Value.absent(),
     this.promotionBudget = const Value.absent(),
-    this.lastTalentRefresh = const Value.absent(),
+    this.lastTalentRefreshWeek = const Value.absent(),
+    this.currentWeek = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   OrganizationsCompanion.insert({
@@ -4156,13 +4246,13 @@ class OrganizationsCompanion extends UpdateCompanion<OrganizationRow> {
     this.fanbaseSize = const Value.absent(),
     required String homeRegion,
     this.promotionBudget = const Value.absent(),
-    required DateTime lastTalentRefresh,
+    this.lastTalentRefreshWeek = const Value.absent(),
+    this.currentWeek = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         name = Value(name),
         cashBalance = Value(cashBalance),
-        homeRegion = Value(homeRegion),
-        lastTalentRefresh = Value(lastTalentRefresh);
+        homeRegion = Value(homeRegion);
   static Insertable<OrganizationRow> custom({
     Expression<String>? id,
     Expression<String>? name,
@@ -4172,7 +4262,8 @@ class OrganizationsCompanion extends UpdateCompanion<OrganizationRow> {
     Expression<int>? fanbaseSize,
     Expression<String>? homeRegion,
     Expression<int>? promotionBudget,
-    Expression<DateTime>? lastTalentRefresh,
+    Expression<int>? lastTalentRefreshWeek,
+    Expression<int>? currentWeek,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -4184,7 +4275,9 @@ class OrganizationsCompanion extends UpdateCompanion<OrganizationRow> {
       if (fanbaseSize != null) 'fanbase_size': fanbaseSize,
       if (homeRegion != null) 'home_region': homeRegion,
       if (promotionBudget != null) 'promotion_budget': promotionBudget,
-      if (lastTalentRefresh != null) 'last_talent_refresh': lastTalentRefresh,
+      if (lastTalentRefreshWeek != null)
+        'last_talent_refresh_week': lastTalentRefreshWeek,
+      if (currentWeek != null) 'current_week': currentWeek,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -4198,7 +4291,8 @@ class OrganizationsCompanion extends UpdateCompanion<OrganizationRow> {
       Value<int>? fanbaseSize,
       Value<String>? homeRegion,
       Value<int>? promotionBudget,
-      Value<DateTime>? lastTalentRefresh,
+      Value<int>? lastTalentRefreshWeek,
+      Value<int>? currentWeek,
       Value<int>? rowid}) {
     return OrganizationsCompanion(
       id: id ?? this.id,
@@ -4209,7 +4303,9 @@ class OrganizationsCompanion extends UpdateCompanion<OrganizationRow> {
       fanbaseSize: fanbaseSize ?? this.fanbaseSize,
       homeRegion: homeRegion ?? this.homeRegion,
       promotionBudget: promotionBudget ?? this.promotionBudget,
-      lastTalentRefresh: lastTalentRefresh ?? this.lastTalentRefresh,
+      lastTalentRefreshWeek:
+          lastTalentRefreshWeek ?? this.lastTalentRefreshWeek,
+      currentWeek: currentWeek ?? this.currentWeek,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -4241,8 +4337,12 @@ class OrganizationsCompanion extends UpdateCompanion<OrganizationRow> {
     if (promotionBudget.present) {
       map['promotion_budget'] = Variable<int>(promotionBudget.value);
     }
-    if (lastTalentRefresh.present) {
-      map['last_talent_refresh'] = Variable<DateTime>(lastTalentRefresh.value);
+    if (lastTalentRefreshWeek.present) {
+      map['last_talent_refresh_week'] =
+          Variable<int>(lastTalentRefreshWeek.value);
+    }
+    if (currentWeek.present) {
+      map['current_week'] = Variable<int>(currentWeek.value);
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
@@ -4261,7 +4361,8 @@ class OrganizationsCompanion extends UpdateCompanion<OrganizationRow> {
           ..write('fanbaseSize: $fanbaseSize, ')
           ..write('homeRegion: $homeRegion, ')
           ..write('promotionBudget: $promotionBudget, ')
-          ..write('lastTalentRefresh: $lastTalentRefresh, ')
+          ..write('lastTalentRefreshWeek: $lastTalentRefreshWeek, ')
+          ..write('currentWeek: $currentWeek, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -6428,6 +6529,386 @@ class RandomEventsCompanion extends UpdateCompanion<RandomEventRow> {
   }
 }
 
+class $InboxItemsTable extends InboxItems
+    with TableInfo<$InboxItemsTable, InboxItemRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $InboxItemsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
+      'type', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _weekMeta = const VerificationMeta('week');
+  @override
+  late final GeneratedColumn<int> week = GeneratedColumn<int>(
+      'week', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+      'title', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _bodyMeta = const VerificationMeta('body');
+  @override
+  late final GeneratedColumn<String> body = GeneratedColumn<String>(
+      'body', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _fighterIdMeta =
+      const VerificationMeta('fighterId');
+  @override
+  late final GeneratedColumn<String> fighterId = GeneratedColumn<String>(
+      'fighter_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _readMeta = const VerificationMeta('read');
+  @override
+  late final GeneratedColumn<bool> read = GeneratedColumn<bool>(
+      'read', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("read" IN (0, 1))'),
+      defaultValue: const Constant(false));
+  @override
+  List<GeneratedColumn> get $columns =>
+      [id, type, week, title, body, fighterId, read];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'inbox_items';
+  @override
+  VerificationContext validateIntegrity(Insertable<InboxItemRow> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+          _typeMeta, type.isAcceptableOrUnknown(data['type']!, _typeMeta));
+    } else if (isInserting) {
+      context.missing(_typeMeta);
+    }
+    if (data.containsKey('week')) {
+      context.handle(
+          _weekMeta, week.isAcceptableOrUnknown(data['week']!, _weekMeta));
+    } else if (isInserting) {
+      context.missing(_weekMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+          _titleMeta, title.isAcceptableOrUnknown(data['title']!, _titleMeta));
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('body')) {
+      context.handle(
+          _bodyMeta, body.isAcceptableOrUnknown(data['body']!, _bodyMeta));
+    } else if (isInserting) {
+      context.missing(_bodyMeta);
+    }
+    if (data.containsKey('fighter_id')) {
+      context.handle(_fighterIdMeta,
+          fighterId.isAcceptableOrUnknown(data['fighter_id']!, _fighterIdMeta));
+    }
+    if (data.containsKey('read')) {
+      context.handle(
+          _readMeta, read.isAcceptableOrUnknown(data['read']!, _readMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  InboxItemRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return InboxItemRow(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      type: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}type'])!,
+      week: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}week'])!,
+      title: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}title'])!,
+      body: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}body'])!,
+      fighterId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}fighter_id']),
+      read: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}read'])!,
+    );
+  }
+
+  @override
+  $InboxItemsTable createAlias(String alias) {
+    return $InboxItemsTable(attachedDatabase, alias);
+  }
+}
+
+class InboxItemRow extends DataClass implements Insertable<InboxItemRow> {
+  final String id;
+  final String type;
+  final int week;
+  final String title;
+  final String body;
+  final String? fighterId;
+  final bool read;
+  const InboxItemRow(
+      {required this.id,
+      required this.type,
+      required this.week,
+      required this.title,
+      required this.body,
+      this.fighterId,
+      required this.read});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['type'] = Variable<String>(type);
+    map['week'] = Variable<int>(week);
+    map['title'] = Variable<String>(title);
+    map['body'] = Variable<String>(body);
+    if (!nullToAbsent || fighterId != null) {
+      map['fighter_id'] = Variable<String>(fighterId);
+    }
+    map['read'] = Variable<bool>(read);
+    return map;
+  }
+
+  InboxItemsCompanion toCompanion(bool nullToAbsent) {
+    return InboxItemsCompanion(
+      id: Value(id),
+      type: Value(type),
+      week: Value(week),
+      title: Value(title),
+      body: Value(body),
+      fighterId: fighterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fighterId),
+      read: Value(read),
+    );
+  }
+
+  factory InboxItemRow.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return InboxItemRow(
+      id: serializer.fromJson<String>(json['id']),
+      type: serializer.fromJson<String>(json['type']),
+      week: serializer.fromJson<int>(json['week']),
+      title: serializer.fromJson<String>(json['title']),
+      body: serializer.fromJson<String>(json['body']),
+      fighterId: serializer.fromJson<String?>(json['fighterId']),
+      read: serializer.fromJson<bool>(json['read']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'type': serializer.toJson<String>(type),
+      'week': serializer.toJson<int>(week),
+      'title': serializer.toJson<String>(title),
+      'body': serializer.toJson<String>(body),
+      'fighterId': serializer.toJson<String?>(fighterId),
+      'read': serializer.toJson<bool>(read),
+    };
+  }
+
+  InboxItemRow copyWith(
+          {String? id,
+          String? type,
+          int? week,
+          String? title,
+          String? body,
+          Value<String?> fighterId = const Value.absent(),
+          bool? read}) =>
+      InboxItemRow(
+        id: id ?? this.id,
+        type: type ?? this.type,
+        week: week ?? this.week,
+        title: title ?? this.title,
+        body: body ?? this.body,
+        fighterId: fighterId.present ? fighterId.value : this.fighterId,
+        read: read ?? this.read,
+      );
+  InboxItemRow copyWithCompanion(InboxItemsCompanion data) {
+    return InboxItemRow(
+      id: data.id.present ? data.id.value : this.id,
+      type: data.type.present ? data.type.value : this.type,
+      week: data.week.present ? data.week.value : this.week,
+      title: data.title.present ? data.title.value : this.title,
+      body: data.body.present ? data.body.value : this.body,
+      fighterId: data.fighterId.present ? data.fighterId.value : this.fighterId,
+      read: data.read.present ? data.read.value : this.read,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('InboxItemRow(')
+          ..write('id: $id, ')
+          ..write('type: $type, ')
+          ..write('week: $week, ')
+          ..write('title: $title, ')
+          ..write('body: $body, ')
+          ..write('fighterId: $fighterId, ')
+          ..write('read: $read')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, type, week, title, body, fighterId, read);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is InboxItemRow &&
+          other.id == this.id &&
+          other.type == this.type &&
+          other.week == this.week &&
+          other.title == this.title &&
+          other.body == this.body &&
+          other.fighterId == this.fighterId &&
+          other.read == this.read);
+}
+
+class InboxItemsCompanion extends UpdateCompanion<InboxItemRow> {
+  final Value<String> id;
+  final Value<String> type;
+  final Value<int> week;
+  final Value<String> title;
+  final Value<String> body;
+  final Value<String?> fighterId;
+  final Value<bool> read;
+  final Value<int> rowid;
+  const InboxItemsCompanion({
+    this.id = const Value.absent(),
+    this.type = const Value.absent(),
+    this.week = const Value.absent(),
+    this.title = const Value.absent(),
+    this.body = const Value.absent(),
+    this.fighterId = const Value.absent(),
+    this.read = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  InboxItemsCompanion.insert({
+    required String id,
+    required String type,
+    required int week,
+    required String title,
+    required String body,
+    this.fighterId = const Value.absent(),
+    this.read = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        type = Value(type),
+        week = Value(week),
+        title = Value(title),
+        body = Value(body);
+  static Insertable<InboxItemRow> custom({
+    Expression<String>? id,
+    Expression<String>? type,
+    Expression<int>? week,
+    Expression<String>? title,
+    Expression<String>? body,
+    Expression<String>? fighterId,
+    Expression<bool>? read,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (type != null) 'type': type,
+      if (week != null) 'week': week,
+      if (title != null) 'title': title,
+      if (body != null) 'body': body,
+      if (fighterId != null) 'fighter_id': fighterId,
+      if (read != null) 'read': read,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  InboxItemsCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? type,
+      Value<int>? week,
+      Value<String>? title,
+      Value<String>? body,
+      Value<String?>? fighterId,
+      Value<bool>? read,
+      Value<int>? rowid}) {
+    return InboxItemsCompanion(
+      id: id ?? this.id,
+      type: type ?? this.type,
+      week: week ?? this.week,
+      title: title ?? this.title,
+      body: body ?? this.body,
+      fighterId: fighterId ?? this.fighterId,
+      read: read ?? this.read,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
+    }
+    if (week.present) {
+      map['week'] = Variable<int>(week.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (body.present) {
+      map['body'] = Variable<String>(body.value);
+    }
+    if (fighterId.present) {
+      map['fighter_id'] = Variable<String>(fighterId.value);
+    }
+    if (read.present) {
+      map['read'] = Variable<bool>(read.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('InboxItemsCompanion(')
+          ..write('id: $id, ')
+          ..write('type: $type, ')
+          ..write('week: $week, ')
+          ..write('title: $title, ')
+          ..write('body: $body, ')
+          ..write('fighterId: $fighterId, ')
+          ..write('read: $read, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -6437,12 +6918,20 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $EventsTable events = $EventsTable(this);
   late final $FightsTable fights = $FightsTable(this);
   late final $RandomEventsTable randomEvents = $RandomEventsTable(this);
+  late final $InboxItemsTable inboxItems = $InboxItemsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities =>
-      [fighters, contracts, organizations, events, fights, randomEvents];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [
+        fighters,
+        contracts,
+        organizations,
+        events,
+        fights,
+        randomEvents,
+        inboxItems
+      ];
 }
 
 typedef $$FightersTableCreateCompanionBuilder = FightersCompanion Function({
@@ -6518,6 +7007,7 @@ typedef $$FightersTableCreateCompanionBuilder = FightersCompanion Function({
   Value<int> popularity,
   Value<int> morale,
   Value<String> injuryStatus,
+  Value<int?> injuryClearsAtWeek,
   Value<int> winStreak,
   Value<int> lossStreak,
   Value<int> eloRating,
@@ -6601,6 +7091,7 @@ typedef $$FightersTableUpdateCompanionBuilder = FightersCompanion Function({
   Value<int> popularity,
   Value<int> morale,
   Value<String> injuryStatus,
+  Value<int?> injuryClearsAtWeek,
   Value<int> winStreak,
   Value<int> lossStreak,
   Value<int> eloRating,
@@ -6856,6 +7347,10 @@ class $$FightersTableFilterComposer
 
   ColumnFilters<String> get injuryStatus => $composableBuilder(
       column: $table.injuryStatus, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get injuryClearsAtWeek => $composableBuilder(
+      column: $table.injuryClearsAtWeek,
+      builder: (column) => ColumnFilters(column));
 
   ColumnFilters<int> get winStreak => $composableBuilder(
       column: $table.winStreak, builder: (column) => ColumnFilters(column));
@@ -7141,6 +7636,10 @@ class $$FightersTableOrderingComposer
       column: $table.injuryStatus,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<int> get injuryClearsAtWeek => $composableBuilder(
+      column: $table.injuryClearsAtWeek,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<int> get winStreak => $composableBuilder(
       column: $table.winStreak, builder: (column) => ColumnOrderings(column));
 
@@ -7394,6 +7893,9 @@ class $$FightersTableAnnotationComposer
   GeneratedColumn<String> get injuryStatus => $composableBuilder(
       column: $table.injuryStatus, builder: (column) => column);
 
+  GeneratedColumn<int> get injuryClearsAtWeek => $composableBuilder(
+      column: $table.injuryClearsAtWeek, builder: (column) => column);
+
   GeneratedColumn<int> get winStreak =>
       $composableBuilder(column: $table.winStreak, builder: (column) => column);
 
@@ -7514,6 +8016,7 @@ class $$FightersTableTableManager extends RootTableManager<
             Value<int> popularity = const Value.absent(),
             Value<int> morale = const Value.absent(),
             Value<String> injuryStatus = const Value.absent(),
+            Value<int?> injuryClearsAtWeek = const Value.absent(),
             Value<int> winStreak = const Value.absent(),
             Value<int> lossStreak = const Value.absent(),
             Value<int> eloRating = const Value.absent(),
@@ -7597,6 +8100,7 @@ class $$FightersTableTableManager extends RootTableManager<
             popularity: popularity,
             morale: morale,
             injuryStatus: injuryStatus,
+            injuryClearsAtWeek: injuryClearsAtWeek,
             winStreak: winStreak,
             lossStreak: lossStreak,
             eloRating: eloRating,
@@ -7680,6 +8184,7 @@ class $$FightersTableTableManager extends RootTableManager<
             Value<int> popularity = const Value.absent(),
             Value<int> morale = const Value.absent(),
             Value<String> injuryStatus = const Value.absent(),
+            Value<int?> injuryClearsAtWeek = const Value.absent(),
             Value<int> winStreak = const Value.absent(),
             Value<int> lossStreak = const Value.absent(),
             Value<int> eloRating = const Value.absent(),
@@ -7763,6 +8268,7 @@ class $$FightersTableTableManager extends RootTableManager<
             popularity: popularity,
             morale: morale,
             injuryStatus: injuryStatus,
+            injuryClearsAtWeek: injuryClearsAtWeek,
             winStreak: winStreak,
             lossStreak: lossStreak,
             eloRating: eloRating,
@@ -7984,7 +8490,8 @@ typedef $$OrganizationsTableCreateCompanionBuilder = OrganizationsCompanion
   Value<int> fanbaseSize,
   required String homeRegion,
   Value<int> promotionBudget,
-  required DateTime lastTalentRefresh,
+  Value<int> lastTalentRefreshWeek,
+  Value<int> currentWeek,
   Value<int> rowid,
 });
 typedef $$OrganizationsTableUpdateCompanionBuilder = OrganizationsCompanion
@@ -7997,7 +8504,8 @@ typedef $$OrganizationsTableUpdateCompanionBuilder = OrganizationsCompanion
   Value<int> fanbaseSize,
   Value<String> homeRegion,
   Value<int> promotionBudget,
-  Value<DateTime> lastTalentRefresh,
+  Value<int> lastTalentRefreshWeek,
+  Value<int> currentWeek,
   Value<int> rowid,
 });
 
@@ -8037,9 +8545,12 @@ class $$OrganizationsTableFilterComposer
       column: $table.promotionBudget,
       builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<DateTime> get lastTalentRefresh => $composableBuilder(
-      column: $table.lastTalentRefresh,
+  ColumnFilters<int> get lastTalentRefreshWeek => $composableBuilder(
+      column: $table.lastTalentRefreshWeek,
       builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get currentWeek => $composableBuilder(
+      column: $table.currentWeek, builder: (column) => ColumnFilters(column));
 }
 
 class $$OrganizationsTableOrderingComposer
@@ -8078,9 +8589,12 @@ class $$OrganizationsTableOrderingComposer
       column: $table.promotionBudget,
       builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<DateTime> get lastTalentRefresh => $composableBuilder(
-      column: $table.lastTalentRefresh,
+  ColumnOrderings<int> get lastTalentRefreshWeek => $composableBuilder(
+      column: $table.lastTalentRefreshWeek,
       builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get currentWeek => $composableBuilder(
+      column: $table.currentWeek, builder: (column) => ColumnOrderings(column));
 }
 
 class $$OrganizationsTableAnnotationComposer
@@ -8116,8 +8630,11 @@ class $$OrganizationsTableAnnotationComposer
   GeneratedColumn<int> get promotionBudget => $composableBuilder(
       column: $table.promotionBudget, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get lastTalentRefresh => $composableBuilder(
-      column: $table.lastTalentRefresh, builder: (column) => column);
+  GeneratedColumn<int> get lastTalentRefreshWeek => $composableBuilder(
+      column: $table.lastTalentRefreshWeek, builder: (column) => column);
+
+  GeneratedColumn<int> get currentWeek => $composableBuilder(
+      column: $table.currentWeek, builder: (column) => column);
 }
 
 class $$OrganizationsTableTableManager extends RootTableManager<
@@ -8154,7 +8671,8 @@ class $$OrganizationsTableTableManager extends RootTableManager<
             Value<int> fanbaseSize = const Value.absent(),
             Value<String> homeRegion = const Value.absent(),
             Value<int> promotionBudget = const Value.absent(),
-            Value<DateTime> lastTalentRefresh = const Value.absent(),
+            Value<int> lastTalentRefreshWeek = const Value.absent(),
+            Value<int> currentWeek = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               OrganizationsCompanion(
@@ -8166,7 +8684,8 @@ class $$OrganizationsTableTableManager extends RootTableManager<
             fanbaseSize: fanbaseSize,
             homeRegion: homeRegion,
             promotionBudget: promotionBudget,
-            lastTalentRefresh: lastTalentRefresh,
+            lastTalentRefreshWeek: lastTalentRefreshWeek,
+            currentWeek: currentWeek,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -8178,7 +8697,8 @@ class $$OrganizationsTableTableManager extends RootTableManager<
             Value<int> fanbaseSize = const Value.absent(),
             required String homeRegion,
             Value<int> promotionBudget = const Value.absent(),
-            required DateTime lastTalentRefresh,
+            Value<int> lastTalentRefreshWeek = const Value.absent(),
+            Value<int> currentWeek = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               OrganizationsCompanion.insert(
@@ -8190,7 +8710,8 @@ class $$OrganizationsTableTableManager extends RootTableManager<
             fanbaseSize: fanbaseSize,
             homeRegion: homeRegion,
             promotionBudget: promotionBudget,
-            lastTalentRefresh: lastTalentRefresh,
+            lastTalentRefreshWeek: lastTalentRefreshWeek,
+            currentWeek: currentWeek,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
@@ -9161,6 +9682,207 @@ typedef $$RandomEventsTableProcessedTableManager = ProcessedTableManager<
     ),
     RandomEventRow,
     PrefetchHooks Function()>;
+typedef $$InboxItemsTableCreateCompanionBuilder = InboxItemsCompanion Function({
+  required String id,
+  required String type,
+  required int week,
+  required String title,
+  required String body,
+  Value<String?> fighterId,
+  Value<bool> read,
+  Value<int> rowid,
+});
+typedef $$InboxItemsTableUpdateCompanionBuilder = InboxItemsCompanion Function({
+  Value<String> id,
+  Value<String> type,
+  Value<int> week,
+  Value<String> title,
+  Value<String> body,
+  Value<String?> fighterId,
+  Value<bool> read,
+  Value<int> rowid,
+});
+
+class $$InboxItemsTableFilterComposer
+    extends Composer<_$AppDatabase, $InboxItemsTable> {
+  $$InboxItemsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get type => $composableBuilder(
+      column: $table.type, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get week => $composableBuilder(
+      column: $table.week, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get body => $composableBuilder(
+      column: $table.body, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get fighterId => $composableBuilder(
+      column: $table.fighterId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get read => $composableBuilder(
+      column: $table.read, builder: (column) => ColumnFilters(column));
+}
+
+class $$InboxItemsTableOrderingComposer
+    extends Composer<_$AppDatabase, $InboxItemsTable> {
+  $$InboxItemsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get type => $composableBuilder(
+      column: $table.type, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get week => $composableBuilder(
+      column: $table.week, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get body => $composableBuilder(
+      column: $table.body, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get fighterId => $composableBuilder(
+      column: $table.fighterId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get read => $composableBuilder(
+      column: $table.read, builder: (column) => ColumnOrderings(column));
+}
+
+class $$InboxItemsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $InboxItemsTable> {
+  $$InboxItemsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<int> get week =>
+      $composableBuilder(column: $table.week, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get body =>
+      $composableBuilder(column: $table.body, builder: (column) => column);
+
+  GeneratedColumn<String> get fighterId =>
+      $composableBuilder(column: $table.fighterId, builder: (column) => column);
+
+  GeneratedColumn<bool> get read =>
+      $composableBuilder(column: $table.read, builder: (column) => column);
+}
+
+class $$InboxItemsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $InboxItemsTable,
+    InboxItemRow,
+    $$InboxItemsTableFilterComposer,
+    $$InboxItemsTableOrderingComposer,
+    $$InboxItemsTableAnnotationComposer,
+    $$InboxItemsTableCreateCompanionBuilder,
+    $$InboxItemsTableUpdateCompanionBuilder,
+    (
+      InboxItemRow,
+      BaseReferences<_$AppDatabase, $InboxItemsTable, InboxItemRow>
+    ),
+    InboxItemRow,
+    PrefetchHooks Function()> {
+  $$InboxItemsTableTableManager(_$AppDatabase db, $InboxItemsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$InboxItemsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$InboxItemsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$InboxItemsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> type = const Value.absent(),
+            Value<int> week = const Value.absent(),
+            Value<String> title = const Value.absent(),
+            Value<String> body = const Value.absent(),
+            Value<String?> fighterId = const Value.absent(),
+            Value<bool> read = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              InboxItemsCompanion(
+            id: id,
+            type: type,
+            week: week,
+            title: title,
+            body: body,
+            fighterId: fighterId,
+            read: read,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String type,
+            required int week,
+            required String title,
+            required String body,
+            Value<String?> fighterId = const Value.absent(),
+            Value<bool> read = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              InboxItemsCompanion.insert(
+            id: id,
+            type: type,
+            week: week,
+            title: title,
+            body: body,
+            fighterId: fighterId,
+            read: read,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$InboxItemsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $InboxItemsTable,
+    InboxItemRow,
+    $$InboxItemsTableFilterComposer,
+    $$InboxItemsTableOrderingComposer,
+    $$InboxItemsTableAnnotationComposer,
+    $$InboxItemsTableCreateCompanionBuilder,
+    $$InboxItemsTableUpdateCompanionBuilder,
+    (
+      InboxItemRow,
+      BaseReferences<_$AppDatabase, $InboxItemsTable, InboxItemRow>
+    ),
+    InboxItemRow,
+    PrefetchHooks Function()>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -9177,4 +9899,6 @@ class $AppDatabaseManager {
       $$FightsTableTableManager(_db, _db.fights);
   $$RandomEventsTableTableManager get randomEvents =>
       $$RandomEventsTableTableManager(_db, _db.randomEvents);
+  $$InboxItemsTableTableManager get inboxItems =>
+      $$InboxItemsTableTableManager(_db, _db.inboxItems);
 }

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 
@@ -8,10 +9,12 @@ import '../../data/models/models.dart';
 import '../../data/repositories/event_repository.dart';
 import '../../data/repositories/fighter_repository.dart';
 import '../../data/repositories/in_memory/in_memory_repositories.dart';
+import '../../data/repositories/inbox_item_repository.dart';
 import '../../data/repositories/organization_repository.dart';
 import '../../data/repositories/random_event_repository.dart';
 import '../../data/repositories/repository_contracts.dart';
 import '../../data/seed/roster_seed.dart';
+import '../../domain/calendar/game_calendar.dart';
 import '../../domain/career/career_progression_engine.dart';
 import '../../domain/events/random_event_engine.dart';
 import '../../domain/finance/event_finance_calculator.dart';
@@ -62,16 +65,19 @@ class GameController extends ChangeNotifier {
   final OrganizationRepositoryContract _orgRepo;
   final EventRepositoryContract _eventRepo;
   final RandomEventRepositoryContract _randomEventRepo;
+  final InboxItemRepositoryContract _inboxRepo;
 
   final FightResolver _fightResolver = FightResolver();
   final EventFinanceCalculator _financeCalculator = EventFinanceCalculator();
   final RandomEventEngine _randomEventEngine = RandomEventEngine();
   final CareerProgressionEngine _careerEngine = CareerProgressionEngine();
+  final Random _rng = Random();
 
   StreamSubscription<List<Fighter>>? _fighterSub;
   StreamSubscription<Organization?>? _orgSub;
   StreamSubscription<List<MmaEvent>>? _eventSub;
   StreamSubscription<List<RandomEvent>>? _randomEventSub;
+  StreamSubscription<List<InboxItem>>? _inboxSub;
 
   /// Persists to on-device SQLite via Drift. This is the real, shipping
   /// backend — not available on Flutter web (no `dart:io`), which is why
@@ -83,6 +89,7 @@ class GameController extends ChangeNotifier {
       orgRepo: OrganizationRepository(db),
       eventRepo: EventRepository(db),
       randomEventRepo: RandomEventRepository(db),
+      inboxRepo: InboxItemRepository(db),
     );
   }
 
@@ -91,10 +98,12 @@ class GameController extends ChangeNotifier {
     required OrganizationRepositoryContract orgRepo,
     required EventRepositoryContract eventRepo,
     required RandomEventRepositoryContract randomEventRepo,
+    required InboxItemRepositoryContract inboxRepo,
   })  : _fighterRepo = fighterRepo,
         _orgRepo = orgRepo,
         _eventRepo = eventRepo,
-        _randomEventRepo = randomEventRepo;
+        _randomEventRepo = randomEventRepo,
+        _inboxRepo = inboxRepo;
 
   /// Volatile, non-persistent mode used for the Flutter-web preview build.
   /// Game state resets on every page reload.
@@ -102,13 +111,15 @@ class GameController extends ChangeNotifier {
       : _fighterRepo = InMemoryFighterRepository(),
         _orgRepo = InMemoryOrganizationRepository(),
         _eventRepo = InMemoryEventRepository(),
-        _randomEventRepo = InMemoryRandomEventRepository();
+        _randomEventRepo = InMemoryRandomEventRepository(),
+        _inboxRepo = InMemoryInboxItemRepository();
 
   bool isLoading = true;
   Organization? organization;
   List<Fighter> allFighters = [];
   List<MmaEvent> events = [];
   List<RandomEvent> pendingRandomEvents = [];
+  List<InboxItem> inboxItems = [];
 
   List<Fighter> get signedRoster =>
       allFighters.where((f) => f.isSigned && !f.retired).toList();
@@ -122,6 +133,15 @@ class GameController extends ChangeNotifier {
       events.where((e) => !e.isCompleted).toList();
   List<MmaEvent> get completedEvents =>
       events.where((e) => e.isCompleted).toList();
+  int get unreadInboxCount => inboxItems.where((i) => !i.read).length;
+
+  /// The next scheduled event in chronological order — the only one
+  /// [simulateEvent] will resolve, and the one [advanceWeek] parks on.
+  MmaEvent? get nextScheduledEvent {
+    final scheduled = scheduledEvents;
+    if (scheduled.isEmpty) return null;
+    return scheduled.reduce((a, b) => a.date.isBefore(b.date) ? a : b);
+  }
 
   /// True once we've checked persistence and found no organization yet —
   /// the UI should show the new-game setup screen instead of the dashboard.
@@ -180,6 +200,10 @@ class GameController extends ChangeNotifier {
     });
     _randomEventSub = _randomEventRepo.watchUnresolved().listen((e) {
       pendingRandomEvents = e;
+      notifyListeners();
+    });
+    _inboxSub = _inboxRepo.watchAll().listen((i) {
+      inboxItems = i;
       notifyListeners();
     });
   }
@@ -265,6 +289,12 @@ class GameController extends ChangeNotifier {
     if (card.isEmpty) return 'Add at least one fight to the card.';
     if (!card.any((f) => f.isMainEvent)) return 'Pick a main event.';
 
+    final org = organization;
+    if (org == null) return 'No active organization.';
+    if (GameCalendar.weekNumberFor(date) <= org.currentWeek) {
+      return 'Event date must be in a future week.';
+    }
+
     final event = MmaEvent(
       id: newId(),
       name: name,
@@ -282,15 +312,23 @@ class GameController extends ChangeNotifier {
 
   // ---- Event simulation ---------------------------------------------------
 
+  /// Resolves [eventId]'s card, but only if it's due (its week has arrived
+  /// on [Organization.currentWeek]) and it's the earliest still-scheduled
+  /// event. This is what makes it structurally impossible to simulate
+  /// events out of chronological order — the player can only ever reach a
+  /// later event's week by first resolving everything scheduled before it
+  /// (see [advanceWeek]).
   Future<EventSimulationSummary?> simulateEvent(
     String eventId, {
     required int promotionBudgetSpent,
   }) async {
-    var org = organization;
+    final org = organization;
     final event = await _eventRepo.getById(eventId);
     if (org == null || event == null || event.isCompleted) return null;
+    if (GameCalendar.weekNumberFor(event.date) > org.currentWeek) return null;
 
-    org = await _maybeRefreshTalentPool(org, asOf: event.date);
+    final earliest = nextScheduledEvent;
+    if (earliest == null || earliest.id != event.id) return null;
 
     final card = await _eventRepo.getCard(eventId);
     final fighterLookup = {for (final f in allFighters) f.id: f};
@@ -352,27 +390,121 @@ class GameController extends ChangeNotifier {
     );
   }
 
-  /// Tops up the talent pool with ~10 fresh free agents for every calendar
-  /// month that's passed since the last refresh, keyed off the date of the
-  /// event being simulated (the only thing that advances "game time").
-  Future<Organization> _maybeRefreshTalentPool(
-    Organization org, {
-    required DateTime asOf,
-  }) async {
-    final last = org.lastTalentRefresh;
-    final monthsElapsed =
-        (asOf.year - last.year) * 12 + (asOf.month - last.month);
-    if (monthsElapsed < 1) return org;
+  // ---- Game clock ---------------------------------------------------------
 
-    for (var i = 0; i < monthsElapsed; i++) {
+  /// Advances the game's own clock ([Organization.currentWeek]) by one
+  /// week, refreshing the talent pool and healing injuries as it goes.
+  /// Refuses to advance past a week where a scheduled event has already
+  /// come due — the player must resolve it first via [simulateEvent]. This
+  /// is the single mechanism that makes booking/playing events out of
+  /// chronological order impossible.
+  Future<String?> advanceWeek() async {
+    final org = organization;
+    if (org == null) return 'No active organization.';
+
+    final due = nextScheduledEvent;
+    if (due != null && GameCalendar.weekNumberFor(due.date) <= org.currentWeek) {
+      return '"${due.name}" is ready to run — resolve it before advancing further.';
+    }
+
+    var updated = org.copyWith(currentWeek: org.currentWeek + 1);
+    await _orgRepo.save(updated);
+    organization = updated;
+
+    updated = await _maybeRefreshTalentPool(updated);
+    await _healInjuries(updated);
+    await _maybeGenerateFightRequests(updated);
+
+    organization = updated;
+    notifyListeners();
+    return null;
+  }
+
+  /// Tops up the talent pool with ~10 fresh free agents for every 4 game
+  /// weeks that have passed since the last refresh.
+  Future<Organization> _maybeRefreshTalentPool(Organization org) async {
+    const weeksPerRefresh = 4;
+    final weeksElapsed = org.currentWeek - org.lastTalentRefreshWeek;
+    if (weeksElapsed < weeksPerRefresh) return org;
+
+    final refreshes = weeksElapsed ~/ weeksPerRefresh;
+    for (var i = 0; i < refreshes; i++) {
       for (final fighter in generateMonthlyTalentPool()) {
         await _fighterRepo.save(fighter);
       }
     }
-    final updated = org.copyWith(lastTalentRefresh: asOf);
+    final updated = org.copyWith(
+      lastTalentRefreshWeek: org.lastTalentRefreshWeek + refreshes * weeksPerRefresh,
+    );
     await _orgRepo.save(updated);
     return updated;
   }
+
+  /// Clears any injury whose countdown has reached [Organization.currentWeek].
+  Future<void> _healInjuries(Organization org) async {
+    for (final fighter in allFighters) {
+      final clearsAt = fighter.injuryClearsAtWeek;
+      if (clearsAt != null && clearsAt <= org.currentWeek) {
+        await _fighterRepo.save(fighter.copyWith(
+          injuryStatus: InjuryStatus.healthy,
+          clearInjuryClearsAtWeek: true,
+        ));
+      }
+    }
+  }
+
+  /// Small per-week chance for an idle, healthy, signed fighter with no
+  /// upcoming booking to ask for a fight — surfaced in the Inbox.
+  Future<void> _maybeGenerateFightRequests(Organization org) async {
+    final bookedFighterIds = <String>{};
+    for (final event in scheduledEvents) {
+      final card = await _eventRepo.getCard(event.id);
+      for (final fight in card) {
+        bookedFighterIds.add(fight.fighterAId);
+        bookedFighterIds.add(fight.fighterBId);
+      }
+    }
+
+    for (final fighter in signedRoster) {
+      if (bookedFighterIds.contains(fighter.id)) continue;
+      if (!fighter.isAvailableToFight) continue;
+      final hasPending = inboxItems.any(
+        (i) =>
+            i.type == InboxItemType.fightRequest &&
+            i.fighterId == fighter.id &&
+            !i.read,
+      );
+      if (hasPending) continue;
+      if (_rng.nextDouble() >= 0.05) continue;
+
+      await _inboxRepo.save(_newInboxItem(
+        org,
+        InboxItemType.fightRequest,
+        fighterId: fighter.id,
+        title: '${fighter.name} wants a fight',
+        body: '${fighter.name} is healthy and idle, and is asking to be booked.',
+      ));
+    }
+  }
+
+  InboxItem _newInboxItem(
+    Organization org,
+    InboxItemType type, {
+    required String title,
+    required String body,
+    String? fighterId,
+  }) {
+    return InboxItem(
+      id: newId(),
+      type: type,
+      week: org.currentWeek,
+      title: title,
+      body: body,
+      fighterId: fighterId,
+    );
+  }
+
+  Future<void> markInboxItemRead(String id) => _inboxRepo.markRead(id);
 
   Future<List<FighterOutcomeSummary>> _applyFightOutcome(
     Fight fight,
@@ -389,13 +521,13 @@ class GameController extends ChangeNotifier {
         _careerEngine.updateElo(a.eloRating, b.eloRating, scoreA);
 
     if (result.isDraw) {
-      final updatedA = _applyPostFight(
+      final updatedA = await _applyPostFight(
         a,
         record: a.record.addDraw(),
         eloRating: newEloA,
         injuryFromFight: result.fighterAInjury,
       );
-      final updatedB = _applyPostFight(
+      final updatedB = await _applyPostFight(
         b,
         record: b.record.addDraw(),
         eloRating: newEloB,
@@ -415,7 +547,7 @@ class GameController extends ChangeNotifier {
     final loserInjury =
         result.winnerId == a.id ? result.fighterBInjury : result.fighterAInjury;
 
-    final updatedWinner = _applyPostFight(
+    final updatedWinner = await _applyPostFight(
       winner,
       record: winner.record.addWin(),
       winStreak: winner.winStreak + 1,
@@ -425,7 +557,7 @@ class GameController extends ChangeNotifier {
       moraleDelta: 8,
       injuryFromFight: winnerInjury,
     );
-    final updatedLoser = _applyPostFight(
+    final updatedLoser = await _applyPostFight(
       loser,
       record: loser.record.addLoss(),
       winStreak: 0,
@@ -450,7 +582,7 @@ class GameController extends ChangeNotifier {
     );
   }
 
-  Fighter _applyPostFight(
+  Future<Fighter> _applyPostFight(
     Fighter fighter, {
     required FightRecord record,
     int? winStreak,
@@ -459,9 +591,10 @@ class GameController extends ChangeNotifier {
     int popularityDelta = 0,
     int moraleDelta = 0,
     InjuryStatus injuryFromFight = InjuryStatus.healthy,
-  }) {
+  }) async {
     final newWinStreak = winStreak ?? fighter.winStreak;
     final newLossStreak = lossStreak ?? fighter.lossStreak;
+    final newInjuryStatus = _worseInjury(fighter.injuryStatus, injuryFromFight);
     var updated = fighter.copyWith(
       record: record,
       winStreak: newWinStreak,
@@ -473,7 +606,7 @@ class GameController extends ChangeNotifier {
       morale: (fighter.morale + moraleDelta).clamp(0, 100),
       // Fighting never heals a pre-existing injury, only matches or
       // worsens it with whatever this fight itself caused.
-      injuryStatus: _worseInjury(fighter.injuryStatus, injuryFromFight),
+      injuryStatus: newInjuryStatus,
     );
     updated = updated.copyWith(
       potential: _careerEngine.adjustPotential(
@@ -485,7 +618,43 @@ class GameController extends ChangeNotifier {
     if (updated.contract != null) {
       updated = updated.copyWith(contract: updated.contract!.afterFight());
     }
-    return _careerEngine.maybeRetire(updated);
+
+    // A fresh, worse-than-before injury gets a healing countdown and, if
+    // this fighter is on the player's roster, an Inbox notification.
+    final org = organization;
+    final isNewInjury = _injurySeverity[newInjuryStatus]! >
+        _injurySeverity[fighter.injuryStatus]!;
+    if (isNewInjury && newInjuryStatus != InjuryStatus.healthy && org != null) {
+      final healingWeeks = _careerEngine.rollHealingWeeks(newInjuryStatus);
+      updated = updated.copyWith(
+        injuryClearsAtWeek: org.currentWeek + healingWeeks,
+      );
+      if (updated.isSigned) {
+        await _inboxRepo.save(_newInboxItem(
+          org,
+          InboxItemType.injury,
+          fighterId: updated.id,
+          title: '${updated.name} injured',
+          body: '${updated.name} suffered a ${newInjuryStatus.name} injury '
+              'and will be out for roughly $healingWeeks weeks.',
+        ));
+      }
+    }
+
+    final wasRetired = fighter.retired;
+    final wasSigned = updated.isSigned;
+    final result = _careerEngine.maybeRetire(updated);
+    if (!wasRetired && result.retired && wasSigned && org != null) {
+      await _inboxRepo.save(_newInboxItem(
+        org,
+        InboxItemType.retirement,
+        fighterId: result.id,
+        title: '${result.name} has retired',
+        body: '${result.name} announced their retirement. '
+            'Reason: ${result.retirementReason ?? 'Unknown'}.',
+      ));
+    }
+    return result;
   }
 
   static const _injurySeverity = {
@@ -566,7 +735,10 @@ class GameController extends ChangeNotifier {
 
   Future<void> _maybeTriggerRandomEvent() async {
     if (pendingRandomEvents.isNotEmpty) return; // one at a time for v1.
-    final event = _randomEventEngine.maybeGenerate(signedRoster, DateTime.now());
+    final asOf = organization == null
+        ? DateTime.now()
+        : GameCalendar.dateForWeek(organization!.currentWeek);
+    final event = _randomEventEngine.maybeGenerate(signedRoster, asOf);
     if (event != null) {
       await _randomEventRepo.save(event);
     }
@@ -600,6 +772,7 @@ class GameController extends ChangeNotifier {
     _orgSub?.cancel();
     _eventSub?.cancel();
     _randomEventSub?.cancel();
+    _inboxSub?.cancel();
     super.dispose();
   }
 }

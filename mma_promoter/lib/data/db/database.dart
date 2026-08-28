@@ -6,7 +6,15 @@ import 'tables.dart';
 part 'database.g.dart';
 
 @DriftDatabase(
-  tables: [Fighters, Contracts, Organizations, Events, Fights, RandomEvents],
+  tables: [
+    Fighters,
+    Contracts,
+    Organizations,
+    Events,
+    Fights,
+    RandomEvents,
+    InboxItems,
+  ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(openConnection());
@@ -96,4 +104,16 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> upsertRandomEvent(RandomEventsCompanion entry) =>
       into(randomEvents).insertOnConflictUpdate(entry);
+
+  // ---- Inbox items ------------------------------------------------------
+
+  Stream<List<InboxItemRow>> watchAllInboxItems() =>
+      (select(inboxItems)..orderBy([(i) => OrderingTerm.desc(i.week)])).watch();
+
+  Future<void> upsertInboxItem(InboxItemsCompanion entry) =>
+      into(inboxItems).insertOnConflictUpdate(entry);
+
+  Future<void> markInboxItemRead(String id) =>
+      (update(inboxItems)..where((i) => i.id.equals(id)))
+          .write(const InboxItemsCompanion(read: Value(true)));
 }
