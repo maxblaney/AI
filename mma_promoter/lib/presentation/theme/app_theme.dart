@@ -99,6 +99,14 @@ class AppTheme {
       brightness: Brightness.dark,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: AppColors.background,
+      // The animated spreading-circle splash (Material's default, and
+      // InkSparkle even more so) reads as a visible "flash" on a near-
+      // black background, especially on web. Keep only a flat, instant
+      // press-state highlight instead — no animation to flash.
+      splashFactory: NoSplash.splashFactory,
+      highlightColor: Colors.white.withOpacity(0.06),
+      hoverColor: Colors.white.withOpacity(0.04),
+      splashColor: Colors.transparent,
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.background,
         foregroundColor: Colors.white,
@@ -123,6 +131,17 @@ class AppTheme {
       listTileTheme: const ListTileThemeData(
         iconColor: AppColors.textMuted,
         textColor: Colors.white,
+      ),
+      // Pin both expanded/collapsed backgrounds to the same transparent
+      // value — Material 3's defaults otherwise shift an ExpansionTile's
+      // background color on expand, which reads as a flash on tap.
+      expansionTileTheme: const ExpansionTileThemeData(
+        backgroundColor: Colors.transparent,
+        collapsedBackgroundColor: Colors.transparent,
+        iconColor: Colors.white,
+        collapsedIconColor: AppColors.textMuted,
+        textColor: Colors.white,
+        collapsedTextColor: Colors.white,
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: AppColors.surface,

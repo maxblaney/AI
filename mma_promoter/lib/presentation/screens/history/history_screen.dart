@@ -13,7 +13,12 @@ class HistoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<GameController>();
-    final all = controller.allFighters;
+    // Leaderboards are the promotion's own record book — scope them to
+    // fighters who've actually had a resolved fight under this org
+    // (isRanked), not the whole generated talent pool. Otherwise every
+    // never-signed free agent's fabricated pre-game record and flat 1500
+    // Elo would show up here on day one.
+    final all = controller.allFighters.where((f) => f.isRanked).toList();
     final retired = controller.retiredFighters
       ..sort((a, b) => b.record.wins.compareTo(a.record.wins));
 

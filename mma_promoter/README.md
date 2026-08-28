@@ -141,7 +141,7 @@ the native mobile app with real persistence.
 - **No roster cap**: there's no limit on how many fighters you can sign or
   how big the talent pool grows — it's bounded only by cash for signing
   bonuses.
-- **Starting talent pool**: 20 fighters per weight class (160 total) at
+- **Starting talent pool**: 50 fighters per weight class (400 total) at
   new-game start. Stat generation uses a weighted talent-tier system
   (`_rollStatCenter` in `roster_seed.dart`) so the pool averages roughly a
   72 overall, with a genuine best-of-the-best slice reaching the low-to-mid

@@ -439,7 +439,7 @@ const Map<FightingStyle, Map<_GroundPlan, double>> _groundPlanWeights = {
 /// most are mid-tier prospects and journeymen — enough variety to make
 /// early signing decisions interesting.
 List<Fighter> generateStartingRoster({
-  int fightersPerWeightClass = 20,
+  int fightersPerWeightClass = 50,
   Random? random,
 }) {
   final rng = random ?? Random();
