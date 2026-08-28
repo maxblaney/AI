@@ -130,7 +130,13 @@ the native mobile app with real persistence.
 - **Nationality-matched names**: fighter names are generated from
   per-nationality name pools (33 nationalities, `roster_seed.dart`), so a
   Brazilian fighter gets a Brazilian-sounding name, not a
-  randomly-assembled mismatch.
+  randomly-assembled mismatch. The three largest contingents — USA,
+  Brazil and Russia, ~60% of the pool between them — have deliberately
+  deep pools (roughly 2,000-2,600 first/last combinations each, including
+  Brazilian compound given names like "João Vitor" and "Luiz Felipe"),
+  which keeps duplicate names across a 400-fighter roster down around 2%.
+  The smaller nationalities still run 10×10 pools, so what duplicates
+  remain cluster there.
 - **Weighted nationality mix**: generated fighters aren't drawn uniformly
   across all 33 nationalities — `_regionWeights` skews the pool toward
   where the sport's real talent base comes from: ~35% USA, ~12.5% each
@@ -227,18 +233,25 @@ the native mobile app with real persistence.
   style with real spread inside each: most BJJ players hunt the tap, most
   wrestlers ride position, a wrestling-heavy fighter is more likely to
   posture up and hit, and a pure striker just wants back to his feet.
-- **Fighter headshots**: pixel-art portraits (`assets/fighters/`, sliced
-  from a fan-contributed sprite sheet) replace the initial-letter avatar
+- **Fighter headshots**: every fighter has a pixel-art portrait
+  (`assets/fighters/`, sliced from a contributed sprite sheet), shown
   wherever a fighter appears — Roster, Fighter Profile, Rankings.
   `rollHeadshot` (`lib/domain/cosmetics/fighter_headshots.dart`) assigns
-  one at generation time based on nationality: each nationality has its
-  own per-tone odds (deep/medium/tan skin), and most nationalities carry
-  no weight at all yet, so they keep the initial-letter fallback rather
-  than being force-fit into art that doesn't suit them (there's no
-  meaningful population of, say, Black Russian or Black Polish fighters
-  in reality). The art set is deliberately small right now — more
-  headshots (and more covered nationalities/tones) can be dropped in over
-  time by extending `_headshotsByTone` and `_nationalityToneWeights`.
+  one at generation time from per-nationality skin-tone odds
+  (deep/medium/tan): Nigeria and Cameroon skew heavily deep, Northern and
+  Eastern Europe sit entirely at the light end (there's no meaningful
+  population of, say, Black Russian or Black Polish fighters in reality),
+  and genuinely mixed rosters — the USA, Brazil, the Caribbean — get a
+  real spread. Any nationality not in the table falls back to the
+  lightest available art.
+  **Known gap**: the current 25-portrait set only spans deep to tan, with
+  no pale, East Asian or South Asian art, so `tan` is doing double duty as
+  "lightest available" for nationalities it isn't really a match for
+  (Japan, South Korea, China, Scandinavia). The fix is more art, not
+  reweighting — adding a tone means one new `SkinTone` value, its asset
+  list in `_headshotsByTone`, and updated `_nationalityToneWeights`.
+  `FighterAvatar` still falls back to an initial-letter circle for
+  fighters saved before portraits existed.
 - **Potential**: a ceiling on a fighter's `overall`, shown on their
   profile. Long win streaks (3+) nudge it up, long losing streaks (3+)
   nudge it down, and it never falls below the fighter's current overall
