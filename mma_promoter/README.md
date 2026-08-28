@@ -206,9 +206,12 @@ the native mobile app with real persistence.
   heart, adaptability, killer instinct); and **14 Tendencies**. Plus
   **reach**, which is a real edge at striking range. Every one of these is
   read individually by the resolver.
-- **Fighting style & tendencies**: every fighter has one `FightingStyle`
-  (Boxer, Kickboxer, Muay Thai, Wrestler, BJJ, Wrestling-Heavy, Counter
-  Striker, Pressure Fighter, Point Fighter, Brawler, Well-Rounded) and 14
+- **Fighting style & tendencies**: every fighter has one `FightingStyle`,
+  drawn from a weighted mix (`_styleWeights` in `roster_seed.dart`) rather
+  than uniformly at random — Well-Rounded (16%), Wrestling-Heavy/Counter
+  Striker (12% each) and Pressure Fighter/Boxer/Kickboxer/Wrestler (10%
+  each) are the common archetypes; Brawler/Point Fighter/Muay Thai/BJJ
+  (5% each) are the rarer ones — and 14
   `Tendencies` dials (0-100: striking/takedown/kick/clinch frequency,
   submission attempts, ground & pound, position control, stand-up
   preference, wall work, aggression, counter striking, head hunting,

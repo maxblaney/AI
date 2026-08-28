@@ -475,6 +475,34 @@ int _rollStatCenter(Random rng) {
   return 48 + rng.nextInt(21); // prospect/journeyman: 48-68
 }
 
+/// How common each fighting style is in the generated pool. Percentages
+/// sum to 100 — Well-Rounded and the grappling-heavy styles (Wrestling-
+/// Heavy, Counter Striker) are the most common archetypes, Brawler/Point
+/// Fighter/Muay Thai/BJJ the rarest.
+const Map<FightingStyle, double> _styleWeights = {
+  FightingStyle.wellRounded: 16,
+  FightingStyle.wrestlingHeavy: 12,
+  FightingStyle.counterStriker: 12,
+  FightingStyle.pressureFighter: 10,
+  FightingStyle.boxer: 10,
+  FightingStyle.kickboxer: 10,
+  FightingStyle.wrestler: 10,
+  FightingStyle.brawler: 5,
+  FightingStyle.pointFighter: 5,
+  FightingStyle.muayThai: 5,
+  FightingStyle.bjj: 5,
+};
+
+FightingStyle _pickFightingStyle(Random rng) {
+  final total = _styleWeights.values.fold(0.0, (a, b) => a + b);
+  var roll = rng.nextDouble() * total;
+  for (final entry in _styleWeights.entries) {
+    roll -= entry.value;
+    if (roll <= 0) return entry.key;
+  }
+  return FightingStyle.wellRounded;
+}
+
 /// Rolls a career fight count. Weighted so ~88% of fighters land in a
 /// believable 4-30 fight "prime of career" range, with a green-prospect
 /// tail (0-3 fights) and a grizzled-veteran tail (31-50) making up the
@@ -526,7 +554,7 @@ Fighter _generateFighter(WeightClass weightClass, Random rng) {
   int stat() => (center + rng.nextInt(band * 2 + 1) - band).clamp(15, 99);
   int tendency() => 20 + rng.nextInt(41); // 20-60 baseline
 
-  final style = FightingStyle.values[rng.nextInt(FightingStyle.values.length)];
+  final style = _pickFightingStyle(rng);
   final groundPlan = _pickGroundPlan(style, rng);
 
   final nationality = _pickNationality(rng);
