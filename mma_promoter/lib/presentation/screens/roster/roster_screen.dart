@@ -8,7 +8,7 @@ import '../../widgets/fighter_list_tile.dart';
 import 'fighter_editor_screen.dart';
 import 'fighter_profile_screen.dart';
 
-enum RosterSortKey { name, age, weightClass, wins, popularity }
+enum RosterSortKey { name, age, weightClass, wins, popularity, overall }
 
 extension on RosterSortKey {
   String get label {
@@ -23,6 +23,8 @@ extension on RosterSortKey {
         return 'Record (Wins)';
       case RosterSortKey.popularity:
         return 'Popularity';
+      case RosterSortKey.overall:
+        return 'Overall';
     }
   }
 }
@@ -73,6 +75,8 @@ class _RosterScreenState extends State<RosterScreen> {
           return a.record.wins.compareTo(b.record.wins);
         case RosterSortKey.popularity:
           return a.popularity.compareTo(b.popularity);
+        case RosterSortKey.overall:
+          return a.overall.compareTo(b.overall);
       }
     }
 

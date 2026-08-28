@@ -121,8 +121,8 @@ the native mobile app with real persistence.
   International $10M), which sets opening cash and fanbase. Replaces the
   old silent auto-seed; `GameController.needsNewGame` gates it.
 - **Roster filter/sort**: `RosterScreen` filters by nationality, weight
-  class and style, and sorts by name/age/weight class/wins/popularity —
-  same controls on both the signed roster and the talent pool.
+  class and style, and sorts by name/age/weight class/wins/popularity/
+  overall — same controls on both the signed roster and the talent pool.
 - **Create/edit fighters**: `FighterEditorScreen` is shared by both —
   create drops a brand-new fighter into the talent pool; edit preserves
   id/contract and lets you change everything else, including record and
@@ -147,6 +147,15 @@ the native mobile app with real persistence.
   72 overall, with a genuine best-of-the-best slice reaching the low-to-mid
   90s and a vanishingly rare (~0.5%) legend tier that's the only way to see
   a 95+ overall.
+- **Generated records**: fight count and win/loss record are generated
+  independently of skill (`_rollFightCount`/`_rollRecord` in
+  `roster_seed.dart`). ~87% of fighters land in a believable 4-30 career
+  fights (a green-prospect tail below 4, a grizzled-veteran tail above 30
+  fill out the rest), and ~85% have a winning record — built by
+  construction (losses kept a deliberate minority share) rather than by
+  rounding a win-rate float, which was undershooting the target at low
+  fight counts. Age is generated to roughly fit the fight count so a
+  22-year-old never shows up with a 40-fight résumé.
 - **Height/weight**: every fighter has a plausible height and walk-around
   weight generated per weight class (see `generatePhysicalStats`), shown
   on their profile and editable in the fighter editor.

@@ -475,12 +475,47 @@ int _rollStatCenter(Random rng) {
   return 48 + rng.nextInt(21); // prospect/journeyman: 48-68
 }
 
+/// Rolls a career fight count. Weighted so ~88% of fighters land in a
+/// believable 4-30 fight "prime of career" range, with a green-prospect
+/// tail (0-3 fights) and a grizzled-veteran tail (31-50) making up the
+/// rest — enough to hit the 85-90% target without every fighter looking
+/// like a carbon copy.
+int _rollFightCount(Random rng) {
+  final roll = rng.nextDouble();
+  if (roll < 0.06) return rng.nextInt(4); // green prospect: 0-3
+  if (roll < 0.94) return 4 + rng.nextInt(27); // standard: 4-30
+  return 31 + rng.nextInt(20); // veteran: 31-50
+}
+
+/// Rolls (wins, losses) for a fighter with [fights] total bouts, biased
+/// toward a winning record. Built by construction rather than rounding a
+/// win-rate float — at low fight counts, rounding a rate near 50% ties
+/// far too often (e.g. 2 wins/2 losses at 4 fights and a 60% "win rate"),
+/// which undershot the positive-record target. Instead losses are
+/// deliberately kept a minority share for the ~85% of fighters who
+/// should have a winning record, so wins > losses by construction for
+/// anyone who's actually fought.
+(int, int) _rollRecord(int fights, Random rng) {
+  if (fights == 0) return (0, 0);
+  final roll = rng.nextDouble();
+  if (roll < 0.85) {
+    // Winning record: losses are 10-40% of the fights, always a minority.
+    final losses = (fights * (0.10 + rng.nextDouble() * 0.30)).floor();
+    return (fights - losses, losses);
+  }
+  // Break-even or a losing skid — the other ~15%, for real variety.
+  final wins = (fights * (0.20 + rng.nextDouble() * 0.30)).round();
+  return (wins, fights - wins);
+}
+
 Fighter _generateFighter(WeightClass weightClass, Random rng) {
-  final age = 21 + rng.nextInt(15); // 21-35
-  final int experienceFights = max(0, (age - 20)) * (1 + rng.nextInt(3));
-  final winRate = 0.4 + rng.nextDouble() * 0.4; // 40-80%
-  final wins = (experienceFights * winRate).round();
-  final losses = experienceFights - wins;
+  final int experienceFights = _rollFightCount(rng);
+  final (wins, losses) = _rollRecord(experienceFights, rng);
+  // Age should be plausible for how many pro fights this fighter has —
+  // roughly a fight every 4-5 months of an active career, starting in
+  // their early 20s — so a 22-year-old never shows up with 40 fights.
+  final minAge = 21 + (experienceFights / 2.5).floor();
+  final age = (minAge + rng.nextInt(6)).clamp(21, 42);
 
   // Every fighter has a talent-tier "center" their stats cluster around.
   // Young/inexperienced fighters swing wider around that center (raw,
