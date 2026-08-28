@@ -250,8 +250,15 @@ the native mobile app with real persistence.
   (Japan, South Korea, China, Scandinavia). The fix is more art, not
   reweighting — adding a tone means one new `SkinTone` value, its asset
   list in `_headshotsByTone`, and updated `_nationalityToneWeights`.
-  `FighterAvatar` still falls back to an initial-letter circle for
-  fighters saved before portraits existed.
+  `FighterAvatar` renders them at `FilterQuality.none` — nearest-neighbour,
+  so the pixels stay square and crisp when scaled up from their native
+  32×32 instead of being smeared by Flutter's default smooth filtering —
+  on a cool steel-blue studio-backdrop gradient with a soft rim. The
+  backdrop is cool by design: the art is warm, so a cool ground gives the
+  strongest complementary separation (compared side by side against
+  neutral and warm greys, warm backdrops muddied the darker skin tones).
+  It still falls back to an initial-letter circle for fighters saved
+  before portraits existed.
 - **Potential**: a ceiling on a fighter's `overall`, shown on their
   profile. Long win streaks (3+) nudge it up, long losing streaks (3+)
   nudge it down, and it never falls below the fighter's current overall

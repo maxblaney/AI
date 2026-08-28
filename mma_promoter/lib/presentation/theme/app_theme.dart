@@ -31,6 +31,17 @@ class AppColors {
   static const textMuted = Color(0xFFA6A6AE);
   static const outline = Color(0xFF2E2E34);
   static const outlineVariant = Color(0xFF1C1C20);
+
+  /// Studio backdrop behind a fighter's headshot. Deliberately a cool
+  /// steel blue rather than the accent: the portrait art is warm (browns
+  /// and tans), so a cool backdrop gives the strongest complementary
+  /// separation — compared side by side against neutral and warm greys,
+  /// this is the one that made every skin tone pop rather than muddying
+  /// the darker ones. Kept mid-light so deep-tone portraits still read
+  /// dark against it while the disc as a whole lifts off the near-black
+  /// list rows.
+  static const avatarBackdropTop = Color(0xFF62728C);
+  static const avatarBackdropBottom = Color(0xFF333D4D);
 }
 
 class AppTheme {
