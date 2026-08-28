@@ -49,7 +49,8 @@ class _InboxTile extends StatelessWidget {
   Color? _iconColor(BuildContext context) {
     switch (item.type) {
       case InboxItemType.injury:
-        return Colors.redAccent;
+        // Matches the injury icon color used on the event results screen.
+        return Colors.orange;
       case InboxItemType.retirement:
         return Colors.amber[800];
       case InboxItemType.fightRequest:
