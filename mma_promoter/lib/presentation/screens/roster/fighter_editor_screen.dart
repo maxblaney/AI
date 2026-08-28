@@ -136,6 +136,7 @@ class _FighterEditorScreenState extends State<FighterEditorScreen>
     final defaultPhysical = generatePhysicalStats(_weightClass, Random());
     _heightInches = f?.heightInches ?? defaultPhysical.$1;
     _weightLbs = f?.weightLbs ?? defaultPhysical.$2;
+    _reachInches = (f != null && f.reachInches > 0) ? f.reachInches : _heightInches;
     _wins = f?.record.wins ?? 0;
     _losses = f?.record.losses ?? 0;
     _draws = f?.record.draws ?? 0;
