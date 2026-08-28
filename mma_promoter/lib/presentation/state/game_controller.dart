@@ -147,18 +147,27 @@ class GameController extends ChangeNotifier {
   /// the UI should show the new-game setup screen instead of the dashboard.
   bool needsNewGame = false;
 
+  /// Set when startup failed — most likely the browser refusing to open
+  /// the save database. Surfaced by the UI instead of leaving the player
+  /// on a spinner that never resolves.
+  String? initError;
+
   Future<void> init() async {
-    final org = await _orgRepo.get();
-    organization = org;
+    try {
+      final org = await _orgRepo.get();
+      organization = org;
 
-    if (org == null) {
-      needsNewGame = true;
-      isLoading = false;
-      notifyListeners();
-      return;
+      if (org == null) {
+        needsNewGame = true;
+        isLoading = false;
+        notifyListeners();
+        return;
+      }
+
+      await _subscribeToStreams();
+    } catch (error, stack) {
+      initError = '$error\n\n$stack';
     }
-
-    await _subscribeToStreams();
     isLoading = false;
     notifyListeners();
   }

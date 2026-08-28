@@ -66,6 +66,41 @@ It *has* been driven end-to-end in a browser (see "Web preview" below),
 which exercises the same UI and game logic as mobile — everything except
 the native SQLite persistence.
 
+### Saves
+
+Games persist on every platform, and there's nothing to press — the game
+saves continuously as you play, because every change is written straight
+to the database rather than held in memory and flushed later. Close the
+tab, come back tomorrow, and you resume where you left off.
+
+- **Native** — on-device SQLite via `sqlite3_flutter_libs`.
+- **Web** — the same schema, mappers and repositories running on sqlite3
+  compiled to WebAssembly. Drift stores the database file through the
+  browser, preferring OPFS and falling back to IndexedDB. This needs
+  `web/sqlite3.wasm` and `web/drift_worker.js`, both committed in `web/`
+  and copied into the build automatically.
+
+Two consequences worth knowing:
+
+- The save lives in **that browser, on that machine**. It isn't in the
+  cloud and doesn't follow you to another device, and clearing site data
+  for the origin deletes it. Private/incognito windows generally discard
+  it when the window closes. If the browser refuses storage entirely, the
+  app says so on startup instead of hanging on a spinner.
+- Because saves are real now, **a schema change without a migration would
+  break them**. `AppDatabase.migration` is the place for that: any change
+  to `tables.dart` bumps `schemaVersion` and adds its step. The
+  round-trip tests in `test/data/persistence_round_trip_test.dart` run
+  the real schema against in-memory SQLite and will fail if a model field
+  never made it into the table or the mappers.
+
+The `sqlite3.wasm` that works here is the one **bundled with the drift
+package** (`.pub-cache/.../drift-<version>/extension/devtools/build/`),
+not the release asset from the sqlite3.dart repo — the latter is built
+from a different commit and fails at load with
+`Import #0 "dart" "localtime": function import requires a callable`. If
+you upgrade drift, recopy that file from the new version's cache folder.
+
 ### Web preview
 
 `flutter build web` works and was used to smoke-test the full loop (sign

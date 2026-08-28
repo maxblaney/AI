@@ -40,6 +40,34 @@ class _HomeShellState extends State<HomeShell> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
+    if (controller.initError != null) {
+      return Scaffold(
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: ListView(
+              children: [
+                Text(
+                  "Couldn't open your save",
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'The game stores saves in your browser. This can fail in '
+                  'private browsing, or if site data is blocked.',
+                ),
+                const SizedBox(height: 16),
+                SelectableText(
+                  controller.initError!,
+                  style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     if (controller.needsNewGame) {
       return const NewGameScreen();
     }
