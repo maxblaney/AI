@@ -141,12 +141,71 @@ const Map<String, _NamePool> _namePoolsByNationality = {
     ['Franck', 'Yannick', 'Junior', 'Herve', 'Serge', 'Landry', 'Patrick', 'Cedric', 'Gaston', 'Blaise'],
     ['Mbarga', 'Ngoua', 'Fotso', 'Talla', 'Mvondo', 'Ateba', 'Biya', 'Njoya', 'Onana', 'Kamga'],
   ),
+  'New Zealand': _NamePool(
+    ['Jayden', 'Mitchell', 'Israel', 'Tane', 'Beauden', 'Dane', 'Reuben', 'Kane', 'Hayden', 'Rhys'],
+    ['Whanau', 'Ngata', 'Taylor', 'Robertson', 'MacDonald', 'Wilson', 'Harrison', 'Barrett', 'Cane', 'Tuipulotu'],
+  ),
 };
 
 /// Nationalities the generator knows how to produce fitting names for.
 /// Reused by the fighter editor so manually-created fighters stay
 /// consistent with generated ones.
 final List<String> knownNationalities = _namePoolsByNationality.keys.toList();
+
+/// Rough regional makeup of the talent pool, reflecting where the sport's
+/// real-world talent base actually comes from: American-heavy with strong
+/// Brazilian and Russian contingents, a solid European base, a small
+/// Oceania slice, and the rest spread across the remaining nationalities.
+/// Weights are approximate by design, not a hard quota.
+const Map<String, double> _regionWeights = {
+  'USA': 35,
+  'Brazil': 12.5,
+  'Russia': 12.5,
+  'Europe': 12.5,
+  'Oceania': 5,
+  'RestOfWorld': 22.5,
+};
+
+const List<String> _usaNationalities = ['USA'];
+const List<String> _brazilNationalities = ['Brazil'];
+const List<String> _russiaNationalities = ['Russia'];
+const List<String> _europeNationalities = [
+  'Poland', 'Ireland', 'Sweden', 'England', 'Netherlands', 'Germany',
+  'France', 'Ukraine', 'Czech Republic', 'Croatia', 'Italy', 'Spain',
+  'Scotland', 'Georgia',
+];
+const List<String> _oceaniaNationalities = ['Australia', 'New Zealand'];
+const List<String> _restOfWorldNationalities = [
+  'Nigeria', 'Japan', 'Mexico', 'Canada', 'South Korea', 'Kazakhstan',
+  'South Africa', 'China', 'Thailand', 'Philippines', 'Cuba',
+  'Dominican Republic', 'Argentina', 'Cameroon',
+];
+
+/// Per-nationality pick weight, flattened from [_regionWeights] — each
+/// nationality within a region splits that region's share evenly. Built
+/// once at load time.
+final Map<String, double> _nationalityWeights = {
+  for (final n in _usaNationalities) n: _regionWeights['USA']! / _usaNationalities.length,
+  for (final n in _brazilNationalities) n: _regionWeights['Brazil']! / _brazilNationalities.length,
+  for (final n in _russiaNationalities) n: _regionWeights['Russia']! / _russiaNationalities.length,
+  for (final n in _europeNationalities) n: _regionWeights['Europe']! / _europeNationalities.length,
+  for (final n in _oceaniaNationalities) n: _regionWeights['Oceania']! / _oceaniaNationalities.length,
+  for (final n in _restOfWorldNationalities) n: _regionWeights['RestOfWorld']! / _restOfWorldNationalities.length,
+};
+
+/// Picks a nationality weighted toward the regional makeup above, falling
+/// back to a uniform pick for any nationality not yet bucketed (so adding
+/// a new country to the name pool without also bucketing it doesn't make
+/// it unreachable).
+String _pickNationality(Random rng) {
+  final total = _nationalityWeights.values.fold(0.0, (a, b) => a + b);
+  var roll = rng.nextDouble() * total;
+  for (final entry in _nationalityWeights.entries) {
+    roll -= entry.value;
+    if (roll <= 0) return entry.key;
+  }
+  return knownNationalities[rng.nextInt(knownNationalities.length)];
+}
 
 /// Plausible height range (inches) by weight class — heavier divisions
 /// skew taller, same as real MMA.
@@ -420,7 +479,7 @@ Fighter _generateFighter(WeightClass weightClass, Random rng) {
   final style = FightingStyle.values[rng.nextInt(FightingStyle.values.length)];
   final groundPlan = _pickGroundPlan(style, rng);
 
-  final nationality = knownNationalities[rng.nextInt(knownNationalities.length)];
+  final nationality = _pickNationality(rng);
   final (heightInches, weightLbs) = generatePhysicalStats(weightClass, rng);
   final reachInches = generateReach(heightInches, rng);
 

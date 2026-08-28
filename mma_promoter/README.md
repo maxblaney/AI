@@ -128,9 +128,19 @@ the native mobile app with real persistence.
   id/contract and lets you change everything else, including record and
   weight class.
 - **Nationality-matched names**: fighter names are generated from
-  per-nationality name pools (32 nationalities, `roster_seed.dart`), so a
+  per-nationality name pools (33 nationalities, `roster_seed.dart`), so a
   Brazilian fighter gets a Brazilian-sounding name, not a
   randomly-assembled mismatch.
+- **Weighted nationality mix**: generated fighters aren't drawn uniformly
+  across all 33 nationalities — `_regionWeights` skews the pool toward
+  where the sport's real talent base comes from: ~35% USA, ~12.5% each
+  Brazil/Russia/Europe, ~5% Australia/New Zealand, ~22.5% spread across the
+  rest. Each region's share splits evenly across its member nationalities
+  (Europe alone covers 14 countries). Manual creation in the fighter editor
+  is unaffected — its nationality dropdown stays a plain alphabetical list.
+- **No roster cap**: there's no limit on how many fighters you can sign or
+  how big the talent pool grows — it's bounded only by cash for signing
+  bonuses.
 - **Height/weight**: every fighter has a plausible height and walk-around
   weight generated per weight class (see `generatePhysicalStats`), shown
   on their profile and editable in the fighter editor.

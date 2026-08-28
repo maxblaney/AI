@@ -126,14 +126,14 @@ void main() {
 
   testWidgets('a fight with no play-by-play degrades gracefully', (tester) async {
     // A result reloaded from storage has no momentum ticks or events.
-    final stripped = Fight(
+    const stripped = Fight(
       id: 'f',
       eventId: 'e',
       fighterAId: 'a-id',
       fighterBId: 'b-id',
       weightClass: WeightClass.lightweight,
       cardOrder: 0,
-      result: const FightResult(
+      result: FightResult(
         winnerId: 'a-id',
         method: FightMethod.koTko,
         round: 2,
