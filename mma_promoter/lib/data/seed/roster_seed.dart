@@ -575,41 +575,80 @@ int _rollFightCount(Random rng) {
   return 31 + rng.nextInt(20); // veteran: 31-50
 }
 
-/// Rolls (wins, losses) for a fighter with [fights] total bouts, biased
-/// toward a winning record. Built by construction rather than rounding a
-/// win-rate float — at low fight counts, rounding a rate near 50% ties
-/// far too often (e.g. 2 wins/2 losses at 4 fights and a 60% "win rate"),
-/// which undershot the positive-record target. Instead losses are
-/// deliberately kept a minority share for the ~85% of fighters who
-/// should have a winning record, so wins > losses by construction for
-/// anyone who's actually fought.
-(int, int) _rollRecord(int fights, Random rng) {
-  if (fights == 0) return (0, 0);
-  final roll = rng.nextDouble();
-  if (roll < 0.85) {
-    // Winning record: losses are 10-40% of the fights, always a minority.
-    final losses = (fights * (0.10 + rng.nextDouble() * 0.30)).floor();
-    return (fights - losses, losses);
+/// The most a fighter's losses may exceed their wins. A record is a
+/// career's worth of evidence about how good someone is, so a deeply
+/// negative one (5-10, say) reads as a fighter no promotion would carry —
+/// they'd have been cut long before reaching it. Losing records still
+/// happen, they just stay within shouting distance of even.
+const int _maxLossDeficit = 4;
+
+/// Expected career win rate at a given stat [center], interpolated
+/// between these anchors. Skill has to show up in the record: a 94
+/// overall with a 10-28 record is nonsense, because a fighter that good
+/// beat most of the people in front of them on the way up.
+const List<(double, double)> _winRateByCenter = [
+  (48, 0.48),
+  (60, 0.55),
+  (70, 0.62),
+  (80, 0.72),
+  (90, 0.83),
+  (99, 0.92),
+];
+
+double _expectedWinRate(int center) {
+  if (center <= _winRateByCenter.first.$1) return _winRateByCenter.first.$2;
+  if (center >= _winRateByCenter.last.$1) return _winRateByCenter.last.$2;
+  for (var i = 0; i < _winRateByCenter.length - 1; i++) {
+    final (x1, y1) = _winRateByCenter[i];
+    final (x2, y2) = _winRateByCenter[i + 1];
+    if (center >= x1 && center <= x2) {
+      return y1 + (y2 - y1) * (center - x1) / (x2 - x1);
+    }
   }
-  // Break-even or a losing skid — the other ~15%, for real variety.
-  final wins = (fights * (0.20 + rng.nextDouble() * 0.30)).round();
+  return _winRateByCenter.last.$2;
+}
+
+/// Rolls (wins, losses) for a fighter with [fights] total bouts whose
+/// stats cluster around [center].
+///
+/// The win rate comes from that skill level plus noise, so the pool's
+/// better fighters genuinely have the better records — but a bad roll can
+/// still hand a good fighter a rough run, and vice versa. Two guards
+/// finish the job: the result can never breach [_maxLossDeficit], and a
+/// fighter who has fought at all never sits on a bare 0 wins.
+(int, int) _rollRecord(int fights, int center, Random rng) {
+  if (fights == 0) return (0, 0);
+
+  final winRate =
+      (_expectedWinRate(center) + (rng.nextDouble() - 0.5) * 0.16).clamp(0.0, 1.0);
+  var wins = (fights * winRate).round();
+
+  // losses - wins <= _maxLossDeficit  =>  wins >= (fights - deficit) / 2
+  final minWins = ((fights - _maxLossDeficit) / 2).ceil();
+  wins = wins.clamp(max(0, minWins), fights);
+  if (fights >= 3 && wins == 0) wins = 1;
+
   return (wins, fights - wins);
 }
 
 Fighter _generateFighter(WeightClass weightClass, Random rng) {
   final int experienceFights = _rollFightCount(rng);
-  final (wins, losses) = _rollRecord(experienceFights, rng);
+
+  // Every fighter has a talent-tier "center" their stats cluster around.
+  // Young/inexperienced fighters swing wider around that center (raw,
+  // uneven tools); veterans are tighter and more consistent — but neither
+  // shifts the *average*, only how much a given stat can stray from it.
+  // Rolled before the record, which is derived from it: the stats are
+  // what the record is supposed to be evidence of.
+  final int center = _rollStatCenter(rng);
+
+  final (wins, losses) = _rollRecord(experienceFights, center, rng);
   // Age should be plausible for how many pro fights this fighter has —
   // roughly a fight every 4-5 months of an active career, starting in
   // their early 20s — so a 22-year-old never shows up with 40 fights.
   final minAge = 21 + (experienceFights / 2.5).floor();
   final age = (minAge + rng.nextInt(6)).clamp(21, 42);
 
-  // Every fighter has a talent-tier "center" their stats cluster around.
-  // Young/inexperienced fighters swing wider around that center (raw,
-  // uneven tools); veterans are tighter and more consistent — but neither
-  // shifts the *average*, only how much a given stat can stray from it.
-  final int center = _rollStatCenter(rng);
   final int band = 12 - min(experienceFights, 6); // 12 (green) down to 6 (veteran)
   int stat() => (center + rng.nextInt(band * 2 + 1) - band).clamp(15, 99);
   int tendency() => 20 + rng.nextInt(41); // 20-60 baseline

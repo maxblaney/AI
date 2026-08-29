@@ -63,8 +63,8 @@ on top of it — `flutter run -d <device>` on a machine with Xcode/Android
 Studio set up.
 
 It *has* been driven end-to-end in a browser (see "Web preview" below),
-which exercises the same UI and game logic as mobile — everything except
-the native SQLite persistence.
+which exercises the same UI, game logic and persistence layer as mobile —
+the web build runs the same schema and repositories on sqlite3-wasm.
 
 ### Saves
 
@@ -111,15 +111,13 @@ mobile build:
 - **`--web-renderer html`** — the default CanvasKit renderer fetches its
   `.wasm` runtime from Google's CDN at startup, which won't work offline
   or behind a restrictive network. The HTML renderer needs no such fetch.
-- **In-memory persistence** — Flutter web has no `dart:io`, so the Drift
+- **WebAssembly SQLite** — Flutter web has no `dart:io`, so the native
   SQLite backend can't run there. `lib/data/db/connection.dart`
-  conditionally exports a native (`connection_native.dart`, real SQLite)
-  or web (`connection_web.dart`, stub) implementation, and
-  `main.dart` constructs `GameController.inMemory()` instead of the
-  default `GameController()` when `kIsWeb` is true — same UI, same domain
-  logic, volatile state that resets on reload. See
-  `lib/data/repositories/repository_contracts.dart` and
-  `lib/data/repositories/in_memory/`.
+  conditionally exports `connection_native.dart` or
+  `connection_web.dart`, the latter opening the same schema on
+  sqlite3-wasm. Saves persist; see "Saves" above. (The in-memory
+  repositories under `lib/data/repositories/in_memory/` are still used by
+  tests via `GameController.inMemory()`.)
 
 ```bash
 flutter build web --release --web-renderer html --no-web-resources-cdn
@@ -188,15 +186,22 @@ the native mobile app with real persistence.
   72 overall, with a genuine best-of-the-best slice reaching the low-to-mid
   90s and a vanishingly rare (~0.5%) legend tier that's the only way to see
   a 95+ overall.
-- **Generated records**: fight count and win/loss record are generated
-  independently of skill (`_rollFightCount`/`_rollRecord` in
-  `roster_seed.dart`). ~87% of fighters land in a believable 4-30 career
-  fights (a green-prospect tail below 4, a grizzled-veteran tail above 30
-  fill out the rest), and ~85% have a winning record — built by
-  construction (losses kept a deliberate minority share) rather than by
-  rounding a win-rate float, which was undershooting the target at low
-  fight counts. Age is generated to roughly fit the fight count so a
+- **Generated records**: a fighter's record is evidence of how good they
+  are, so it's derived from their skill rather than rolled beside it
+  (`_rollFightCount`/`_rollRecord` in `roster_seed.dart`). The stat tier
+  is rolled first, mapped to an expected career win rate
+  (`_winRateByCenter`, ~48% at the bottom of the pool up to ~92% for a
+  legend), then jittered — so a good fighter can still have had a rough
+  run, but a 94 overall no longer turns up 10-28. Measured across 16,000
+  generated fighters, average win rate climbs 50% → 55% → 62% → 70% →
+  78% → 86% across the OVR bands, and 90+ fighters average about 15-3.
+  Two hard floors finish it: **nobody is generated more than 4 losses
+  below .500** (so no 5-10 records — a fighter that far underwater would
+  have been cut long before), and nobody with a real career is winless.
+  ~87% still land in a believable 4-30 career fights and ~86% still have
+  a winning record. Age is generated to roughly fit the fight count so a
   22-year-old never shows up with a 40-fight résumé.
+  `test/data/generated_records_test.dart` asserts all of this at scale.
 - **Height/weight**: every fighter has a plausible height and walk-around
   weight generated per weight class (see `generatePhysicalStats`), shown
   on their profile and editable in the fighter editor.
@@ -269,7 +274,7 @@ the native mobile app with real persistence.
   wrestlers ride position, a wrestling-heavy fighter is more likely to
   posture up and hit, and a pure striker just wants back to his feet.
 - **Fighter headshots**: every fighter has a pixel-art portrait
-  (`assets/fighters/`, sliced from a contributed sprite sheet), shown
+  (`assets/fighters/` — 48 of them, sliced from contributed sprite sheets), shown
   wherever a fighter appears — Roster, Fighter Profile, Rankings.
   `rollHeadshot` (`lib/domain/cosmetics/fighter_headshots.dart`) assigns
   one at generation time from per-nationality skin-tone odds
@@ -279,8 +284,8 @@ the native mobile app with real persistence.
   and genuinely mixed rosters — the USA, Brazil, the Caribbean — get a
   real spread. Any nationality not in the table falls back to the
   lightest available art.
-  **Known gap**: the current 25-portrait set only spans deep to tan, with
-  no pale, East Asian or South Asian art, so `tan` is doing double duty as
+  **Known gap**: the 48-portrait set spans deep to tan, with no pale,
+  East Asian or South Asian art, so `tan` is doing double duty as
   "lightest available" for nationalities it isn't really a match for
   (Japan, South Korea, China, Scandinavia). The fix is more art, not
   reweighting — adding a tone means one new `SkinTone` value, its asset
