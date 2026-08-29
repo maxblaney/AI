@@ -73,6 +73,20 @@ saves continuously as you play, because every change is written straight
 to the database rather than held in memory and flushed later. Close the
 tab, come back tomorrow, and you resume where you left off.
 
+**Multiple saves.** You can keep as many promotions going as you like and
+switch between them freely. The gear icon on the dashboard opens the
+saves list; each entry shows its week, tier, bankroll and roster size, and
+tapping one loads it. Starting a new promotion never disturbs an existing
+one, and launching the app reopens whichever save you played last.
+
+Saves live in a single database, with every game-state row tagged by the
+id of the organization it belongs to (`SaveScope`, and the `saveId`
+columns in `tables.dart`). The repositories read that scope on every
+query, so a save can only ever see its own fighters, events, inbox and
+random events — `test/data/multi_save_test.dart` drives real SQLite to
+prove two saves stay disjoint. Deleting a save removes its fighters,
+contracts, events, fights, inbox and random events in one transaction.
+
 - **Native** — on-device SQLite via `sqlite3_flutter_libs`.
 - **Web** — the same schema, mappers and repositories running on sqlite3
   compiled to WebAssembly. Drift stores the database file through the
@@ -92,7 +106,12 @@ Two consequences worth knowing:
   to `tables.dart` bumps `schemaVersion` and adds its step. The
   round-trip tests in `test/data/persistence_round_trip_test.dart` run
   the real schema against in-memory SQLite and will fail if a model field
-  never made it into the table or the mappers.
+  never made it into the table or the mappers. v2 (multiple saves) is the
+  worked example: it adds the `saveId` columns and then backfills them
+  from the single existing organization, so a game already in progress is
+  adopted into its own save instead of being orphaned behind an id
+  nothing points at. `test/data/migration_v1_to_v2_test.dart` builds a v1
+  database by hand and checks exactly that.
 
 The `sqlite3.wasm` that works here is the one **bundled with the drift
 package** (`.pub-cache/.../drift-<version>/extension/devtools/build/`),

@@ -13,6 +13,7 @@ import '../../data/repositories/inbox_item_repository.dart';
 import '../../data/repositories/organization_repository.dart';
 import '../../data/repositories/random_event_repository.dart';
 import '../../data/repositories/repository_contracts.dart';
+import '../../data/repositories/save_scope.dart';
 import '../../data/seed/roster_seed.dart';
 import '../../domain/calendar/game_calendar.dart';
 import '../../domain/career/career_progression_engine.dart';
@@ -61,6 +62,10 @@ class FighterOutcomeSummary {
 /// [ChangeNotifier], and is the only place UI code should mutate game
 /// state through.
 class GameController extends ChangeNotifier {
+  /// Which save every repository reads and writes. Mutating this is how
+  /// switching saves works — see [loadSave].
+  final SaveScope _scope;
+
   final FighterRepositoryContract _fighterRepo;
   final OrganizationRepositoryContract _orgRepo;
   final EventRepositoryContract _eventRepo;
@@ -84,22 +89,26 @@ class GameController extends ChangeNotifier {
   /// [GameController.inMemory] exists separately.
   factory GameController({AppDatabase? database}) {
     final db = database ?? AppDatabase();
+    final scope = SaveScope();
     return GameController._(
-      fighterRepo: FighterRepository(db),
-      orgRepo: OrganizationRepository(db),
-      eventRepo: EventRepository(db),
-      randomEventRepo: RandomEventRepository(db),
-      inboxRepo: InboxItemRepository(db),
+      scope: scope,
+      fighterRepo: FighterRepository(db, scope),
+      orgRepo: OrganizationRepository(db, scope),
+      eventRepo: EventRepository(db, scope),
+      randomEventRepo: RandomEventRepository(db, scope),
+      inboxRepo: InboxItemRepository(db, scope),
     );
   }
 
   GameController._({
+    required SaveScope scope,
     required FighterRepositoryContract fighterRepo,
     required OrganizationRepositoryContract orgRepo,
     required EventRepositoryContract eventRepo,
     required RandomEventRepositoryContract randomEventRepo,
     required InboxItemRepositoryContract inboxRepo,
-  })  : _fighterRepo = fighterRepo,
+  })  : _scope = scope,
+        _fighterRepo = fighterRepo,
         _orgRepo = orgRepo,
         _eventRepo = eventRepo,
         _randomEventRepo = randomEventRepo,
@@ -108,7 +117,8 @@ class GameController extends ChangeNotifier {
   /// Volatile, non-persistent mode used for the Flutter-web preview build.
   /// Game state resets on every page reload.
   GameController.inMemory()
-      : _fighterRepo = InMemoryFighterRepository(),
+      : _scope = SaveScope(),
+        _fighterRepo = InMemoryFighterRepository(),
         _orgRepo = InMemoryOrganizationRepository(),
         _eventRepo = InMemoryEventRepository(),
         _randomEventRepo = InMemoryRandomEventRepository(),
@@ -143,8 +153,9 @@ class GameController extends ChangeNotifier {
     return scheduled.reduce((a, b) => a.date.isBefore(b.date) ? a : b);
   }
 
-  /// True once we've checked persistence and found no organization yet —
-  /// the UI should show the new-game setup screen instead of the dashboard.
+  /// True when there's no save open — the UI shows the saves screen
+  /// instead of the dashboard. On a fresh install that means no saves
+  /// exist yet; later it also covers leaving a game to pick another.
   bool needsNewGame = false;
 
   /// Set when startup failed — most likely the browser refusing to open
@@ -152,19 +163,22 @@ class GameController extends ChangeNotifier {
   /// on a spinner that never resolves.
   String? initError;
 
+  /// Which save is currently open, or null on the saves screen.
+  String? get activeSaveId => _scope.saveId;
+
+  /// Opens the most recently played save, or lands on the saves screen if
+  /// there isn't one. Never auto-creates a game: with several saves on the
+  /// device, silently starting a new one would bury them.
   Future<void> init() async {
     try {
-      final org = await _orgRepo.get();
-      organization = org;
-
-      if (org == null) {
+      final saves = await _orgRepo.listAll();
+      if (saves.isEmpty) {
         needsNewGame = true;
         isLoading = false;
         notifyListeners();
         return;
       }
-
-      await _subscribeToStreams();
+      await _openSave(saves.first.organization.id);
     } catch (error, stack) {
       initError = '$error\n\n$stack';
     }
@@ -172,26 +186,111 @@ class GameController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Every save on this device, most recently played first.
+  Future<List<SaveSummary>> listSaves() => _orgRepo.listAll();
+
+  /// Switches to an existing save, tearing down the current one's streams
+  /// first so its rows can't leak into the newly opened game.
+  Future<void> loadSave(String saveId) async {
+    await _openSave(saveId);
+    notifyListeners();
+  }
+
+  Future<void> _openSave(String saveId) async {
+    await _cancelSubscriptions();
+    _clearGameState();
+
+    _scope.saveId = saveId;
+    await _orgRepo.touch(saveId, DateTime.now());
+
+    organization = await _orgRepo.get();
+    needsNewGame = organization == null;
+    if (organization != null) await _subscribeToStreams();
+  }
+
+  /// Closes the current save and returns to the saves screen without
+  /// touching what's on disk.
+  Future<void> closeSave() async {
+    await _cancelSubscriptions();
+    _clearGameState();
+    _scope.saveId = null;
+    needsNewGame = true;
+    notifyListeners();
+  }
+
+  /// Permanently deletes a save. If it's the one currently open, the game
+  /// falls back to the next most recent save, or to the saves screen when
+  /// that was the last one.
+  Future<void> deleteSave(String saveId) async {
+    final wasActive = _scope.saveId == saveId;
+    if (wasActive) {
+      await _cancelSubscriptions();
+      _clearGameState();
+      _scope.saveId = null;
+    }
+
+    await _orgRepo.delete(saveId);
+
+    if (wasActive) {
+      final remaining = await _orgRepo.listAll();
+      if (remaining.isEmpty) {
+        needsNewGame = true;
+      } else {
+        await _openSave(remaining.first.organization.id);
+      }
+    }
+    notifyListeners();
+  }
+
   /// Seeds a brand-new save with the player's chosen org name and starting
   /// tier (which sets cash and fanbase — see [ReputationTierInfo]), then
-  /// starts the game normally. Called from the new-game setup screen.
+  /// opens it. Existing saves are left alone.
   Future<void> startNewGame({
     required String orgName,
     required ReputationTier tier,
   }) async {
+    await _cancelSubscriptions();
+    _clearGameState();
+
     final org = generateStartingOrganization(name: orgName, tier: tier);
-    // Everyone starts as a free agent — nobody's signed to "My Roster" yet.
-    final pool = generateStartingRoster();
+    // Scope has to point at the new save before anything is written, or
+    // the roster lands tagged with whichever save was open before.
+    _scope.saveId = org.id;
 
     await _orgRepo.save(org);
-    for (final fighter in pool) {
+    await _orgRepo.touch(org.id, DateTime.now());
+
+    // Everyone starts as a free agent — nobody's signed to "My Roster" yet.
+    for (final fighter in generateStartingRoster()) {
       await _fighterRepo.save(fighter);
     }
+
     organization = org;
     needsNewGame = false;
 
     await _subscribeToStreams();
     notifyListeners();
+  }
+
+  Future<void> _cancelSubscriptions() async {
+    await _fighterSub?.cancel();
+    await _orgSub?.cancel();
+    await _eventSub?.cancel();
+    await _randomEventSub?.cancel();
+    await _inboxSub?.cancel();
+    _fighterSub = null;
+    _orgSub = null;
+    _eventSub = null;
+    _randomEventSub = null;
+    _inboxSub = null;
+  }
+
+  void _clearGameState() {
+    organization = null;
+    allFighters = [];
+    events = [];
+    pendingRandomEvents = [];
+    inboxItems = [];
   }
 
   Future<void> _subscribeToStreams() async {

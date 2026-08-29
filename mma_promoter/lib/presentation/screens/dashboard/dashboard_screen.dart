@@ -6,6 +6,7 @@ import '../../../data/models/models.dart';
 import '../../../domain/calendar/game_calendar.dart';
 import '../../state/game_controller.dart';
 import '../calendar/calendar_screen.dart';
+import '../saves/saves_screen.dart';
 import '../event_booking/event_booking_screen.dart';
 import '../event_result/event_result_screen.dart';
 import '../inbox/inbox_screen.dart';
@@ -33,6 +34,13 @@ class DashboardScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(org?.name ?? 'MMA Promoter'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: 'Saves',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const SavesScreen()),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.calendar_month),
             tooltip: 'Calendar',

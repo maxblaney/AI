@@ -36,6 +36,13 @@ class $FightersTable extends Fighters
   late final GeneratedColumn<String> headshotAsset = GeneratedColumn<String>(
       'headshot_asset', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _saveIdMeta = const VerificationMeta('saveId');
+  @override
+  late final GeneratedColumn<String> saveId = GeneratedColumn<String>(
+      'save_id', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(''));
   static const VerificationMeta _weightClassMeta =
       const VerificationMeta('weightClass');
   @override
@@ -568,6 +575,7 @@ class $FightersTable extends Fighters
         age,
         nationality,
         headshotAsset,
+        saveId,
         weightClass,
         heightInches,
         weightLbs,
@@ -686,6 +694,10 @@ class $FightersTable extends Fighters
           _headshotAssetMeta,
           headshotAsset.isAcceptableOrUnknown(
               data['headshot_asset']!, _headshotAssetMeta));
+    }
+    if (data.containsKey('save_id')) {
+      context.handle(_saveIdMeta,
+          saveId.isAcceptableOrUnknown(data['save_id']!, _saveIdMeta));
     }
     if (data.containsKey('weight_class')) {
       context.handle(
@@ -1189,6 +1201,8 @@ class $FightersTable extends Fighters
           .read(DriftSqlType.string, data['${effectivePrefix}nationality'])!,
       headshotAsset: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}headshot_asset']),
+      saveId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}save_id'])!,
       weightClass: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}weight_class'])!,
       heightInches: attachedDatabase.typeMapping
@@ -1360,6 +1374,11 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
   final int age;
   final String nationality;
   final String? headshotAsset;
+
+  /// The save (organization) this row belongs to. Every game-state
+  /// table carries it so multiple playthroughs can live side by side in
+  /// one database — see `SaveScope`.
+  final String saveId;
   final String weightClass;
   final int heightInches;
   final int weightLbs;
@@ -1448,6 +1467,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       required this.age,
       required this.nationality,
       this.headshotAsset,
+      required this.saveId,
       required this.weightClass,
       required this.heightInches,
       required this.weightLbs,
@@ -1535,6 +1555,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
     if (!nullToAbsent || headshotAsset != null) {
       map['headshot_asset'] = Variable<String>(headshotAsset);
     }
+    map['save_id'] = Variable<String>(saveId);
     map['weight_class'] = Variable<String>(weightClass);
     map['height_inches'] = Variable<int>(heightInches);
     map['weight_lbs'] = Variable<int>(weightLbs);
@@ -1629,6 +1650,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       headshotAsset: headshotAsset == null && nullToAbsent
           ? const Value.absent()
           : Value(headshotAsset),
+      saveId: Value(saveId),
       weightClass: Value(weightClass),
       heightInches: Value(heightInches),
       weightLbs: Value(weightLbs),
@@ -1722,6 +1744,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       age: serializer.fromJson<int>(json['age']),
       nationality: serializer.fromJson<String>(json['nationality']),
       headshotAsset: serializer.fromJson<String?>(json['headshotAsset']),
+      saveId: serializer.fromJson<String>(json['saveId']),
       weightClass: serializer.fromJson<String>(json['weightClass']),
       heightInches: serializer.fromJson<int>(json['heightInches']),
       weightLbs: serializer.fromJson<int>(json['weightLbs']),
@@ -1819,6 +1842,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       'age': serializer.toJson<int>(age),
       'nationality': serializer.toJson<String>(nationality),
       'headshotAsset': serializer.toJson<String?>(headshotAsset),
+      'saveId': serializer.toJson<String>(saveId),
       'weightClass': serializer.toJson<String>(weightClass),
       'heightInches': serializer.toJson<int>(heightInches),
       'weightLbs': serializer.toJson<int>(weightLbs),
@@ -1906,6 +1930,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           int? age,
           String? nationality,
           Value<String?> headshotAsset = const Value.absent(),
+          String? saveId,
           String? weightClass,
           int? heightInches,
           int? weightLbs,
@@ -1990,6 +2015,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
         nationality: nationality ?? this.nationality,
         headshotAsset:
             headshotAsset.present ? headshotAsset.value : this.headshotAsset,
+        saveId: saveId ?? this.saveId,
         weightClass: weightClass ?? this.weightClass,
         heightInches: heightInches ?? this.heightInches,
         weightLbs: weightLbs ?? this.weightLbs,
@@ -2087,6 +2113,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       headshotAsset: data.headshotAsset.present
           ? data.headshotAsset.value
           : this.headshotAsset,
+      saveId: data.saveId.present ? data.saveId.value : this.saveId,
       weightClass:
           data.weightClass.present ? data.weightClass.value : this.weightClass,
       heightInches: data.heightInches.present
@@ -2257,6 +2284,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           ..write('age: $age, ')
           ..write('nationality: $nationality, ')
           ..write('headshotAsset: $headshotAsset, ')
+          ..write('saveId: $saveId, ')
           ..write('weightClass: $weightClass, ')
           ..write('heightInches: $heightInches, ')
           ..write('weightLbs: $weightLbs, ')
@@ -2345,6 +2373,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
         age,
         nationality,
         headshotAsset,
+        saveId,
         weightClass,
         heightInches,
         weightLbs,
@@ -2432,6 +2461,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           other.age == this.age &&
           other.nationality == this.nationality &&
           other.headshotAsset == this.headshotAsset &&
+          other.saveId == this.saveId &&
           other.weightClass == this.weightClass &&
           other.heightInches == this.heightInches &&
           other.weightLbs == this.weightLbs &&
@@ -2517,6 +2547,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
   final Value<int> age;
   final Value<String> nationality;
   final Value<String?> headshotAsset;
+  final Value<String> saveId;
   final Value<String> weightClass;
   final Value<int> heightInches;
   final Value<int> weightLbs;
@@ -2601,6 +2632,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     this.age = const Value.absent(),
     this.nationality = const Value.absent(),
     this.headshotAsset = const Value.absent(),
+    this.saveId = const Value.absent(),
     this.weightClass = const Value.absent(),
     this.heightInches = const Value.absent(),
     this.weightLbs = const Value.absent(),
@@ -2686,6 +2718,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     required int age,
     required String nationality,
     this.headshotAsset = const Value.absent(),
+    this.saveId = const Value.absent(),
     required String weightClass,
     this.heightInches = const Value.absent(),
     this.weightLbs = const Value.absent(),
@@ -2814,6 +2847,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     Expression<int>? age,
     Expression<String>? nationality,
     Expression<String>? headshotAsset,
+    Expression<String>? saveId,
     Expression<String>? weightClass,
     Expression<int>? heightInches,
     Expression<int>? weightLbs,
@@ -2899,6 +2933,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
       if (age != null) 'age': age,
       if (nationality != null) 'nationality': nationality,
       if (headshotAsset != null) 'headshot_asset': headshotAsset,
+      if (saveId != null) 'save_id': saveId,
       if (weightClass != null) 'weight_class': weightClass,
       if (heightInches != null) 'height_inches': heightInches,
       if (weightLbs != null) 'weight_lbs': weightLbs,
@@ -2997,6 +3032,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
       Value<int>? age,
       Value<String>? nationality,
       Value<String?>? headshotAsset,
+      Value<String>? saveId,
       Value<String>? weightClass,
       Value<int>? heightInches,
       Value<int>? weightLbs,
@@ -3081,6 +3117,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
       age: age ?? this.age,
       nationality: nationality ?? this.nationality,
       headshotAsset: headshotAsset ?? this.headshotAsset,
+      saveId: saveId ?? this.saveId,
       weightClass: weightClass ?? this.weightClass,
       heightInches: heightInches ?? this.heightInches,
       weightLbs: weightLbs ?? this.weightLbs,
@@ -3184,6 +3221,9 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     }
     if (headshotAsset.present) {
       map['headshot_asset'] = Variable<String>(headshotAsset.value);
+    }
+    if (saveId.present) {
+      map['save_id'] = Variable<String>(saveId.value);
     }
     if (weightClass.present) {
       map['weight_class'] = Variable<String>(weightClass.value);
@@ -3436,6 +3476,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
           ..write('age: $age, ')
           ..write('nationality: $nationality, ')
           ..write('headshotAsset: $headshotAsset, ')
+          ..write('saveId: $saveId, ')
           ..write('weightClass: $weightClass, ')
           ..write('heightInches: $heightInches, ')
           ..write('weightLbs: $weightLbs, ')
@@ -3991,6 +4032,12 @@ class $OrganizationsTable extends Organizations
       type: DriftSqlType.int,
       requiredDuringInsert: false,
       defaultValue: const Constant(1));
+  static const VerificationMeta _lastPlayedAtMsMeta =
+      const VerificationMeta('lastPlayedAtMs');
+  @override
+  late final GeneratedColumn<int> lastPlayedAtMs = GeneratedColumn<int>(
+      'last_played_at_ms', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -4002,7 +4049,8 @@ class $OrganizationsTable extends Organizations
         homeRegion,
         promotionBudget,
         lastTalentRefreshWeek,
-        currentWeek
+        currentWeek,
+        lastPlayedAtMs
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -4077,6 +4125,12 @@ class $OrganizationsTable extends Organizations
           currentWeek.isAcceptableOrUnknown(
               data['current_week']!, _currentWeekMeta));
     }
+    if (data.containsKey('last_played_at_ms')) {
+      context.handle(
+          _lastPlayedAtMsMeta,
+          lastPlayedAtMs.isAcceptableOrUnknown(
+              data['last_played_at_ms']!, _lastPlayedAtMsMeta));
+    }
     return context;
   }
 
@@ -4106,6 +4160,8 @@ class $OrganizationsTable extends Organizations
           data['${effectivePrefix}last_talent_refresh_week'])!,
       currentWeek: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}current_week'])!,
+      lastPlayedAtMs: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}last_played_at_ms']),
     );
   }
 
@@ -4126,6 +4182,13 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
   final int promotionBudget;
   final int lastTalentRefreshWeek;
   final int currentWeek;
+
+  /// When this save was last opened, as epoch milliseconds — orders the
+  /// saves list so the game you were most recently playing is on top.
+  /// Stored as an int rather than a DateTimeColumn because drift persists
+  /// DateTime at whole-second resolution, and two saves created in the
+  /// same second would then tie and reopen in arbitrary order.
+  final int? lastPlayedAtMs;
   const OrganizationRow(
       {required this.id,
       required this.name,
@@ -4136,7 +4199,8 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
       required this.homeRegion,
       required this.promotionBudget,
       required this.lastTalentRefreshWeek,
-      required this.currentWeek});
+      required this.currentWeek,
+      this.lastPlayedAtMs});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -4150,6 +4214,9 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
     map['promotion_budget'] = Variable<int>(promotionBudget);
     map['last_talent_refresh_week'] = Variable<int>(lastTalentRefreshWeek);
     map['current_week'] = Variable<int>(currentWeek);
+    if (!nullToAbsent || lastPlayedAtMs != null) {
+      map['last_played_at_ms'] = Variable<int>(lastPlayedAtMs);
+    }
     return map;
   }
 
@@ -4165,6 +4232,9 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
       promotionBudget: Value(promotionBudget),
       lastTalentRefreshWeek: Value(lastTalentRefreshWeek),
       currentWeek: Value(currentWeek),
+      lastPlayedAtMs: lastPlayedAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastPlayedAtMs),
     );
   }
 
@@ -4183,6 +4253,7 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
       lastTalentRefreshWeek:
           serializer.fromJson<int>(json['lastTalentRefreshWeek']),
       currentWeek: serializer.fromJson<int>(json['currentWeek']),
+      lastPlayedAtMs: serializer.fromJson<int?>(json['lastPlayedAtMs']),
     );
   }
   @override
@@ -4199,6 +4270,7 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
       'promotionBudget': serializer.toJson<int>(promotionBudget),
       'lastTalentRefreshWeek': serializer.toJson<int>(lastTalentRefreshWeek),
       'currentWeek': serializer.toJson<int>(currentWeek),
+      'lastPlayedAtMs': serializer.toJson<int?>(lastPlayedAtMs),
     };
   }
 
@@ -4212,7 +4284,8 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
           String? homeRegion,
           int? promotionBudget,
           int? lastTalentRefreshWeek,
-          int? currentWeek}) =>
+          int? currentWeek,
+          Value<int?> lastPlayedAtMs = const Value.absent()}) =>
       OrganizationRow(
         id: id ?? this.id,
         name: name ?? this.name,
@@ -4225,6 +4298,8 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
         lastTalentRefreshWeek:
             lastTalentRefreshWeek ?? this.lastTalentRefreshWeek,
         currentWeek: currentWeek ?? this.currentWeek,
+        lastPlayedAtMs:
+            lastPlayedAtMs.present ? lastPlayedAtMs.value : this.lastPlayedAtMs,
       );
   OrganizationRow copyWithCompanion(OrganizationsCompanion data) {
     return OrganizationRow(
@@ -4250,6 +4325,9 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
           : this.lastTalentRefreshWeek,
       currentWeek:
           data.currentWeek.present ? data.currentWeek.value : this.currentWeek,
+      lastPlayedAtMs: data.lastPlayedAtMs.present
+          ? data.lastPlayedAtMs.value
+          : this.lastPlayedAtMs,
     );
   }
 
@@ -4265,7 +4343,8 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
           ..write('homeRegion: $homeRegion, ')
           ..write('promotionBudget: $promotionBudget, ')
           ..write('lastTalentRefreshWeek: $lastTalentRefreshWeek, ')
-          ..write('currentWeek: $currentWeek')
+          ..write('currentWeek: $currentWeek, ')
+          ..write('lastPlayedAtMs: $lastPlayedAtMs')
           ..write(')'))
         .toString();
   }
@@ -4281,7 +4360,8 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
       homeRegion,
       promotionBudget,
       lastTalentRefreshWeek,
-      currentWeek);
+      currentWeek,
+      lastPlayedAtMs);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -4295,7 +4375,8 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
           other.homeRegion == this.homeRegion &&
           other.promotionBudget == this.promotionBudget &&
           other.lastTalentRefreshWeek == this.lastTalentRefreshWeek &&
-          other.currentWeek == this.currentWeek);
+          other.currentWeek == this.currentWeek &&
+          other.lastPlayedAtMs == this.lastPlayedAtMs);
 }
 
 class OrganizationsCompanion extends UpdateCompanion<OrganizationRow> {
@@ -4309,6 +4390,7 @@ class OrganizationsCompanion extends UpdateCompanion<OrganizationRow> {
   final Value<int> promotionBudget;
   final Value<int> lastTalentRefreshWeek;
   final Value<int> currentWeek;
+  final Value<int?> lastPlayedAtMs;
   final Value<int> rowid;
   const OrganizationsCompanion({
     this.id = const Value.absent(),
@@ -4321,6 +4403,7 @@ class OrganizationsCompanion extends UpdateCompanion<OrganizationRow> {
     this.promotionBudget = const Value.absent(),
     this.lastTalentRefreshWeek = const Value.absent(),
     this.currentWeek = const Value.absent(),
+    this.lastPlayedAtMs = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   OrganizationsCompanion.insert({
@@ -4334,6 +4417,7 @@ class OrganizationsCompanion extends UpdateCompanion<OrganizationRow> {
     this.promotionBudget = const Value.absent(),
     this.lastTalentRefreshWeek = const Value.absent(),
     this.currentWeek = const Value.absent(),
+    this.lastPlayedAtMs = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         name = Value(name),
@@ -4350,6 +4434,7 @@ class OrganizationsCompanion extends UpdateCompanion<OrganizationRow> {
     Expression<int>? promotionBudget,
     Expression<int>? lastTalentRefreshWeek,
     Expression<int>? currentWeek,
+    Expression<int>? lastPlayedAtMs,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -4364,6 +4449,7 @@ class OrganizationsCompanion extends UpdateCompanion<OrganizationRow> {
       if (lastTalentRefreshWeek != null)
         'last_talent_refresh_week': lastTalentRefreshWeek,
       if (currentWeek != null) 'current_week': currentWeek,
+      if (lastPlayedAtMs != null) 'last_played_at_ms': lastPlayedAtMs,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -4379,6 +4465,7 @@ class OrganizationsCompanion extends UpdateCompanion<OrganizationRow> {
       Value<int>? promotionBudget,
       Value<int>? lastTalentRefreshWeek,
       Value<int>? currentWeek,
+      Value<int?>? lastPlayedAtMs,
       Value<int>? rowid}) {
     return OrganizationsCompanion(
       id: id ?? this.id,
@@ -4392,6 +4479,7 @@ class OrganizationsCompanion extends UpdateCompanion<OrganizationRow> {
       lastTalentRefreshWeek:
           lastTalentRefreshWeek ?? this.lastTalentRefreshWeek,
       currentWeek: currentWeek ?? this.currentWeek,
+      lastPlayedAtMs: lastPlayedAtMs ?? this.lastPlayedAtMs,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -4430,6 +4518,9 @@ class OrganizationsCompanion extends UpdateCompanion<OrganizationRow> {
     if (currentWeek.present) {
       map['current_week'] = Variable<int>(currentWeek.value);
     }
+    if (lastPlayedAtMs.present) {
+      map['last_played_at_ms'] = Variable<int>(lastPlayedAtMs.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -4449,6 +4540,7 @@ class OrganizationsCompanion extends UpdateCompanion<OrganizationRow> {
           ..write('promotionBudget: $promotionBudget, ')
           ..write('lastTalentRefreshWeek: $lastTalentRefreshWeek, ')
           ..write('currentWeek: $currentWeek, ')
+          ..write('lastPlayedAtMs: $lastPlayedAtMs, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -4465,6 +4557,13 @@ class $EventsTable extends Events with TableInfo<$EventsTable, EventRow> {
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
       'id', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _saveIdMeta = const VerificationMeta('saveId');
+  @override
+  late final GeneratedColumn<String> saveId = GeneratedColumn<String>(
+      'save_id', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(''));
   static const VerificationMeta _nameMeta = const VerificationMeta('name');
   @override
   late final GeneratedColumn<String> name = GeneratedColumn<String>(
@@ -4559,6 +4658,7 @@ class $EventsTable extends Events with TableInfo<$EventsTable, EventRow> {
   @override
   List<GeneratedColumn> get $columns => [
         id,
+        saveId,
         name,
         date,
         venue,
@@ -4587,6 +4687,10 @@ class $EventsTable extends Events with TableInfo<$EventsTable, EventRow> {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     } else if (isInserting) {
       context.missing(_idMeta);
+    }
+    if (data.containsKey('save_id')) {
+      context.handle(_saveIdMeta,
+          saveId.isAcceptableOrUnknown(data['save_id']!, _saveIdMeta));
     }
     if (data.containsKey('name')) {
       context.handle(
@@ -4671,6 +4775,8 @@ class $EventsTable extends Events with TableInfo<$EventsTable, EventRow> {
     return EventRow(
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      saveId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}save_id'])!,
       name: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
       date: attachedDatabase.typeMapping
@@ -4710,6 +4816,11 @@ class $EventsTable extends Events with TableInfo<$EventsTable, EventRow> {
 
 class EventRow extends DataClass implements Insertable<EventRow> {
   final String id;
+
+  /// The save (organization) this row belongs to. Every game-state
+  /// table carries it so multiple playthroughs can live side by side in
+  /// one database — see `SaveScope`.
+  final String saveId;
   final String name;
   final DateTime date;
   final String venue;
@@ -4725,6 +4836,7 @@ class EventRow extends DataClass implements Insertable<EventRow> {
   final String? performanceOfTheNightFighterId;
   const EventRow(
       {required this.id,
+      required this.saveId,
       required this.name,
       required this.date,
       required this.venue,
@@ -4742,6 +4854,7 @@ class EventRow extends DataClass implements Insertable<EventRow> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
+    map['save_id'] = Variable<String>(saveId);
     map['name'] = Variable<String>(name);
     map['date'] = Variable<DateTime>(date);
     map['venue'] = Variable<String>(venue);
@@ -4767,6 +4880,7 @@ class EventRow extends DataClass implements Insertable<EventRow> {
   EventsCompanion toCompanion(bool nullToAbsent) {
     return EventsCompanion(
       id: Value(id),
+      saveId: Value(saveId),
       name: Value(name),
       date: Value(date),
       venue: Value(venue),
@@ -4793,6 +4907,7 @@ class EventRow extends DataClass implements Insertable<EventRow> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return EventRow(
       id: serializer.fromJson<String>(json['id']),
+      saveId: serializer.fromJson<String>(json['saveId']),
       name: serializer.fromJson<String>(json['name']),
       date: serializer.fromJson<DateTime>(json['date']),
       venue: serializer.fromJson<String>(json['venue']),
@@ -4816,6 +4931,7 @@ class EventRow extends DataClass implements Insertable<EventRow> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
+      'saveId': serializer.toJson<String>(saveId),
       'name': serializer.toJson<String>(name),
       'date': serializer.toJson<DateTime>(date),
       'venue': serializer.toJson<String>(venue),
@@ -4836,6 +4952,7 @@ class EventRow extends DataClass implements Insertable<EventRow> {
 
   EventRow copyWith(
           {String? id,
+          String? saveId,
           String? name,
           DateTime? date,
           String? venue,
@@ -4852,6 +4969,7 @@ class EventRow extends DataClass implements Insertable<EventRow> {
               const Value.absent()}) =>
       EventRow(
         id: id ?? this.id,
+        saveId: saveId ?? this.saveId,
         name: name ?? this.name,
         date: date ?? this.date,
         venue: venue ?? this.venue,
@@ -4873,6 +4991,7 @@ class EventRow extends DataClass implements Insertable<EventRow> {
   EventRow copyWithCompanion(EventsCompanion data) {
     return EventRow(
       id: data.id.present ? data.id.value : this.id,
+      saveId: data.saveId.present ? data.saveId.value : this.saveId,
       name: data.name.present ? data.name.value : this.name,
       date: data.date.present ? data.date.value : this.date,
       venue: data.venue.present ? data.venue.value : this.venue,
@@ -4904,6 +5023,7 @@ class EventRow extends DataClass implements Insertable<EventRow> {
   String toString() {
     return (StringBuffer('EventRow(')
           ..write('id: $id, ')
+          ..write('saveId: $saveId, ')
           ..write('name: $name, ')
           ..write('date: $date, ')
           ..write('venue: $venue, ')
@@ -4925,6 +5045,7 @@ class EventRow extends DataClass implements Insertable<EventRow> {
   @override
   int get hashCode => Object.hash(
       id,
+      saveId,
       name,
       date,
       venue,
@@ -4943,6 +5064,7 @@ class EventRow extends DataClass implements Insertable<EventRow> {
       identical(this, other) ||
       (other is EventRow &&
           other.id == this.id &&
+          other.saveId == this.saveId &&
           other.name == this.name &&
           other.date == this.date &&
           other.venue == this.venue &&
@@ -4961,6 +5083,7 @@ class EventRow extends DataClass implements Insertable<EventRow> {
 
 class EventsCompanion extends UpdateCompanion<EventRow> {
   final Value<String> id;
+  final Value<String> saveId;
   final Value<String> name;
   final Value<DateTime> date;
   final Value<String> venue;
@@ -4977,6 +5100,7 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
   final Value<int> rowid;
   const EventsCompanion({
     this.id = const Value.absent(),
+    this.saveId = const Value.absent(),
     this.name = const Value.absent(),
     this.date = const Value.absent(),
     this.venue = const Value.absent(),
@@ -4994,6 +5118,7 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
   });
   EventsCompanion.insert({
     required String id,
+    this.saveId = const Value.absent(),
     required String name,
     required DateTime date,
     required String venue,
@@ -5014,6 +5139,7 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
         venue = Value(venue);
   static Insertable<EventRow> custom({
     Expression<String>? id,
+    Expression<String>? saveId,
     Expression<String>? name,
     Expression<DateTime>? date,
     Expression<String>? venue,
@@ -5031,6 +5157,7 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (saveId != null) 'save_id': saveId,
       if (name != null) 'name': name,
       if (date != null) 'date': date,
       if (venue != null) 'venue': venue,
@@ -5053,6 +5180,7 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
 
   EventsCompanion copyWith(
       {Value<String>? id,
+      Value<String>? saveId,
       Value<String>? name,
       Value<DateTime>? date,
       Value<String>? venue,
@@ -5069,6 +5197,7 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
       Value<int>? rowid}) {
     return EventsCompanion(
       id: id ?? this.id,
+      saveId: saveId ?? this.saveId,
       name: name ?? this.name,
       date: date ?? this.date,
       venue: venue ?? this.venue,
@@ -5093,6 +5222,9 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<String>(id.value);
+    }
+    if (saveId.present) {
+      map['save_id'] = Variable<String>(saveId.value);
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
@@ -5145,6 +5277,7 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
   String toString() {
     return (StringBuffer('EventsCompanion(')
           ..write('id: $id, ')
+          ..write('saveId: $saveId, ')
           ..write('name: $name, ')
           ..write('date: $date, ')
           ..write('venue: $venue, ')
@@ -6173,6 +6306,13 @@ class $RandomEventsTable extends RandomEvents
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
       'id', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _saveIdMeta = const VerificationMeta('saveId');
+  @override
+  late final GeneratedColumn<String> saveId = GeneratedColumn<String>(
+      'save_id', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(''));
   static const VerificationMeta _typeMeta = const VerificationMeta('type');
   @override
   late final GeneratedColumn<String> type = GeneratedColumn<String>(
@@ -6217,6 +6357,7 @@ class $RandomEventsTable extends RandomEvents
   @override
   List<GeneratedColumn> get $columns => [
         id,
+        saveId,
         type,
         affectedFighterId,
         headline,
@@ -6239,6 +6380,10 @@ class $RandomEventsTable extends RandomEvents
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     } else if (isInserting) {
       context.missing(_idMeta);
+    }
+    if (data.containsKey('save_id')) {
+      context.handle(_saveIdMeta,
+          saveId.isAcceptableOrUnknown(data['save_id']!, _saveIdMeta));
     }
     if (data.containsKey('type')) {
       context.handle(
@@ -6299,6 +6444,8 @@ class $RandomEventsTable extends RandomEvents
     return RandomEventRow(
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      saveId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}save_id'])!,
       type: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}type'])!,
       affectedFighterId: attachedDatabase.typeMapping.read(
@@ -6324,6 +6471,11 @@ class $RandomEventsTable extends RandomEvents
 
 class RandomEventRow extends DataClass implements Insertable<RandomEventRow> {
   final String id;
+
+  /// The save (organization) this row belongs to. Every game-state
+  /// table carries it so multiple playthroughs can live side by side in
+  /// one database — see `SaveScope`.
+  final String saveId;
   final String type;
   final String? affectedFighterId;
   final String headline;
@@ -6335,6 +6487,7 @@ class RandomEventRow extends DataClass implements Insertable<RandomEventRow> {
   final DateTime occurredOn;
   const RandomEventRow(
       {required this.id,
+      required this.saveId,
       required this.type,
       this.affectedFighterId,
       required this.headline,
@@ -6346,6 +6499,7 @@ class RandomEventRow extends DataClass implements Insertable<RandomEventRow> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
+    map['save_id'] = Variable<String>(saveId);
     map['type'] = Variable<String>(type);
     if (!nullToAbsent || affectedFighterId != null) {
       map['affected_fighter_id'] = Variable<String>(affectedFighterId);
@@ -6363,6 +6517,7 @@ class RandomEventRow extends DataClass implements Insertable<RandomEventRow> {
   RandomEventsCompanion toCompanion(bool nullToAbsent) {
     return RandomEventsCompanion(
       id: Value(id),
+      saveId: Value(saveId),
       type: Value(type),
       affectedFighterId: affectedFighterId == null && nullToAbsent
           ? const Value.absent()
@@ -6382,6 +6537,7 @@ class RandomEventRow extends DataClass implements Insertable<RandomEventRow> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return RandomEventRow(
       id: serializer.fromJson<String>(json['id']),
+      saveId: serializer.fromJson<String>(json['saveId']),
       type: serializer.fromJson<String>(json['type']),
       affectedFighterId:
           serializer.fromJson<String?>(json['affectedFighterId']),
@@ -6397,6 +6553,7 @@ class RandomEventRow extends DataClass implements Insertable<RandomEventRow> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
+      'saveId': serializer.toJson<String>(saveId),
       'type': serializer.toJson<String>(type),
       'affectedFighterId': serializer.toJson<String?>(affectedFighterId),
       'headline': serializer.toJson<String>(headline),
@@ -6409,6 +6566,7 @@ class RandomEventRow extends DataClass implements Insertable<RandomEventRow> {
 
   RandomEventRow copyWith(
           {String? id,
+          String? saveId,
           String? type,
           Value<String?> affectedFighterId = const Value.absent(),
           String? headline,
@@ -6418,6 +6576,7 @@ class RandomEventRow extends DataClass implements Insertable<RandomEventRow> {
           DateTime? occurredOn}) =>
       RandomEventRow(
         id: id ?? this.id,
+        saveId: saveId ?? this.saveId,
         type: type ?? this.type,
         affectedFighterId: affectedFighterId.present
             ? affectedFighterId.value
@@ -6432,6 +6591,7 @@ class RandomEventRow extends DataClass implements Insertable<RandomEventRow> {
   RandomEventRow copyWithCompanion(RandomEventsCompanion data) {
     return RandomEventRow(
       id: data.id.present ? data.id.value : this.id,
+      saveId: data.saveId.present ? data.saveId.value : this.saveId,
       type: data.type.present ? data.type.value : this.type,
       affectedFighterId: data.affectedFighterId.present
           ? data.affectedFighterId.value
@@ -6453,6 +6613,7 @@ class RandomEventRow extends DataClass implements Insertable<RandomEventRow> {
   String toString() {
     return (StringBuffer('RandomEventRow(')
           ..write('id: $id, ')
+          ..write('saveId: $saveId, ')
           ..write('type: $type, ')
           ..write('affectedFighterId: $affectedFighterId, ')
           ..write('headline: $headline, ')
@@ -6465,13 +6626,14 @@ class RandomEventRow extends DataClass implements Insertable<RandomEventRow> {
   }
 
   @override
-  int get hashCode => Object.hash(id, type, affectedFighterId, headline,
+  int get hashCode => Object.hash(id, saveId, type, affectedFighterId, headline,
       description, choicesJson, chosenChoiceId, occurredOn);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is RandomEventRow &&
           other.id == this.id &&
+          other.saveId == this.saveId &&
           other.type == this.type &&
           other.affectedFighterId == this.affectedFighterId &&
           other.headline == this.headline &&
@@ -6483,6 +6645,7 @@ class RandomEventRow extends DataClass implements Insertable<RandomEventRow> {
 
 class RandomEventsCompanion extends UpdateCompanion<RandomEventRow> {
   final Value<String> id;
+  final Value<String> saveId;
   final Value<String> type;
   final Value<String?> affectedFighterId;
   final Value<String> headline;
@@ -6493,6 +6656,7 @@ class RandomEventsCompanion extends UpdateCompanion<RandomEventRow> {
   final Value<int> rowid;
   const RandomEventsCompanion({
     this.id = const Value.absent(),
+    this.saveId = const Value.absent(),
     this.type = const Value.absent(),
     this.affectedFighterId = const Value.absent(),
     this.headline = const Value.absent(),
@@ -6504,6 +6668,7 @@ class RandomEventsCompanion extends UpdateCompanion<RandomEventRow> {
   });
   RandomEventsCompanion.insert({
     required String id,
+    this.saveId = const Value.absent(),
     required String type,
     this.affectedFighterId = const Value.absent(),
     required String headline,
@@ -6520,6 +6685,7 @@ class RandomEventsCompanion extends UpdateCompanion<RandomEventRow> {
         occurredOn = Value(occurredOn);
   static Insertable<RandomEventRow> custom({
     Expression<String>? id,
+    Expression<String>? saveId,
     Expression<String>? type,
     Expression<String>? affectedFighterId,
     Expression<String>? headline,
@@ -6531,6 +6697,7 @@ class RandomEventsCompanion extends UpdateCompanion<RandomEventRow> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (saveId != null) 'save_id': saveId,
       if (type != null) 'type': type,
       if (affectedFighterId != null) 'affected_fighter_id': affectedFighterId,
       if (headline != null) 'headline': headline,
@@ -6544,6 +6711,7 @@ class RandomEventsCompanion extends UpdateCompanion<RandomEventRow> {
 
   RandomEventsCompanion copyWith(
       {Value<String>? id,
+      Value<String>? saveId,
       Value<String>? type,
       Value<String?>? affectedFighterId,
       Value<String>? headline,
@@ -6554,6 +6722,7 @@ class RandomEventsCompanion extends UpdateCompanion<RandomEventRow> {
       Value<int>? rowid}) {
     return RandomEventsCompanion(
       id: id ?? this.id,
+      saveId: saveId ?? this.saveId,
       type: type ?? this.type,
       affectedFighterId: affectedFighterId ?? this.affectedFighterId,
       headline: headline ?? this.headline,
@@ -6570,6 +6739,9 @@ class RandomEventsCompanion extends UpdateCompanion<RandomEventRow> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<String>(id.value);
+    }
+    if (saveId.present) {
+      map['save_id'] = Variable<String>(saveId.value);
     }
     if (type.present) {
       map['type'] = Variable<String>(type.value);
@@ -6602,6 +6774,7 @@ class RandomEventsCompanion extends UpdateCompanion<RandomEventRow> {
   String toString() {
     return (StringBuffer('RandomEventsCompanion(')
           ..write('id: $id, ')
+          ..write('saveId: $saveId, ')
           ..write('type: $type, ')
           ..write('affectedFighterId: $affectedFighterId, ')
           ..write('headline: $headline, ')
@@ -6626,6 +6799,13 @@ class $InboxItemsTable extends InboxItems
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
       'id', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _saveIdMeta = const VerificationMeta('saveId');
+  @override
+  late final GeneratedColumn<String> saveId = GeneratedColumn<String>(
+      'save_id', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(''));
   static const VerificationMeta _typeMeta = const VerificationMeta('type');
   @override
   late final GeneratedColumn<String> type = GeneratedColumn<String>(
@@ -6663,7 +6843,7 @@ class $InboxItemsTable extends InboxItems
       defaultValue: const Constant(false));
   @override
   List<GeneratedColumn> get $columns =>
-      [id, type, week, title, body, fighterId, read];
+      [id, saveId, type, week, title, body, fighterId, read];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -6678,6 +6858,10 @@ class $InboxItemsTable extends InboxItems
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     } else if (isInserting) {
       context.missing(_idMeta);
+    }
+    if (data.containsKey('save_id')) {
+      context.handle(_saveIdMeta,
+          saveId.isAcceptableOrUnknown(data['save_id']!, _saveIdMeta));
     }
     if (data.containsKey('type')) {
       context.handle(
@@ -6722,6 +6906,8 @@ class $InboxItemsTable extends InboxItems
     return InboxItemRow(
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      saveId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}save_id'])!,
       type: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}type'])!,
       week: attachedDatabase.typeMapping
@@ -6745,6 +6931,11 @@ class $InboxItemsTable extends InboxItems
 
 class InboxItemRow extends DataClass implements Insertable<InboxItemRow> {
   final String id;
+
+  /// The save (organization) this row belongs to. Every game-state
+  /// table carries it so multiple playthroughs can live side by side in
+  /// one database — see `SaveScope`.
+  final String saveId;
   final String type;
   final int week;
   final String title;
@@ -6753,6 +6944,7 @@ class InboxItemRow extends DataClass implements Insertable<InboxItemRow> {
   final bool read;
   const InboxItemRow(
       {required this.id,
+      required this.saveId,
       required this.type,
       required this.week,
       required this.title,
@@ -6763,6 +6955,7 @@ class InboxItemRow extends DataClass implements Insertable<InboxItemRow> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
+    map['save_id'] = Variable<String>(saveId);
     map['type'] = Variable<String>(type);
     map['week'] = Variable<int>(week);
     map['title'] = Variable<String>(title);
@@ -6777,6 +6970,7 @@ class InboxItemRow extends DataClass implements Insertable<InboxItemRow> {
   InboxItemsCompanion toCompanion(bool nullToAbsent) {
     return InboxItemsCompanion(
       id: Value(id),
+      saveId: Value(saveId),
       type: Value(type),
       week: Value(week),
       title: Value(title),
@@ -6793,6 +6987,7 @@ class InboxItemRow extends DataClass implements Insertable<InboxItemRow> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return InboxItemRow(
       id: serializer.fromJson<String>(json['id']),
+      saveId: serializer.fromJson<String>(json['saveId']),
       type: serializer.fromJson<String>(json['type']),
       week: serializer.fromJson<int>(json['week']),
       title: serializer.fromJson<String>(json['title']),
@@ -6806,6 +7001,7 @@ class InboxItemRow extends DataClass implements Insertable<InboxItemRow> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
+      'saveId': serializer.toJson<String>(saveId),
       'type': serializer.toJson<String>(type),
       'week': serializer.toJson<int>(week),
       'title': serializer.toJson<String>(title),
@@ -6817,6 +7013,7 @@ class InboxItemRow extends DataClass implements Insertable<InboxItemRow> {
 
   InboxItemRow copyWith(
           {String? id,
+          String? saveId,
           String? type,
           int? week,
           String? title,
@@ -6825,6 +7022,7 @@ class InboxItemRow extends DataClass implements Insertable<InboxItemRow> {
           bool? read}) =>
       InboxItemRow(
         id: id ?? this.id,
+        saveId: saveId ?? this.saveId,
         type: type ?? this.type,
         week: week ?? this.week,
         title: title ?? this.title,
@@ -6835,6 +7033,7 @@ class InboxItemRow extends DataClass implements Insertable<InboxItemRow> {
   InboxItemRow copyWithCompanion(InboxItemsCompanion data) {
     return InboxItemRow(
       id: data.id.present ? data.id.value : this.id,
+      saveId: data.saveId.present ? data.saveId.value : this.saveId,
       type: data.type.present ? data.type.value : this.type,
       week: data.week.present ? data.week.value : this.week,
       title: data.title.present ? data.title.value : this.title,
@@ -6848,6 +7047,7 @@ class InboxItemRow extends DataClass implements Insertable<InboxItemRow> {
   String toString() {
     return (StringBuffer('InboxItemRow(')
           ..write('id: $id, ')
+          ..write('saveId: $saveId, ')
           ..write('type: $type, ')
           ..write('week: $week, ')
           ..write('title: $title, ')
@@ -6859,12 +7059,14 @@ class InboxItemRow extends DataClass implements Insertable<InboxItemRow> {
   }
 
   @override
-  int get hashCode => Object.hash(id, type, week, title, body, fighterId, read);
+  int get hashCode =>
+      Object.hash(id, saveId, type, week, title, body, fighterId, read);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is InboxItemRow &&
           other.id == this.id &&
+          other.saveId == this.saveId &&
           other.type == this.type &&
           other.week == this.week &&
           other.title == this.title &&
@@ -6875,6 +7077,7 @@ class InboxItemRow extends DataClass implements Insertable<InboxItemRow> {
 
 class InboxItemsCompanion extends UpdateCompanion<InboxItemRow> {
   final Value<String> id;
+  final Value<String> saveId;
   final Value<String> type;
   final Value<int> week;
   final Value<String> title;
@@ -6884,6 +7087,7 @@ class InboxItemsCompanion extends UpdateCompanion<InboxItemRow> {
   final Value<int> rowid;
   const InboxItemsCompanion({
     this.id = const Value.absent(),
+    this.saveId = const Value.absent(),
     this.type = const Value.absent(),
     this.week = const Value.absent(),
     this.title = const Value.absent(),
@@ -6894,6 +7098,7 @@ class InboxItemsCompanion extends UpdateCompanion<InboxItemRow> {
   });
   InboxItemsCompanion.insert({
     required String id,
+    this.saveId = const Value.absent(),
     required String type,
     required int week,
     required String title,
@@ -6908,6 +7113,7 @@ class InboxItemsCompanion extends UpdateCompanion<InboxItemRow> {
         body = Value(body);
   static Insertable<InboxItemRow> custom({
     Expression<String>? id,
+    Expression<String>? saveId,
     Expression<String>? type,
     Expression<int>? week,
     Expression<String>? title,
@@ -6918,6 +7124,7 @@ class InboxItemsCompanion extends UpdateCompanion<InboxItemRow> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (saveId != null) 'save_id': saveId,
       if (type != null) 'type': type,
       if (week != null) 'week': week,
       if (title != null) 'title': title,
@@ -6930,6 +7137,7 @@ class InboxItemsCompanion extends UpdateCompanion<InboxItemRow> {
 
   InboxItemsCompanion copyWith(
       {Value<String>? id,
+      Value<String>? saveId,
       Value<String>? type,
       Value<int>? week,
       Value<String>? title,
@@ -6939,6 +7147,7 @@ class InboxItemsCompanion extends UpdateCompanion<InboxItemRow> {
       Value<int>? rowid}) {
     return InboxItemsCompanion(
       id: id ?? this.id,
+      saveId: saveId ?? this.saveId,
       type: type ?? this.type,
       week: week ?? this.week,
       title: title ?? this.title,
@@ -6954,6 +7163,9 @@ class InboxItemsCompanion extends UpdateCompanion<InboxItemRow> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<String>(id.value);
+    }
+    if (saveId.present) {
+      map['save_id'] = Variable<String>(saveId.value);
     }
     if (type.present) {
       map['type'] = Variable<String>(type.value);
@@ -6983,6 +7195,7 @@ class InboxItemsCompanion extends UpdateCompanion<InboxItemRow> {
   String toString() {
     return (StringBuffer('InboxItemsCompanion(')
           ..write('id: $id, ')
+          ..write('saveId: $saveId, ')
           ..write('type: $type, ')
           ..write('week: $week, ')
           ..write('title: $title, ')
@@ -7026,6 +7239,7 @@ typedef $$FightersTableCreateCompanionBuilder = FightersCompanion Function({
   required int age,
   required String nationality,
   Value<String?> headshotAsset,
+  Value<String> saveId,
   required String weightClass,
   Value<int> heightInches,
   Value<int> weightLbs,
@@ -7111,6 +7325,7 @@ typedef $$FightersTableUpdateCompanionBuilder = FightersCompanion Function({
   Value<int> age,
   Value<String> nationality,
   Value<String?> headshotAsset,
+  Value<String> saveId,
   Value<String> weightClass,
   Value<int> heightInches,
   Value<int> weightLbs,
@@ -7214,6 +7429,9 @@ class $$FightersTableFilterComposer
 
   ColumnFilters<String> get headshotAsset => $composableBuilder(
       column: $table.headshotAsset, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get saveId => $composableBuilder(
+      column: $table.saveId, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get weightClass => $composableBuilder(
       column: $table.weightClass, builder: (column) => ColumnFilters(column));
@@ -7495,6 +7713,9 @@ class $$FightersTableOrderingComposer
   ColumnOrderings<String> get headshotAsset => $composableBuilder(
       column: $table.headshotAsset,
       builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get saveId => $composableBuilder(
+      column: $table.saveId, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get weightClass => $composableBuilder(
       column: $table.weightClass, builder: (column) => ColumnOrderings(column));
@@ -7787,6 +8008,9 @@ class $$FightersTableAnnotationComposer
   GeneratedColumn<String> get headshotAsset => $composableBuilder(
       column: $table.headshotAsset, builder: (column) => column);
 
+  GeneratedColumn<String> get saveId =>
+      $composableBuilder(column: $table.saveId, builder: (column) => column);
+
   GeneratedColumn<String> get weightClass => $composableBuilder(
       column: $table.weightClass, builder: (column) => column);
 
@@ -8047,6 +8271,7 @@ class $$FightersTableTableManager extends RootTableManager<
             Value<int> age = const Value.absent(),
             Value<String> nationality = const Value.absent(),
             Value<String?> headshotAsset = const Value.absent(),
+            Value<String> saveId = const Value.absent(),
             Value<String> weightClass = const Value.absent(),
             Value<int> heightInches = const Value.absent(),
             Value<int> weightLbs = const Value.absent(),
@@ -8132,6 +8357,7 @@ class $$FightersTableTableManager extends RootTableManager<
             age: age,
             nationality: nationality,
             headshotAsset: headshotAsset,
+            saveId: saveId,
             weightClass: weightClass,
             heightInches: heightInches,
             weightLbs: weightLbs,
@@ -8217,6 +8443,7 @@ class $$FightersTableTableManager extends RootTableManager<
             required int age,
             required String nationality,
             Value<String?> headshotAsset = const Value.absent(),
+            Value<String> saveId = const Value.absent(),
             required String weightClass,
             Value<int> heightInches = const Value.absent(),
             Value<int> weightLbs = const Value.absent(),
@@ -8302,6 +8529,7 @@ class $$FightersTableTableManager extends RootTableManager<
             age: age,
             nationality: nationality,
             headshotAsset: headshotAsset,
+            saveId: saveId,
             weightClass: weightClass,
             heightInches: heightInches,
             weightLbs: weightLbs,
@@ -8609,6 +8837,7 @@ typedef $$OrganizationsTableCreateCompanionBuilder = OrganizationsCompanion
   Value<int> promotionBudget,
   Value<int> lastTalentRefreshWeek,
   Value<int> currentWeek,
+  Value<int?> lastPlayedAtMs,
   Value<int> rowid,
 });
 typedef $$OrganizationsTableUpdateCompanionBuilder = OrganizationsCompanion
@@ -8623,6 +8852,7 @@ typedef $$OrganizationsTableUpdateCompanionBuilder = OrganizationsCompanion
   Value<int> promotionBudget,
   Value<int> lastTalentRefreshWeek,
   Value<int> currentWeek,
+  Value<int?> lastPlayedAtMs,
   Value<int> rowid,
 });
 
@@ -8668,6 +8898,10 @@ class $$OrganizationsTableFilterComposer
 
   ColumnFilters<int> get currentWeek => $composableBuilder(
       column: $table.currentWeek, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get lastPlayedAtMs => $composableBuilder(
+      column: $table.lastPlayedAtMs,
+      builder: (column) => ColumnFilters(column));
 }
 
 class $$OrganizationsTableOrderingComposer
@@ -8712,6 +8946,10 @@ class $$OrganizationsTableOrderingComposer
 
   ColumnOrderings<int> get currentWeek => $composableBuilder(
       column: $table.currentWeek, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get lastPlayedAtMs => $composableBuilder(
+      column: $table.lastPlayedAtMs,
+      builder: (column) => ColumnOrderings(column));
 }
 
 class $$OrganizationsTableAnnotationComposer
@@ -8752,6 +8990,9 @@ class $$OrganizationsTableAnnotationComposer
 
   GeneratedColumn<int> get currentWeek => $composableBuilder(
       column: $table.currentWeek, builder: (column) => column);
+
+  GeneratedColumn<int> get lastPlayedAtMs => $composableBuilder(
+      column: $table.lastPlayedAtMs, builder: (column) => column);
 }
 
 class $$OrganizationsTableTableManager extends RootTableManager<
@@ -8790,6 +9031,7 @@ class $$OrganizationsTableTableManager extends RootTableManager<
             Value<int> promotionBudget = const Value.absent(),
             Value<int> lastTalentRefreshWeek = const Value.absent(),
             Value<int> currentWeek = const Value.absent(),
+            Value<int?> lastPlayedAtMs = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               OrganizationsCompanion(
@@ -8803,6 +9045,7 @@ class $$OrganizationsTableTableManager extends RootTableManager<
             promotionBudget: promotionBudget,
             lastTalentRefreshWeek: lastTalentRefreshWeek,
             currentWeek: currentWeek,
+            lastPlayedAtMs: lastPlayedAtMs,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -8816,6 +9059,7 @@ class $$OrganizationsTableTableManager extends RootTableManager<
             Value<int> promotionBudget = const Value.absent(),
             Value<int> lastTalentRefreshWeek = const Value.absent(),
             Value<int> currentWeek = const Value.absent(),
+            Value<int?> lastPlayedAtMs = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               OrganizationsCompanion.insert(
@@ -8829,6 +9073,7 @@ class $$OrganizationsTableTableManager extends RootTableManager<
             promotionBudget: promotionBudget,
             lastTalentRefreshWeek: lastTalentRefreshWeek,
             currentWeek: currentWeek,
+            lastPlayedAtMs: lastPlayedAtMs,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
@@ -8855,6 +9100,7 @@ typedef $$OrganizationsTableProcessedTableManager = ProcessedTableManager<
     PrefetchHooks Function()>;
 typedef $$EventsTableCreateCompanionBuilder = EventsCompanion Function({
   required String id,
+  Value<String> saveId,
   required String name,
   required DateTime date,
   required String venue,
@@ -8872,6 +9118,7 @@ typedef $$EventsTableCreateCompanionBuilder = EventsCompanion Function({
 });
 typedef $$EventsTableUpdateCompanionBuilder = EventsCompanion Function({
   Value<String> id,
+  Value<String> saveId,
   Value<String> name,
   Value<DateTime> date,
   Value<String> venue,
@@ -8899,6 +9146,9 @@ class $$EventsTableFilterComposer
   });
   ColumnFilters<String> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get saveId => $composableBuilder(
+      column: $table.saveId, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get name => $composableBuilder(
       column: $table.name, builder: (column) => ColumnFilters(column));
@@ -8957,6 +9207,9 @@ class $$EventsTableOrderingComposer
   ColumnOrderings<String> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get saveId => $composableBuilder(
+      column: $table.saveId, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get name => $composableBuilder(
       column: $table.name, builder: (column) => ColumnOrderings(column));
 
@@ -9013,6 +9266,9 @@ class $$EventsTableAnnotationComposer
   });
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get saveId =>
+      $composableBuilder(column: $table.saveId, builder: (column) => column);
 
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
@@ -9080,6 +9336,7 @@ class $$EventsTableTableManager extends RootTableManager<
               $$EventsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback: ({
             Value<String> id = const Value.absent(),
+            Value<String> saveId = const Value.absent(),
             Value<String> name = const Value.absent(),
             Value<DateTime> date = const Value.absent(),
             Value<String> venue = const Value.absent(),
@@ -9098,6 +9355,7 @@ class $$EventsTableTableManager extends RootTableManager<
           }) =>
               EventsCompanion(
             id: id,
+            saveId: saveId,
             name: name,
             date: date,
             venue: venue,
@@ -9115,6 +9373,7 @@ class $$EventsTableTableManager extends RootTableManager<
           ),
           createCompanionCallback: ({
             required String id,
+            Value<String> saveId = const Value.absent(),
             required String name,
             required DateTime date,
             required String venue,
@@ -9133,6 +9392,7 @@ class $$EventsTableTableManager extends RootTableManager<
           }) =>
               EventsCompanion.insert(
             id: id,
+            saveId: saveId,
             name: name,
             date: date,
             venue: venue,
@@ -9580,6 +9840,7 @@ typedef $$FightsTableProcessedTableManager = ProcessedTableManager<
 typedef $$RandomEventsTableCreateCompanionBuilder = RandomEventsCompanion
     Function({
   required String id,
+  Value<String> saveId,
   required String type,
   Value<String?> affectedFighterId,
   required String headline,
@@ -9592,6 +9853,7 @@ typedef $$RandomEventsTableCreateCompanionBuilder = RandomEventsCompanion
 typedef $$RandomEventsTableUpdateCompanionBuilder = RandomEventsCompanion
     Function({
   Value<String> id,
+  Value<String> saveId,
   Value<String> type,
   Value<String?> affectedFighterId,
   Value<String> headline,
@@ -9613,6 +9875,9 @@ class $$RandomEventsTableFilterComposer
   });
   ColumnFilters<String> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get saveId => $composableBuilder(
+      column: $table.saveId, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get type => $composableBuilder(
       column: $table.type, builder: (column) => ColumnFilters(column));
@@ -9650,6 +9915,9 @@ class $$RandomEventsTableOrderingComposer
   ColumnOrderings<String> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get saveId => $composableBuilder(
+      column: $table.saveId, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get type => $composableBuilder(
       column: $table.type, builder: (column) => ColumnOrderings(column));
 
@@ -9685,6 +9953,9 @@ class $$RandomEventsTableAnnotationComposer
   });
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get saveId =>
+      $composableBuilder(column: $table.saveId, builder: (column) => column);
 
   GeneratedColumn<String> get type =>
       $composableBuilder(column: $table.type, builder: (column) => column);
@@ -9735,6 +10006,7 @@ class $$RandomEventsTableTableManager extends RootTableManager<
               $$RandomEventsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback: ({
             Value<String> id = const Value.absent(),
+            Value<String> saveId = const Value.absent(),
             Value<String> type = const Value.absent(),
             Value<String?> affectedFighterId = const Value.absent(),
             Value<String> headline = const Value.absent(),
@@ -9746,6 +10018,7 @@ class $$RandomEventsTableTableManager extends RootTableManager<
           }) =>
               RandomEventsCompanion(
             id: id,
+            saveId: saveId,
             type: type,
             affectedFighterId: affectedFighterId,
             headline: headline,
@@ -9757,6 +10030,7 @@ class $$RandomEventsTableTableManager extends RootTableManager<
           ),
           createCompanionCallback: ({
             required String id,
+            Value<String> saveId = const Value.absent(),
             required String type,
             Value<String?> affectedFighterId = const Value.absent(),
             required String headline,
@@ -9768,6 +10042,7 @@ class $$RandomEventsTableTableManager extends RootTableManager<
           }) =>
               RandomEventsCompanion.insert(
             id: id,
+            saveId: saveId,
             type: type,
             affectedFighterId: affectedFighterId,
             headline: headline,
@@ -9801,6 +10076,7 @@ typedef $$RandomEventsTableProcessedTableManager = ProcessedTableManager<
     PrefetchHooks Function()>;
 typedef $$InboxItemsTableCreateCompanionBuilder = InboxItemsCompanion Function({
   required String id,
+  Value<String> saveId,
   required String type,
   required int week,
   required String title,
@@ -9811,6 +10087,7 @@ typedef $$InboxItemsTableCreateCompanionBuilder = InboxItemsCompanion Function({
 });
 typedef $$InboxItemsTableUpdateCompanionBuilder = InboxItemsCompanion Function({
   Value<String> id,
+  Value<String> saveId,
   Value<String> type,
   Value<int> week,
   Value<String> title,
@@ -9831,6 +10108,9 @@ class $$InboxItemsTableFilterComposer
   });
   ColumnFilters<String> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get saveId => $composableBuilder(
+      column: $table.saveId, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get type => $composableBuilder(
       column: $table.type, builder: (column) => ColumnFilters(column));
@@ -9863,6 +10143,9 @@ class $$InboxItemsTableOrderingComposer
   ColumnOrderings<String> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get saveId => $composableBuilder(
+      column: $table.saveId, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get type => $composableBuilder(
       column: $table.type, builder: (column) => ColumnOrderings(column));
 
@@ -9893,6 +10176,9 @@ class $$InboxItemsTableAnnotationComposer
   });
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get saveId =>
+      $composableBuilder(column: $table.saveId, builder: (column) => column);
 
   GeneratedColumn<String> get type =>
       $composableBuilder(column: $table.type, builder: (column) => column);
@@ -9940,6 +10226,7 @@ class $$InboxItemsTableTableManager extends RootTableManager<
               $$InboxItemsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback: ({
             Value<String> id = const Value.absent(),
+            Value<String> saveId = const Value.absent(),
             Value<String> type = const Value.absent(),
             Value<int> week = const Value.absent(),
             Value<String> title = const Value.absent(),
@@ -9950,6 +10237,7 @@ class $$InboxItemsTableTableManager extends RootTableManager<
           }) =>
               InboxItemsCompanion(
             id: id,
+            saveId: saveId,
             type: type,
             week: week,
             title: title,
@@ -9960,6 +10248,7 @@ class $$InboxItemsTableTableManager extends RootTableManager<
           ),
           createCompanionCallback: ({
             required String id,
+            Value<String> saveId = const Value.absent(),
             required String type,
             required int week,
             required String title,
@@ -9970,6 +10259,7 @@ class $$InboxItemsTableTableManager extends RootTableManager<
           }) =>
               InboxItemsCompanion.insert(
             id: id,
+            saveId: saveId,
             type: type,
             week: week,
             title: title,

@@ -61,6 +61,9 @@ dev_dependencies:
   build_runner: ^2.4.13
   drift_dev: ^2.20.3
 
+  # Used by the migration test to build an old-schema database by hand.
+  sqlite3: ^2.4.0
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 

@@ -103,9 +103,10 @@ Fighter fighterFromRow(FighterRow row, ContractRow? contractRow) {
   );
 }
 
-FightersCompanion fighterToCompanion(Fighter fighter) {
+FightersCompanion fighterToCompanion(Fighter fighter, String saveId) {
   return FightersCompanion.insert(
     id: fighter.id,
+    saveId: Value(saveId),
     name: fighter.name,
     age: fighter.age,
     nationality: fighter.nationality,
@@ -263,9 +264,10 @@ MmaEvent eventFromRow(EventRow row) {
   );
 }
 
-EventsCompanion eventToCompanion(MmaEvent event) {
+EventsCompanion eventToCompanion(MmaEvent event, String saveId) {
   return EventsCompanion.insert(
     id: event.id,
+    saveId: Value(saveId),
     name: event.name,
     date: event.date,
     venue: event.venue.name,
@@ -366,7 +368,7 @@ RandomEvent randomEventFromRow(RandomEventRow row) {
   );
 }
 
-RandomEventsCompanion randomEventToCompanion(RandomEvent event) {
+RandomEventsCompanion randomEventToCompanion(RandomEvent event, String saveId) {
   final choicesJson = jsonEncode(event.choices
       .map((c) => {
             'id': c.id,
@@ -376,6 +378,7 @@ RandomEventsCompanion randomEventToCompanion(RandomEvent event) {
       .toList());
   return RandomEventsCompanion.insert(
     id: event.id,
+    saveId: Value(saveId),
     type: event.type.name,
     affectedFighterId: Value(event.affectedFighterId),
     headline: event.headline,
@@ -398,9 +401,10 @@ InboxItem inboxItemFromRow(InboxItemRow row) {
   );
 }
 
-InboxItemsCompanion inboxItemToCompanion(InboxItem item) {
+InboxItemsCompanion inboxItemToCompanion(InboxItem item, String saveId) {
   return InboxItemsCompanion.insert(
     id: item.id,
+    saveId: Value(saveId),
     type: item.type.name,
     week: item.week,
     title: item.title,

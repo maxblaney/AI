@@ -24,27 +24,54 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   /// Games persist on every platform now (web included), so a schema
   /// change without a matching migration step here would silently break
-  /// saves that are already on disk. The convention from here on: any
-  /// change to `tables.dart` bumps [schemaVersion] and adds its step to
-  /// [onUpgrade] — `m.addColumn(...)` for a new column, which is what
-  /// nearly every change to a game this shape turns out to be.
+  /// saves that are already on disk. The convention: any change to
+  /// `tables.dart` bumps [schemaVersion] and adds its step here —
+  /// `m.addColumn(...)` for a new column, which is what nearly every
+  /// change to a game this shape turns out to be.
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) => m.createAll(),
         onUpgrade: (m, from, to) async {
-          // No upgrade steps yet — v1 is the only schema published.
+          if (from < 2) {
+            // v2 introduced multiple saves. Everything that was game state
+            // gained a saveId, and organizations gained a last-played
+            // stamp so the saves list can be ordered.
+            await m.addColumn(fighters, fighters.saveId);
+            await m.addColumn(events, events.saveId);
+            await m.addColumn(randomEvents, randomEvents.saveId);
+            await m.addColumn(inboxItems, inboxItems.saveId);
+            await m.addColumn(organizations, organizations.lastPlayedAtMs);
+
+            // A v1 database held exactly one playthrough, and its rows have
+            // no saveId. Adopt them into the existing organization so an
+            // in-progress game survives the upgrade instead of being
+            // orphaned behind a save nothing points at.
+            final existing = await select(organizations).get();
+            if (existing.length == 1) {
+              final saveId = existing.single.id;
+              for (final table in ['fighters', 'events', 'random_events',
+                'inbox_items']) {
+                await customStatement(
+                  "UPDATE $table SET save_id = ? WHERE save_id = ''",
+                  [saveId],
+                );
+              }
+            }
+          }
         },
       );
 
   // ---- Fighters -----------------------------------------------------
 
-  Future<List<FighterRow>> getAllFighters() => select(fighters).get();
+  Future<List<FighterRow>> getAllFighters(String saveId) =>
+      (select(fighters)..where((f) => f.saveId.equals(saveId))).get();
 
-  Stream<List<FighterRow>> watchAllFighters() => select(fighters).watch();
+  Stream<List<FighterRow>> watchAllFighters(String saveId) =>
+      (select(fighters)..where((f) => f.saveId.equals(saveId))).watch();
 
   Future<FighterRow?> getFighterById(String id) =>
       (select(fighters)..where((f) => f.id.equals(id))).getSingleOrNull();
@@ -69,19 +96,98 @@ class AppDatabase extends _$AppDatabase {
 
   // ---- Organization (single row) --------------------------------------
 
-  Future<OrganizationRow?> getOrganization() =>
-      select(organizations).getSingleOrNull();
+  Future<OrganizationRow?> getSave(String saveId) =>
+      (select(organizations)..where((o) => o.id.equals(saveId)))
+          .getSingleOrNull();
 
-  Stream<OrganizationRow?> watchOrganization() =>
-      select(organizations).watchSingleOrNull();
+  Stream<OrganizationRow?> watchSave(String saveId) =>
+      (select(organizations)..where((o) => o.id.equals(saveId)))
+          .watchSingleOrNull();
 
-  Future<void> upsertOrganization(OrganizationsCompanion entry) =>
+  /// Every save on this device, most recently played first. Saves with no
+  /// last-played stamp (pre-v2 rows) sort last rather than being dropped.
+  Future<List<OrganizationRow>> listSaves() => (select(organizations)
+        ..orderBy([
+          (o) => OrderingTerm.desc(o.lastPlayedAtMs),
+        ]))
+      .get();
+
+  Stream<List<OrganizationRow>> watchSaves() => (select(organizations)
+        ..orderBy([
+          (o) => OrderingTerm.desc(o.lastPlayedAtMs),
+        ]))
+      .watch();
+
+  /// Deletes a save and everything belonging to it. Fights and contracts
+  /// hang off events and fighters rather than carrying a saveId of their
+  /// own, so they're cleared via their parents' ids.
+  Future<void> deleteSave(String saveId) async {
+    await transaction(() async {
+      final eventIds = await (select(events)
+            ..where((e) => e.saveId.equals(saveId)))
+          .map((e) => e.id)
+          .get();
+      final fighterIds = await (select(fighters)
+            ..where((f) => f.saveId.equals(saveId)))
+          .map((f) => f.id)
+          .get();
+
+      if (eventIds.isNotEmpty) {
+        await (delete(fights)..where((f) => f.eventId.isIn(eventIds))).go();
+      }
+      if (fighterIds.isNotEmpty) {
+        await (delete(contracts)..where((c) => c.fighterId.isIn(fighterIds)))
+            .go();
+      }
+      await (delete(events)..where((e) => e.saveId.equals(saveId))).go();
+      await (delete(fighters)..where((f) => f.saveId.equals(saveId))).go();
+      await (delete(randomEvents)..where((r) => r.saveId.equals(saveId))).go();
+      await (delete(inboxItems)..where((i) => i.saveId.equals(saveId))).go();
+      await (delete(organizations)..where((o) => o.id.equals(saveId))).go();
+    });
+  }
+
+  Future<void> upsertSave(OrganizationsCompanion entry) =>
       into(organizations).insertOnConflictUpdate(entry);
+
+  /// Records that a save was just opened. A targeted UPDATE rather than an
+  /// upsert of the whole row, so it can't race with a game-state write and
+  /// clobber it.
+  Future<void> touchSave(String saveId, DateTime at) =>
+      (update(organizations)..where((o) => o.id.equals(saveId))).write(
+        OrganizationsCompanion(
+          lastPlayedAtMs: Value(at.millisecondsSinceEpoch),
+        ),
+      );
+
+  /// How many fighters exist in a save, for the saves list. Counted in SQL
+  /// rather than by loading rosters — the picker would otherwise pull every
+  /// fighter of every save just to render a subtitle.
+  Future<int> countFighters(String saveId) async {
+    final count = fighters.id.count();
+    final query = selectOnly(fighters)
+      ..addColumns([count])
+      ..where(fighters.saveId.equals(saveId));
+    return (await query.getSingle()).read(count) ?? 0;
+  }
+
+  /// How many of a save's fighters are actually under contract.
+  Future<int> countSignedFighters(String saveId) async {
+    final count = fighters.id.count();
+    final query = selectOnly(fighters).join([
+      innerJoin(contracts, contracts.fighterId.equalsExp(fighters.id)),
+    ])
+      ..addColumns([count])
+      ..where(fighters.saveId.equals(saveId));
+    return (await query.getSingle()).read(count) ?? 0;
+  }
 
   // ---- Events -----------------------------------------------------------
 
-  Stream<List<EventRow>> watchAllEvents() =>
-      (select(events)..orderBy([(e) => OrderingTerm.asc(e.date)])).watch();
+  Stream<List<EventRow>> watchAllEvents(String saveId) => (select(events)
+        ..where((e) => e.saveId.equals(saveId))
+        ..orderBy([(e) => OrderingTerm.asc(e.date)]))
+      .watch();
 
   Future<EventRow?> getEventById(String id) =>
       (select(events)..where((e) => e.id.equals(id))).getSingleOrNull();
@@ -117,16 +223,21 @@ class AppDatabase extends _$AppDatabase {
 
   // ---- Random events ------------------------------------------------------
 
-  Stream<List<RandomEventRow>> watchUnresolvedRandomEvents() =>
-      (select(randomEvents)..where((r) => r.chosenChoiceId.isNull())).watch();
+  Stream<List<RandomEventRow>> watchUnresolvedRandomEvents(String saveId) =>
+      (select(randomEvents)
+            ..where((r) => r.saveId.equals(saveId) & r.chosenChoiceId.isNull()))
+          .watch();
 
   Future<void> upsertRandomEvent(RandomEventsCompanion entry) =>
       into(randomEvents).insertOnConflictUpdate(entry);
 
   // ---- Inbox items ------------------------------------------------------
 
-  Stream<List<InboxItemRow>> watchAllInboxItems() =>
-      (select(inboxItems)..orderBy([(i) => OrderingTerm.desc(i.week)])).watch();
+  Stream<List<InboxItemRow>> watchAllInboxItems(String saveId) =>
+      (select(inboxItems)
+            ..where((i) => i.saveId.equals(saveId))
+            ..orderBy([(i) => OrderingTerm.desc(i.week)]))
+          .watch();
 
   Future<void> upsertInboxItem(InboxItemsCompanion entry) =>
       into(inboxItems).insertOnConflictUpdate(entry);

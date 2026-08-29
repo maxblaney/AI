@@ -95,5 +95,10 @@ class _NewGameScreenState extends State<NewGameScreen> {
         ? 'Apex Fighting Championship'
         : _nameController.text.trim();
     await context.read<GameController>().startNewGame(orgName: name, tier: _tier);
+    if (!mounted) return;
+    // Reached as a route from the saves screen, so it has to dismiss
+    // itself — the shell swapping to the dashboard underneath would
+    // otherwise leave this sitting on top of it.
+    Navigator.of(context).pop();
   }
 }

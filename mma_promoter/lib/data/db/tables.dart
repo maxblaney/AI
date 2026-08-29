@@ -12,6 +12,11 @@ class Fighters extends Table {
   IntColumn get age => integer()();
   TextColumn get nationality => text()();
   TextColumn get headshotAsset => text().nullable()();
+
+  /// The save (organization) this row belongs to. Every game-state
+  /// table carries it so multiple playthroughs can live side by side in
+  /// one database — see `SaveScope`.
+  TextColumn get saveId => text().withDefault(const Constant(''))();
   TextColumn get weightClass => text()();
   IntColumn get heightInches => integer().withDefault(const Constant(70))();
   IntColumn get weightLbs => integer().withDefault(const Constant(155))();
@@ -142,6 +147,13 @@ class Organizations extends Table {
   IntColumn get lastTalentRefreshWeek => integer().withDefault(const Constant(1))();
   IntColumn get currentWeek => integer().withDefault(const Constant(1))();
 
+  /// When this save was last opened, as epoch milliseconds — orders the
+  /// saves list so the game you were most recently playing is on top.
+  /// Stored as an int rather than a DateTimeColumn because drift persists
+  /// DateTime at whole-second resolution, and two saves created in the
+  /// same second would then tie and reopen in arbitrary order.
+  IntColumn get lastPlayedAtMs => integer().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -149,6 +161,11 @@ class Organizations extends Table {
 @DataClassName('EventRow')
 class Events extends Table {
   TextColumn get id => text()();
+
+  /// The save (organization) this row belongs to. Every game-state
+  /// table carries it so multiple playthroughs can live side by side in
+  /// one database — see `SaveScope`.
+  TextColumn get saveId => text().withDefault(const Constant(''))();
   TextColumn get name => text()();
   DateTimeColumn get date => dateTime()();
   TextColumn get venue => text()();
@@ -203,6 +220,11 @@ class Fights extends Table {
 @DataClassName('RandomEventRow')
 class RandomEvents extends Table {
   TextColumn get id => text()();
+
+  /// The save (organization) this row belongs to. Every game-state
+  /// table carries it so multiple playthroughs can live side by side in
+  /// one database — see `SaveScope`.
+  TextColumn get saveId => text().withDefault(const Constant(''))();
   TextColumn get type => text()();
   TextColumn get affectedFighterId => text().nullable()();
   TextColumn get headline => text()();
@@ -222,6 +244,11 @@ class RandomEvents extends Table {
 @DataClassName('InboxItemRow')
 class InboxItems extends Table {
   TextColumn get id => text()();
+
+  /// The save (organization) this row belongs to. Every game-state
+  /// table carries it so multiple playthroughs can live side by side in
+  /// one database — see `SaveScope`.
+  TextColumn get saveId => text().withDefault(const Constant(''))();
   TextColumn get type => text()();
   IntColumn get week => integer()();
   TextColumn get title => text()();

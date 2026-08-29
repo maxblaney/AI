@@ -2,16 +2,20 @@ import '../db/database.dart';
 import '../models/models.dart';
 import 'mappers.dart';
 import 'repository_contracts.dart';
+import 'save_scope.dart';
 
 /// Reads and writes [MmaEvent]s and their booked [Fight] cards.
 class EventRepository implements EventRepositoryContract {
   final AppDatabase _db;
+  final SaveScope _scope;
 
-  EventRepository(this._db);
+  EventRepository(this._db, this._scope);
 
   @override
   Stream<List<MmaEvent>> watchAll() {
-    return _db.watchAllEvents().map((rows) => rows.map(eventFromRow).toList());
+    return _db
+        .watchAllEvents(_scope.key)
+        .map((rows) => rows.map(eventFromRow).toList());
   }
 
   @override
@@ -22,7 +26,7 @@ class EventRepository implements EventRepositoryContract {
 
   @override
   Future<void> saveEvent(MmaEvent event) {
-    return _db.upsertEvent(eventToCompanion(event));
+    return _db.upsertEvent(eventToCompanion(event, _scope.key));
   }
 
   @override

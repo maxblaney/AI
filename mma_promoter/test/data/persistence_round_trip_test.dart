@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mma_promoter/data/db/database.dart';
 import 'package:mma_promoter/data/repositories/fighter_repository.dart';
 import 'package:mma_promoter/data/repositories/organization_repository.dart';
+import 'package:mma_promoter/data/repositories/save_scope.dart';
 import 'package:mma_promoter/data/seed/roster_seed.dart';
 import 'package:mma_promoter/data/models/models.dart';
 
@@ -13,12 +14,16 @@ import 'package:mma_promoter/data/models/models.dart';
 /// here as a value that doesn't survive the round trip.
 void main() {
   late AppDatabase db;
+  late SaveScope scope;
 
-  setUp(() => db = AppDatabase.forTesting(NativeDatabase.memory()));
+  setUp(() {
+    db = AppDatabase.forTesting(NativeDatabase.memory());
+    scope = SaveScope('save-under-test');
+  });
   tearDown(() => db.close());
 
   test('the schema builds from scratch and stores an organization', () async {
-    final repo = OrganizationRepository(db);
+    final repo = OrganizationRepository(db, scope);
     expect(await repo.get(), isNull);
 
     final org = generateStartingOrganization(
@@ -26,6 +31,9 @@ void main() {
       tier: ReputationTier.regional,
     );
     await repo.save(org);
+    // An organization *is* a save, so opening it means pointing the scope
+    // at its id — the same thing GameController does on load.
+    scope.saveId = org.id;
 
     final loaded = await repo.get();
     expect(loaded, isNotNull);
@@ -36,7 +44,7 @@ void main() {
 
   test('a generated fighter survives a save/load round trip intact',
       () async {
-    final repo = FighterRepository(db);
+    final repo = FighterRepository(db, scope);
     final original = generateStartingRoster(fightersPerWeightClass: 1).first;
 
     await repo.save(original);
@@ -65,7 +73,7 @@ void main() {
   });
 
   test('a whole starting roster persists and reads back', () async {
-    final repo = FighterRepository(db);
+    final repo = FighterRepository(db, scope);
     final roster = generateStartingRoster(fightersPerWeightClass: 3);
 
     for (final fighter in roster) {

@@ -6,9 +6,9 @@ import '../widgets/random_event_dialog.dart';
 import 'dashboard/dashboard_screen.dart';
 import 'finance/finance_screen.dart';
 import 'history/history_screen.dart';
-import 'new_game/new_game_screen.dart';
 import 'rankings/rankings_screen.dart';
 import 'roster/roster_screen.dart';
+import 'saves/saves_screen.dart';
 
 /// App shell: bottom-tab navigation plus a global watcher that pops up a
 /// modal whenever a random event needs the player's attention, regardless
@@ -69,7 +69,9 @@ class _HomeShellState extends State<HomeShell> {
     }
 
     if (controller.needsNewGame) {
-      return const NewGameScreen();
+      // No save open — the picker is the start screen, and starting a new
+      // promotion is one tap from it.
+      return const SavesScreen(isStartScreen: true);
     }
 
     final pending = controller.pendingRandomEvents;

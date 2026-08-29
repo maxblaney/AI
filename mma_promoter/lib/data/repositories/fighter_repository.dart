@@ -2,22 +2,24 @@ import '../db/database.dart';
 import '../models/models.dart';
 import 'mappers.dart';
 import 'repository_contracts.dart';
+import 'save_scope.dart';
 
 /// Reads and writes [Fighter]s (talent pool + signed roster), keeping the
 /// fighter row and its optional contract row in sync.
 class FighterRepository implements FighterRepositoryContract {
   final AppDatabase _db;
+  final SaveScope _scope;
 
-  FighterRepository(this._db);
+  FighterRepository(this._db, this._scope);
 
   @override
   Stream<List<Fighter>> watchAll() {
-    return _db.watchAllFighters().asyncMap(_attachContracts);
+    return _db.watchAllFighters(_scope.key).asyncMap(_attachContracts);
   }
 
   @override
   Future<List<Fighter>> getAll() async {
-    final rows = await _db.getAllFighters();
+    final rows = await _db.getAllFighters(_scope.key);
     return _attachContracts(rows);
   }
 
@@ -41,7 +43,7 @@ class FighterRepository implements FighterRepositoryContract {
   /// Persists a fighter's core attributes and, if present, their contract.
   @override
   Future<void> save(Fighter fighter) async {
-    await _db.upsertFighter(fighterToCompanion(fighter));
+    await _db.upsertFighter(fighterToCompanion(fighter, _scope.key));
     if (fighter.contract != null) {
       await _db.upsertContract(contractToCompanion(fighter.contract!));
     }
