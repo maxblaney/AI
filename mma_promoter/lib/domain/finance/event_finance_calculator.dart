@@ -25,6 +25,14 @@ class EventFinanceResult {
 /// reputation delta. Pure Dart so it can be unit tested independent of the
 /// database/UI.
 class EventFinanceCalculator {
+  /// What a booked bout is worth in demand terms before anyone's name is
+  /// considered — the value of simply having another fight on the card.
+  static const double _drawPerBout = 6;
+
+  /// Exponent applied to a fighter's popularity. Below 1 so star power
+  /// has diminishing returns: two 40s draw less than one 80.
+  static const double _popularityDamping = 0.8;
+
   final Random _random;
 
   EventFinanceCalculator({Random? random}) : _random = random ?? Random();
@@ -50,20 +58,29 @@ class EventFinanceCalculator {
       fighterLookup[mainEvent.fighterAId],
       fighterLookup[mainEvent.fighterBId],
     ]);
-    final cardPopularity = _averagePopularity(
-      card.expand((f) => [
-            fighterLookup[f.fighterAId],
-            fighterLookup[f.fighterBId],
-          ]).toList(),
-    );
+    // Card draw is deliberately a *total*, not an average: a longer show
+    // is worth more than a short one, and adding a bout should never make
+    // an event draw worse. (It used to be an average, which meant booking
+    // a prelim between two unknowns actively cut demand.) Each fighter's
+    // contribution is damped so a deep card of nobodies still adds less
+    // than one genuine star, and every booked bout is worth something on
+    // its own — fans turn up for a full night of fights.
+    final cardDraw = card.fold<double>(0, (sum, fight) {
+      final a = fighterLookup[fight.fighterAId]?.popularity ?? 0;
+      final b = fighterLookup[fight.fighterBId]?.popularity ?? 0;
+      return sum +
+          _drawPerBout +
+          pow(a.toDouble(), _popularityDamping) +
+          pow(b.toDouble(), _popularityDamping);
+    });
 
     // Diminishing returns on promo spend: sqrt curve.
     final promoEffect = sqrt(promotionBudgetSpent.clamp(0, 500000)) * 4;
 
     final baseDemand =
         (organization.fanbaseSize * 0.015) +
-        (mainEventPopularity * 8) +
-        (cardPopularity * 3) +
+        (mainEventPopularity * 9) +
+        (cardDraw * 1.6) +
         promoEffect;
 
     // Price elasticity: pricing above the venue's suggested price softens
@@ -85,9 +102,12 @@ class EventFinanceCalculator {
     // card on PPV, a local promotion can't even in a big rented arena.
     final canSellPpv = organization.reputationTier == ReputationTier.national ||
         organization.reputationTier == ReputationTier.international;
+    // PPV moves on the same two levers as the gate — who's headlining,
+    // and how much show there is behind them.
     final ppvBuys = canSellPpv
         ? ((organization.fanbaseSize * 0.01) +
                 (mainEventPopularity * 15) +
+                (cardDraw * 2.2) +
                 promoEffect * 2)
             .round()
         : 0;

@@ -165,6 +165,13 @@ the native mobile app with real persistence.
   suggested price per venue. Pricing above the suggestion softens
   attendance demand, pricing below it boosts demand (mild elasticity
   curve in `EventFinanceCalculator`).
+- **Card size and star power drive revenue**: demand is built from a
+  *total* card draw, not an average. Each booked bout is worth something
+  on its own, and each fighter adds more on top of that with diminishing
+  returns (two 40-popularity fighters draw less than one 80). This was a
+  real bug before: card popularity was averaged, so adding a fight never
+  helped and adding a low-profile prelim actively cut demand. Both the
+  gate and PPV buys move on it.
 - **PPV eligibility**: tied to the org's reputation tier (National/
   International only), not the venue — a small promotion doesn't get a
   PPV deal just by renting a big room.
@@ -318,6 +325,42 @@ the native mobile app with real persistence.
   neutral and warm greys, warm backdrops muddied the darker skin tones).
   It still falls back to an initial-letter circle for fighters saved
   before portraits existed.
+- **Record book**: the History tab's leaderboards are scoped to fights
+  that happened *on this promotion's cards*. A fighter who arrives 10-2
+  and goes 6-0 for you counts as 6 fights, not 18 — their record
+  elsewhere is not your promotion's history. 18 categories (fights, wins,
+  finishes, KO/TKOs, submissions, decisions, longest win streak, title
+  wins, bonuses, shortest average and most total fight time, control
+  time, knockdowns, significant strikes, takedowns landed, takedown
+  accuracy and defense, main events), built by `RecordBook` from
+  persisted per-fight box scores. Rate categories carry a minimum
+  (5 takedown attempts, 3 fights) so one lucky takedown can't top the
+  accuracy chart, and a leaderboard nobody has scored on is hidden rather
+  than shown as a wall of zeroes.
+- **Championships**: winning a championship fight takes the division's
+  belt off whoever held it; an interim belt is tracked separately since
+  it doesn't displace the undisputed champion, and a draw leaves the belt
+  where it is. In a divisional ranking the champion sits above the
+  contenders as **C** (interim as **iC**) with the rest numbering from 1;
+  pound-for-pound stays a straight Elo list with a belt icon, since it
+  spans every division and so has many champions in it.
+- **Betting odds**: every fight is priced as American moneylines
+  (`OddsCalculator`), shown on the booked card, on the event page beside
+  each bout, and in the booking dialog's matchup preview. A logistic
+  curve on skill (plus form and injuries) sets the win probability, a 5%
+  margin is applied so both sides are slightly worse than fair, and
+  prices are rounded to fives and never quoted inside +/-100. Nobody is
+  ever priced as a lock — the clamp tops out at 92%.
+- **Informed matchmaking**: the Add Fight dialog lists each fighter with
+  their record, overall and health, and once both corners are picked it
+  shows a side-by-side of overall/striking/grappling/physical/mental/
+  popularity with the opening line — so you can tell a competitive
+  booking from a squash before you make it.
+- **Spoiler-free results**: an event's results page opens as a card of
+  matchups with odds, not outcomes. Each fight is revealed by watching it
+  live or explicitly skipping to the result, and the sections that would
+  give the card away — awards, injuries, popularity swings — stay hidden
+  until every fight has been seen.
 - **Potential**: a ceiling on a fighter's `overall`, shown on their
   profile. Long win streaks (3+) nudge it up, long losing streaks (3+)
   nudge it down, and it never falls below the fighter's current overall

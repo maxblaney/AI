@@ -24,7 +24,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   /// Games persist on every platform now (web included), so a schema
   /// change without a matching migration step here would silently break
@@ -61,6 +61,17 @@ class AppDatabase extends _$AppDatabase {
                 );
               }
             }
+          }
+          if (from < 3) {
+            // v3 persists per-fight box scores (the record book aggregates
+            // them) and tracks who holds each division's belt. Fights
+            // resolved before this keep empty statlines — they predate the
+            // data, and inventing numbers for them would put phantom
+            // entries in the record book.
+            await m.addColumn(fights, fights.statsAJson);
+            await m.addColumn(fights, fights.statsBJson);
+            await m.addColumn(fighters, fighters.isChampion);
+            await m.addColumn(fighters, fighters.isInterimChampion);
           }
         },
       );
@@ -205,6 +216,20 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> upsertFight(FightsCompanion entry) =>
       into(fights).insertOnConflictUpdate(entry);
+
+  /// Every resolved fight in a save, oldest event first. Backs the record
+  /// book, which needs chronological order to work out win streaks.
+  Future<List<FightRow>> getResolvedFightsForSave(String saveId) {
+    final query = select(fights).join([
+      innerJoin(events, events.id.equalsExp(fights.eventId)),
+    ])
+      ..where(events.saveId.equals(saveId) & fights.resultMethod.isNotNull())
+      ..orderBy([
+        OrderingTerm.asc(events.date),
+        OrderingTerm.asc(fights.cardOrder),
+      ]);
+    return query.map((row) => row.readTable(fights)).get();
+  }
 
   /// All resolved fights involving [fighterId], most recent event first —
   /// powers the fighter profile's fight history list.

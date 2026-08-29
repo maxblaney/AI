@@ -114,6 +114,15 @@ class Fighters extends Table {
   IntColumn get performanceOfTheNightCount =>
       integer().withDefault(const Constant(0))();
 
+  /// Holder of this fighter's division belt. Set by winning a
+  /// championship fight, cleared when they lose one.
+  BoolColumn get isChampion => boolean().withDefault(const Constant(false))();
+
+  /// Holder of an interim belt in the division — a separate marker, since
+  /// an interim champ doesn't displace the undisputed one.
+  BoolColumn get isInterimChampion =>
+      boolean().withDefault(const Constant(false))();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -208,6 +217,13 @@ class Fights extends Table {
       text().withDefault(const Constant('none'))();
   TextColumn get resultMethodDetail =>
       text().withDefault(const Constant(''))();
+  /// Box score for each fighter, JSON-encoded. Stored as a blob rather
+  /// than ~11 columns per corner because nothing queries an individual
+  /// stat in SQL — the record book loads a save's fights and aggregates
+  /// them in Dart. Empty string on fights resolved before v3.
+  TextColumn get statsAJson => text().withDefault(const Constant(''))();
+  TextColumn get statsBJson => text().withDefault(const Constant(''))();
+
   IntColumn get winnerPerformanceRating => integer().nullable()();
   IntColumn get loserPerformanceRating => integer().nullable()();
   TextColumn get resultFighterAInjury => text().nullable()();

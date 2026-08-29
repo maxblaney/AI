@@ -19,6 +19,7 @@ import '../../domain/calendar/game_calendar.dart';
 import '../../domain/career/career_progression_engine.dart';
 import '../../domain/events/random_event_engine.dart';
 import '../../domain/finance/event_finance_calculator.dart';
+import '../../domain/history/record_book.dart';
 import '../../domain/simulation/fight_resolver.dart';
 
 /// Result of resolving one event, kept around so the results screen can
@@ -55,6 +56,26 @@ class FighterOutcomeSummary {
   });
 
   int get popularityDelta => popularityAfter - popularityBefore;
+}
+
+/// A fighter's next booked bout, for showing "who am I matched with" on
+/// the roster without every row hitting the database.
+class FighterBooking {
+  final String eventId;
+  final String eventName;
+  final DateTime date;
+  final String opponentId;
+  final bool isTitleFight;
+  final bool isMainEvent;
+
+  const FighterBooking({
+    required this.eventId,
+    required this.eventName,
+    required this.date,
+    required this.opponentId,
+    required this.isTitleFight,
+    required this.isMainEvent,
+  });
 }
 
 /// The single app-wide source of truth for game state. Owns the DB,
@@ -130,6 +151,10 @@ class GameController extends ChangeNotifier {
   List<MmaEvent> events = [];
   List<RandomEvent> pendingRandomEvents = [];
   List<InboxItem> inboxItems = [];
+
+  /// Who each fighter is currently matched against, keyed by fighter id.
+  /// Rebuilt whenever the event list changes.
+  Map<String, FighterBooking> bookingsByFighterId = {};
 
   List<Fighter> get signedRoster =>
       allFighters.where((f) => f.isSigned && !f.retired).toList();
@@ -305,6 +330,9 @@ class GameController extends ChangeNotifier {
     _eventSub = _eventRepo.watchAll().listen((e) {
       events = e;
       notifyListeners();
+      // Cards live in a separate table, so the booking map is refreshed
+      // off the back of the event list rather than watched directly.
+      unawaited(_refreshBookings());
     });
     _randomEventSub = _randomEventRepo.watchUnresolved().listen((e) {
       pendingRandomEvents = e;
@@ -332,6 +360,42 @@ class GameController extends ChangeNotifier {
     return result;
   }
   Future<List<Fight>> getEventCard(String id) => _eventRepo.getCard(id);
+
+  /// Rebuilds [bookingsByFighterId] from the cards of every event that
+  /// hasn't been run yet.
+  Future<void> _refreshBookings() async {
+    final map = <String, FighterBooking>{};
+    for (final event in scheduledEvents) {
+      for (final fight in await _eventRepo.getCard(event.id)) {
+        if (fight.isResolved) continue;
+        for (final (fighterId, opponentId) in [
+          (fight.fighterAId, fight.fighterBId),
+          (fight.fighterBId, fight.fighterAId),
+        ]) {
+          map[fighterId] = FighterBooking(
+            eventId: event.id,
+            eventName: event.name,
+            date: event.date,
+            opponentId: opponentId,
+            isTitleFight: fight.isTitleFight,
+            isMainEvent: fight.isMainEvent,
+          );
+        }
+      }
+    }
+    bookingsByFighterId = map;
+    notifyListeners();
+  }
+
+  /// The promotion's all-time leaderboards, built from its own fights
+  /// only — a fighter's record elsewhere doesn't count toward these.
+  Future<List<RecordCategory>> getRecordBook() async {
+    final fights = await _eventRepo.getAllResolvedFights();
+    return RecordBook.build(
+      fights: fights,
+      fighters: {for (final f in allFighters) f.id: f},
+    );
+  }
 
   Fighter? fighterById(String id) {
     try {
@@ -469,6 +533,7 @@ class GameController extends ChangeNotifier {
       await _eventRepo.saveFight(fight);
       fighterOutcomes.addAll(await _applyFightOutcome(fight, fighterLookup));
     }
+    await _applyTitleChanges(resolvedCard);
 
     final completedEvent = event.copyWith(
       status: EventStatus.completed,
@@ -497,6 +562,49 @@ class GameController extends ChangeNotifier {
       finance: finance,
       fighterOutcomes: fighterOutcomes,
     );
+  }
+
+  /// Moves belts after a card. Winning a championship fight takes the
+  /// division's title off whoever held it; winning an interim fight takes
+  /// the interim belt, which is tracked separately because it doesn't
+  /// displace the undisputed champion. A draw leaves the belt where it is,
+  /// as it does in the sport.
+  ///
+  /// Fighters are re-read rather than taken from [allFighters], which is
+  /// stream-backed and may still be a step behind the record and Elo
+  /// updates written moments ago — copying from a stale one would undo
+  /// them.
+  Future<void> _applyTitleChanges(List<Fight> card) async {
+    for (final fight in card) {
+      final result = fight.result;
+      if (result == null || !fight.isTitleFight || result.isDraw) continue;
+
+      final interim = fight.titleFightType == TitleFightType.interim;
+      final division = allFighters
+          .where((f) => f.weightClass == fight.weightClass)
+          .toList();
+
+      for (final fighter in division) {
+        final isWinner = fighter.id == result.winnerId;
+        final holdsBelt = interim ? fighter.isInterimChampion : fighter.isChampion;
+        // Only the new champion and the outgoing one need writing.
+        if (!isWinner && !holdsBelt) continue;
+
+        final fresh = await _fighterRepo.getById(fighter.id);
+        if (fresh == null) continue;
+
+        await _fighterRepo.save(
+          interim
+              ? fresh.copyWith(isInterimChampion: isWinner)
+              : fresh.copyWith(
+                  isChampion: isWinner,
+                  // Taking the undisputed belt ends your own interim claim.
+                  isInterimChampion:
+                      isWinner ? false : fresh.isInterimChampion,
+                ),
+        );
+      }
+    }
   }
 
   // ---- Game clock ---------------------------------------------------------

@@ -61,6 +61,10 @@ abstract class EventRepositoryContract {
 
   /// All resolved fights involving [fighterId], most recent first.
   Future<List<Fight>> getFightsForFighter(String fighterId);
+
+  /// Every resolved fight in the active save, oldest first — the record
+  /// book's input.
+  Future<List<Fight>> getAllResolvedFights();
 }
 
 abstract class RandomEventRepositoryContract {

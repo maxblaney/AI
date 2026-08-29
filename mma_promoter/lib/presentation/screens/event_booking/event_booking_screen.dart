@@ -1,3 +1,4 @@
+import '../../../domain/betting/fight_odds.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -253,22 +254,35 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                     value: fighterAId,
+                    isExpanded: true,
                     decoration: const InputDecoration(labelText: 'Fighter A'),
                     items: available
                         .where((f) => f.id != fighterBId)
-                        .map((f) => DropdownMenuItem(value: f.id, child: Text(f.name)))
+                        .map((f) => DropdownMenuItem(
+                            value: f.id, child: _fighterOption(context, f)))
                         .toList(),
                     onChanged: (v) => setState(() => fighterAId = v),
                   ),
                   DropdownButtonFormField<String>(
                     value: fighterBId,
+                    isExpanded: true,
                     decoration: const InputDecoration(labelText: 'Fighter B'),
                     items: available
                         .where((f) => f.id != fighterAId)
-                        .map((f) => DropdownMenuItem(value: f.id, child: Text(f.name)))
+                        .map((f) => DropdownMenuItem(
+                            value: f.id, child: _fighterOption(context, f)))
                         .toList(),
                     onChanged: (v) => setState(() => fighterBId = v),
                   ),
+
+                  // Booking blind is the complaint this answers: once both
+                  // corners are picked, show what you'd want to know before
+                  // signing off on the matchup.
+                  if (fighterAId != null && fighterBId != null)
+                    _MatchupPreview(
+                      a: available.firstWhere((f) => f.id == fighterAId),
+                      b: available.firstWhere((f) => f.id == fighterBId),
+                    ),
                   const SizedBox(height: 12),
                   const Text('Rounds'),
                   SegmentedButton<int>(
@@ -456,6 +470,181 @@ class _FightTile extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// One line in a fighter dropdown — name plus the figures that actually
+/// decide a matchup, so you're not picking from a list of bare names.
+Widget _fighterOption(BuildContext context, Fighter fighter) {
+  final hurt = fighter.injuryStatus != InjuryStatus.healthy;
+  return Row(
+    children: [
+      if (fighter.isChampion)
+        const Padding(
+          padding: EdgeInsets.only(right: 4),
+          child: Icon(Icons.emoji_events, size: 14),
+        ),
+      Expanded(child: Text(fighter.name, overflow: TextOverflow.ellipsis)),
+      const SizedBox(width: 6),
+      Text(
+        '${fighter.record.display} · OVR ${fighter.overall.round()}'
+        '${hurt ? ' · ${fighter.injuryStatus.label}' : ''}',
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: hurt ? Colors.orange : null,
+            ),
+      ),
+    ],
+  );
+}
+
+/// Side-by-side comparison of the two booked corners, with the opening
+/// line so the player can see at a glance whether they've made a
+/// competitive fight or a squash.
+class _MatchupPreview extends StatelessWidget {
+  final Fighter a;
+  final Fighter b;
+
+  const _MatchupPreview({required this.a, required this.b});
+
+  @override
+  Widget build(BuildContext context) {
+    final odds = OddsCalculator.forFight(a: a, b: b);
+    final scheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(a.name,
+                      style: Theme.of(context).textTheme.labelLarge),
+                ),
+                Text('vs', style: Theme.of(context).textTheme.bodySmall),
+                Expanded(
+                  child: Text(
+                    b.name,
+                    textAlign: TextAlign.end,
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    odds.displayA,
+                    style: TextStyle(
+                      color: odds.aIsFavourite ? scheme.primary : null,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                Text('ODDS', style: Theme.of(context).textTheme.bodySmall),
+                Expanded(
+                  child: Text(
+                    odds.displayB,
+                    textAlign: TextAlign.end,
+                    style: TextStyle(
+                      color: odds.aIsFavourite ? null : scheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 16),
+            _CompareRow(
+                label: 'Overall', a: a.overall.round(), b: b.overall.round()),
+            _CompareRow(
+              label: 'Striking',
+              a: a.fightingStats.strikingAverage.round(),
+              b: b.fightingStats.strikingAverage.round(),
+            ),
+            _CompareRow(
+              label: 'Grappling',
+              a: a.fightingStats.grapplingAverage.round(),
+              b: b.fightingStats.grapplingAverage.round(),
+            ),
+            _CompareRow(
+              label: 'Physical',
+              a: a.physicalStats.average.round(),
+              b: b.physicalStats.average.round(),
+            ),
+            _CompareRow(
+              label: 'Mental',
+              a: a.mentalStats.average.round(),
+              b: b.mentalStats.average.round(),
+            ),
+            _CompareRow(label: 'Popularity', a: a.popularity, b: b.popularity),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(a.style.label,
+                      style: Theme.of(context).textTheme.bodySmall),
+                ),
+                Expanded(
+                  child: Text(
+                    b.style.label,
+                    textAlign: TextAlign.end,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One stat compared across both corners, with the higher side
+/// highlighted so an edge is visible without reading the numbers.
+class _CompareRow extends StatelessWidget {
+  final String label;
+  final int a;
+  final int b;
+
+  const _CompareRow({required this.label, required this.a, required this.b});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    TextStyle? style(bool leads) => TextStyle(
+          fontWeight: leads ? FontWeight.bold : FontWeight.normal,
+          color: leads ? scheme.primary : null,
+        );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 1),
+      child: Row(
+        children: [
+          SizedBox(width: 32, child: Text('$a', style: style(a > b))),
+          Expanded(
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+          SizedBox(
+            width: 32,
+            child: Text('$b', textAlign: TextAlign.end, style: style(b > a)),
+          ),
+        ],
       ),
     );
   }

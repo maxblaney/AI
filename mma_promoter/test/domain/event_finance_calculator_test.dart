@@ -65,6 +65,8 @@ Fight _mainEventFight(String aId, String bId) {
 }
 
 void main() {
+  _cardSizeAndPopularityTests();
+
   group('EventFinanceCalculator', () {
     test('attendance never exceeds venue capacity', () {
       final calculator = EventFinanceCalculator(random: Random(1));
@@ -202,6 +204,107 @@ void main() {
 
       expect(localResult.ppvBuys, 0);
       expect(nationalResult.ppvBuys, greaterThan(0));
+    });
+  });
+}
+
+/// Card size and star power were the two levers that used to do nothing:
+/// depth was averaged away, so adding a bout could actually *lower*
+/// demand. These pin down that both now push revenue up.
+void _cardSizeAndPopularityTests() {
+  final calculator = EventFinanceCalculator(random: Random(7));
+
+  EventFinanceResult run(List<Fight> card, Map<String, Fighter> lookup) =>
+      calculator.calculate(
+        venue: Venue.regionalUsa,
+        ticketPrice: Venue.regionalUsa.suggestedTicketPrice,
+        organization: _organization(fanbaseSize: 20000),
+        card: card,
+        fighterLookup: lookup,
+        promotionBudgetSpent: 0,
+      );
+
+  group('card size and popularity drive revenue', () {
+    test('a deeper card out-earns a short one with the same headliner', () {
+      final lookup = <String, Fighter>{};
+      List<Fight> buildCard(int bouts) {
+        final card = <Fight>[];
+        for (var i = 0; i < bouts; i++) {
+          final a = _fighter('a$i', popularity: 40);
+          final b = _fighter('b$i', popularity: 40);
+          lookup['a$i'] = a;
+          lookup['b$i'] = b;
+          card.add(Fight(
+            id: 'f$i',
+            eventId: 'e',
+            fighterAId: 'a$i',
+            fighterBId: 'b$i',
+            weightClass: WeightClass.lightweight,
+            cardOrder: i,
+            isMainEvent: i == 0,
+          ));
+        }
+        return card;
+      }
+
+      final short = run(buildCard(2), lookup);
+      final deep = run(buildCard(8), lookup);
+
+      expect(deep.revenue, greaterThan(short.revenue),
+          reason: 'more fights should mean a bigger show');
+    });
+
+    test('adding a bout never makes an event worth less', () {
+      final lookup = <String, Fighter>{};
+      Fight bout(int i, int popularity) {
+        lookup['a$i'] = _fighter('a$i', popularity: popularity);
+        lookup['b$i'] = _fighter('b$i', popularity: popularity);
+        return Fight(
+          id: 'f$i',
+          eventId: 'e',
+          fighterAId: 'a$i',
+          fighterBId: 'b$i',
+          weightClass: WeightClass.lightweight,
+          cardOrder: i,
+          isMainEvent: i == 0,
+        );
+      }
+
+      // A headline bout of stars, then an extra prelim between nobodies.
+      final headlineOnly = [bout(0, 90)];
+      final withPrelim = [bout(0, 90), bout(1, 1)];
+
+      final before = run(headlineOnly, lookup);
+      final after = run(withPrelim, lookup);
+
+      expect(after.revenue, greaterThanOrEqualTo(before.revenue),
+          reason: 'a low-profile prelim used to drag the average down');
+    });
+
+    test('a more popular card out-earns an equally deep unknown one', () {
+      final lookup = <String, Fighter>{};
+      List<Fight> buildCard(String prefix, int popularity) {
+        final card = <Fight>[];
+        for (var i = 0; i < 5; i++) {
+          lookup['$prefix-a$i'] = _fighter('$prefix-a$i', popularity: popularity);
+          lookup['$prefix-b$i'] = _fighter('$prefix-b$i', popularity: popularity);
+          card.add(Fight(
+            id: '$prefix-f$i',
+            eventId: 'e',
+            fighterAId: '$prefix-a$i',
+            fighterBId: '$prefix-b$i',
+            weightClass: WeightClass.lightweight,
+            cardOrder: i,
+            isMainEvent: i == 0,
+          ));
+        }
+        return card;
+      }
+
+      final unknowns = run(buildCard('u', 10), lookup);
+      final stars = run(buildCard('s', 85), lookup);
+
+      expect(stars.revenue, greaterThan(unknowns.revenue));
     });
   });
 }

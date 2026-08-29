@@ -48,6 +48,12 @@ class EventRepository implements EventRepositoryContract {
   }
 
   @override
+  Future<List<Fight>> getAllResolvedFights() async {
+    final rows = await _db.getResolvedFightsForSave(_scope.key);
+    return rows.map(fightFromRow).toList();
+  }
+
+  @override
   Future<List<Fight>> getFightsForFighter(String fighterId) async {
     final rows = await _db.getFightsForFighter(fighterId);
     return rows.map(fightFromRow).toList();

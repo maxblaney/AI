@@ -2,24 +2,38 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/models/models.dart';
+import '../../../domain/history/record_book.dart';
 import '../../state/game_controller.dart';
 import '../roster/fighter_profile_screen.dart';
 
-/// Hall-of-fame style leaderboards plus the list of retired fighters —
-/// the record book for the promotion's whole history.
-class HistoryScreen extends StatelessWidget {
+/// The promotion's record book. Every figure here comes from fights that
+/// happened on this org's cards — a fighter who arrived 10-2 and went 6-0
+/// for you counts as 6 fights, not 18.
+class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
+
+  @override
+  State<HistoryScreen> createState() => _HistoryScreenState();
+}
+
+class _HistoryScreenState extends State<HistoryScreen> {
+  Future<List<RecordCategory>>? _records;
+  int _knownFightCount = -1;
 
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<GameController>();
-    // Leaderboards are the promotion's own record book — scope them to
-    // fighters who've actually had a resolved fight under this org
-    // (isRanked), not the whole generated talent pool. Otherwise every
-    // never-signed free agent's fabricated pre-game record and flat 1500
-    // Elo would show up here on day one.
-    final all = controller.allFighters.where((f) => f.isRanked).toList();
-    final retired = controller.retiredFighters
+
+    // The book is rebuilt from the database, so it has to be refetched
+    // when new results land. Keying off the completed-event count means a
+    // simulated card refreshes it without re-querying on every rebuild.
+    final completed = controller.completedEvents.length;
+    if (completed != _knownFightCount) {
+      _knownFightCount = completed;
+      _records = controller.getRecordBook();
+    }
+
+    final retired = [...controller.retiredFighters]
       ..sort((a, b) => b.record.wins.compareTo(a.record.wins));
 
     return Scaffold(
@@ -27,51 +41,43 @@ class HistoryScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text('Accolades & Feats', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
-          _Leaderboard(
-            title: 'Most Wins',
-            icon: Icons.emoji_events,
-            fighters: [...all]..sort((a, b) => b.record.wins.compareTo(a.record.wins)),
-            valueOf: (f) => '${f.record.wins} wins',
+          Text('Record Book', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 4),
+          Text(
+            'All-time bests inside the promotion. Only fights on your cards '
+            'count toward these.',
+            style: Theme.of(context).textTheme.bodySmall,
           ),
-          _Leaderboard(
-            title: 'Highest Elo Rating',
-            icon: Icons.trending_up,
-            fighters: [...all]..sort((a, b) => b.eloRating.compareTo(a.eloRating)),
-            valueOf: (f) => '${f.eloRating} Elo',
-          ),
-          _Leaderboard(
-            title: 'Most Fight of the Night Awards',
-            icon: Icons.local_fire_department,
-            fighters: [...all]
-              ..sort((a, b) => b.fightOfTheNightCount.compareTo(a.fightOfTheNightCount)),
-            valueOf: (f) => '${f.fightOfTheNightCount}',
-            filter: (f) => f.fightOfTheNightCount > 0,
-          ),
-          _Leaderboard(
-            title: 'Most Performance of the Night Awards',
-            icon: Icons.star,
-            fighters: [...all]..sort(
-                (a, b) => b.performanceOfTheNightCount.compareTo(a.performanceOfTheNightCount)),
-            valueOf: (f) => '${f.performanceOfTheNightCount}',
-            filter: (f) => f.performanceOfTheNightCount > 0,
-          ),
-          _Leaderboard(
-            title: 'Longest Active Win Streak',
-            icon: Icons.whatshot,
-            fighters: [...all]..sort((a, b) => b.winStreak.compareTo(a.winStreak)),
-            valueOf: (f) => '${f.winStreak} in a row',
-            filter: (f) => f.winStreak > 0,
-          ),
-          _Leaderboard(
-            title: 'Highest Potential',
-            icon: Icons.auto_awesome,
-            fighters: [...all]..sort((a, b) => b.potential.compareTo(a.potential)),
-            valueOf: (f) => '${f.potential} ceiling',
+          const SizedBox(height: 12),
+          FutureBuilder<List<RecordCategory>>(
+            future: _records,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              final categories = snapshot.data ?? const <RecordCategory>[];
+              if (categories.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    'No fights have happened yet. Run an event and the record '
+                    'book fills in.',
+                  ),
+                );
+              }
+              return Column(
+                children: [
+                  for (final category in categories) _RecordCard(category: category),
+                ],
+              );
+            },
           ),
           const SizedBox(height: 24),
-          Text('Retired Fighters', style: Theme.of(context).textTheme.titleLarge),
+          Text('Retired Fighters',
+              style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
           if (retired.isEmpty)
             const Padding(
@@ -91,7 +97,8 @@ class HistoryScreen extends StatelessWidget {
                   trailing: Text('Age ${fighter.age}'),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => FighterProfileScreen(fighterId: fighter.id),
+                      builder: (_) =>
+                          FighterProfileScreen(fighterId: fighter.id),
                     ),
                   ),
                 ),
@@ -102,25 +109,14 @@ class HistoryScreen extends StatelessWidget {
   }
 }
 
-class _Leaderboard extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final List<Fighter> fighters;
-  final String Function(Fighter) valueOf;
-  final bool Function(Fighter)? filter;
+class _RecordCard extends StatelessWidget {
+  final RecordCategory category;
 
-  const _Leaderboard({
-    required this.title,
-    required this.icon,
-    required this.fighters,
-    required this.valueOf,
-    this.filter,
-  });
+  const _RecordCard({required this.category});
 
   @override
   Widget build(BuildContext context) {
-    final top = fighters.where(filter ?? (_) => true).take(5).toList();
-    if (top.isEmpty) return const SizedBox.shrink();
+    final scheme = Theme.of(context).colorScheme;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -131,21 +127,52 @@ class _Leaderboard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(icon, size: 18),
-                const SizedBox(width: 8),
-                Text(title, style: Theme.of(context).textTheme.titleSmall),
+                Expanded(
+                  child: Text(
+                    category.title,
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                ),
+                if (category.qualifier != null)
+                  Text(
+                    category.qualifier!,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
               ],
             ),
             const SizedBox(height: 8),
-            for (var i = 0; i < top.length; i++)
+            for (var i = 0; i < category.entries.length; i++)
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
-                child: Row(
-                  children: [
-                    SizedBox(width: 20, child: Text('${i + 1}.')),
-                    Expanded(child: Text(top[i].name)),
-                    Text(valueOf(top[i])),
-                  ],
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: InkWell(
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => FighterProfileScreen(
+                        fighterId: category.entries[i].fighterId,
+                      ),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 22,
+                        child: Text(
+                          '${i + 1}.',
+                          style: TextStyle(
+                            color: i == 0 ? scheme.primary : null,
+                            fontWeight: i == 0 ? FontWeight.bold : null,
+                          ),
+                        ),
+                      ),
+                      Expanded(child: Text(category.entries[i].fighterName)),
+                      Text(
+                        category.entries[i].value,
+                        style: TextStyle(
+                          fontWeight: i == 0 ? FontWeight.bold : null,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
           ],

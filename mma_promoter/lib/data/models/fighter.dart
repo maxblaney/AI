@@ -55,6 +55,14 @@ class Fighter {
   final int fightOfTheNightCount;
   final int performanceOfTheNightCount;
 
+  /// Holds their division's belt. Won by taking a championship fight,
+  /// lost by dropping one.
+  final bool isChampion;
+
+  /// Holds an interim belt in their division — tracked separately, since
+  /// it doesn't displace the undisputed champion.
+  final bool isInterimChampion;
+
   const Fighter({
     required this.id,
     required this.name,
@@ -85,6 +93,8 @@ class Fighter {
     this.retirementReason,
     this.fightOfTheNightCount = 0,
     this.performanceOfTheNightCount = 0,
+    this.isChampion = false,
+    this.isInterimChampion = false,
   });
 
   bool get isSigned => contract != null;
@@ -139,6 +149,8 @@ class Fighter {
     String? retirementReason,
     int? fightOfTheNightCount,
     int? performanceOfTheNightCount,
+    bool? isChampion,
+    bool? isInterimChampion,
   }) {
     return Fighter(
       id: id ?? this.id,
@@ -173,6 +185,8 @@ class Fighter {
       fightOfTheNightCount: fightOfTheNightCount ?? this.fightOfTheNightCount,
       performanceOfTheNightCount:
           performanceOfTheNightCount ?? this.performanceOfTheNightCount,
+      isChampion: isChampion ?? this.isChampion,
+      isInterimChampion: isInterimChampion ?? this.isInterimChampion,
     );
   }
 }

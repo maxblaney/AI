@@ -100,6 +100,8 @@ Fighter fighterFromRow(FighterRow row, ContractRow? contractRow) {
     retirementReason: row.retirementReason,
     fightOfTheNightCount: row.fightOfTheNightCount,
     performanceOfTheNightCount: row.performanceOfTheNightCount,
+    isChampion: row.isChampion,
+    isInterimChampion: row.isInterimChampion,
   );
 }
 
@@ -188,6 +190,8 @@ FightersCompanion fighterToCompanion(Fighter fighter, String saveId) {
     retirementReason: Value(fighter.retirementReason),
     fightOfTheNightCount: Value(fighter.fightOfTheNightCount),
     performanceOfTheNightCount: Value(fighter.performanceOfTheNightCount),
+    isChampion: Value(fighter.isChampion),
+    isInterimChampion: Value(fighter.isInterimChampion),
   );
 }
 
@@ -285,6 +289,46 @@ EventsCompanion eventToCompanion(MmaEvent event, String saveId) {
   );
 }
 
+/// Box scores are persisted as JSON rather than a column per stat — see
+/// the note on `Fights.statsAJson`. An empty or unreadable blob decodes
+/// to an empty statline, which is what fights resolved before v3 have.
+Map<String, dynamic> _statlineToJson(FightStatline s) => {
+      'sigL': s.significantStrikesLanded,
+      'sigA': s.significantStrikesAttempted,
+      'head': s.headStrikes,
+      'body': s.bodyStrikes,
+      'leg': s.legStrikes,
+      'tdL': s.takedownsLanded,
+      'tdA': s.takedownsAttempted,
+      'sub': s.submissionAttempts,
+      'kd': s.knockdowns,
+      'ctrl': s.controlSeconds,
+      'rev': s.reversals,
+    };
+
+FightStatline _statlineFromJson(String raw) {
+  if (raw.isEmpty) return const FightStatline();
+  try {
+    final j = jsonDecode(raw) as Map<String, dynamic>;
+    int read(String key) => (j[key] as num?)?.toInt() ?? 0;
+    return FightStatline(
+      significantStrikesLanded: read('sigL'),
+      significantStrikesAttempted: read('sigA'),
+      headStrikes: read('head'),
+      bodyStrikes: read('body'),
+      legStrikes: read('leg'),
+      takedownsLanded: read('tdL'),
+      takedownsAttempted: read('tdA'),
+      submissionAttempts: read('sub'),
+      knockdowns: read('kd'),
+      controlSeconds: read('ctrl'),
+      reversals: read('rev'),
+    );
+  } on FormatException {
+    return const FightStatline();
+  }
+}
+
 Fight fightFromRow(FightRow row) {
   FightResult? result;
   if (row.resultWinnerId != null && row.resultMethod != null) {
@@ -303,9 +347,10 @@ Fight fightFromRow(FightRow row) {
       fighterBInjury: row.resultFighterBInjury == null
           ? InjuryStatus.healthy
           : InjuryStatus.values.byName(row.resultFighterBInjury!),
-      // Momentum ticks, play-by-play, box score and scorecards are
-      // display-only and not persisted; they're only present on a
-      // freshly-simulated result held in memory.
+      statsA: _statlineFromJson(row.statsAJson),
+      statsB: _statlineFromJson(row.statsBJson),
+      // Momentum ticks, play-by-play and scorecards stay display-only —
+      // they're only present on a freshly-simulated result held in memory.
     );
   }
   return Fight(
@@ -345,6 +390,12 @@ FightsCompanion fightToCompanion(Fight fight) {
     loserPerformanceRating: Value(fight.result?.loserPerformanceRating),
     resultFighterAInjury: Value(fight.result?.fighterAInjury.name),
     resultFighterBInjury: Value(fight.result?.fighterBInjury.name),
+    statsAJson: Value(fight.result == null
+        ? ''
+        : jsonEncode(_statlineToJson(fight.result!.statsA))),
+    statsBJson: Value(fight.result == null
+        ? ''
+        : jsonEncode(_statlineToJson(fight.result!.statsB))),
   );
 }
 

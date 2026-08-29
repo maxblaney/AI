@@ -6,7 +6,8 @@ import 'package:mma_promoter/data/repositories/save_scope.dart';
 import 'package:sqlite3/sqlite3.dart' as sql;
 
 /// v1 databases exist in the wild — anyone already playing has one. The
-/// v2 upgrade adds save scoping, and the risk worth testing is that an
+/// upgrade path since then adds save scoping (v2) and persisted box
+/// scores plus championship flags (v3). The risk worth testing is that an
 /// in-progress game ends up tagged with no save and becomes invisible
 /// behind a saves list that can't see it.
 ///
@@ -17,7 +18,8 @@ import 'package:sqlite3/sqlite3.dart' as sql;
 /// migration reads whole rows from it) and the scoped tables minimally,
 /// since all it does to those is ALTER and UPDATE them.
 void main() {
-  test('a v1 save and its fighters survive the upgrade to v2', () async {
+  test('a v1 save and its fighters survive upgrading to the current schema',
+      () async {
     final raw = sql.sqlite3.openInMemory();
 
     raw.execute('PRAGMA user_version = 1');
@@ -35,7 +37,14 @@ void main() {
         current_week INTEGER NOT NULL DEFAULT 1,
         PRIMARY KEY (id)
       )''');
-    for (final table in ['fighters', 'events', 'random_events', 'inbox_items']) {
+    for (final table in [
+      'fighters',
+      'events',
+      'random_events',
+      'inbox_items',
+      // Not save-scoped, but v3 adds box-score columns to it.
+      'fights',
+    ]) {
       raw.execute('CREATE TABLE $table (id TEXT NOT NULL PRIMARY KEY)');
     }
     // Not scoped by the migration, but the saves list joins it to count

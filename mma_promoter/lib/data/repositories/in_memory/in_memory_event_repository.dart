@@ -53,6 +53,10 @@ class InMemoryEventRepository implements EventRepositoryContract {
   }
 
   @override
+  Future<List<Fight>> getAllResolvedFights() async =>
+      _fights.values.where((f) => f.isResolved).toList();
+
+  @override
   Future<List<Fight>> getFightsForFighter(String fighterId) async {
     final list = _fights.values
         .where((f) =>

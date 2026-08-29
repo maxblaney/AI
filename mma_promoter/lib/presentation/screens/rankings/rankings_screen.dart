@@ -31,6 +31,33 @@ class _RankingsScreenState extends State<RankingsScreen> {
         .toList()
       ..sort((a, b) => b.eloRating.compareTo(a.eloRating));
 
+    // In a division the champion sits above the contenders regardless of
+    // Elo — that's what holding the belt means. Pound-for-pound spans
+    // every division and so has many champions in it; there it stays a
+    // straight Elo list, with the belt shown as a badge instead.
+    if (!isP4P) {
+      ranked.sort((a, b) {
+        int rank(Fighter f) =>
+            f.isChampion ? 0 : (f.isInterimChampion ? 1 : 2);
+        final byBelt = rank(a).compareTo(rank(b));
+        return byBelt != 0 ? byBelt : b.eloRating.compareTo(a.eloRating);
+      });
+    }
+
+    // Contenders number from 1; belt holders are labelled instead.
+    final labels = <String>[];
+    var contender = 0;
+    for (final f in ranked) {
+      if (!isP4P && f.isChampion) {
+        labels.add('C');
+      } else if (!isP4P && f.isInterimChampion) {
+        labels.add('iC');
+      } else {
+        contender++;
+        labels.add('$contender.');
+      }
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text('Rankings')),
       body: Column(
@@ -72,9 +99,34 @@ class _RankingsScreenState extends State<RankingsScreen> {
                     itemCount: ranked.length,
                     itemBuilder: (context, index) {
                       final fighter = ranked[index];
+                      final label = labels[index];
+                      final isBelt = label == 'C' || label == 'iC';
                       return ListTile(
                         leading: FighterAvatar(fighter: fighter),
-                        title: Text('${index + 1}. ${fighter.name}'),
+                        title: Row(
+                          children: [
+                            SizedBox(
+                              width: 30,
+                              child: Text(
+                                label,
+                                style: TextStyle(
+                                  fontWeight:
+                                      isBelt ? FontWeight.bold : FontWeight.normal,
+                                  color: isBelt
+                                      ? Theme.of(context).colorScheme.primary
+                                      : null,
+                                ),
+                              ),
+                            ),
+                            Expanded(child: Text(fighter.name)),
+                            if (isP4P && fighter.isChampion)
+                              Icon(
+                                Icons.emoji_events,
+                                size: 16,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                          ],
+                        ),
                         subtitle: Text(
                           isP4P
                               ? '${fighter.weightClass.label} · ${fighter.record.display} · ${fighter.style.label}'

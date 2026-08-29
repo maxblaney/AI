@@ -1,3 +1,4 @@
+import '../../../domain/betting/fight_odds.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -120,20 +121,31 @@ class _PreEventView extends StatelessWidget {
         const SizedBox(height: 16),
         Text('Card', style: Theme.of(context).textTheme.titleLarge),
         for (final fight in card)
-          ListTile(
-            title: Text(
-              '${controller.fighterById(fight.fighterAId)?.name ?? '?'} vs '
-              '${controller.fighterById(fight.fighterBId)?.name ?? '?'}',
-            ),
-            subtitle: Text([
-              if (fight.isMainEvent) 'Main Event'
-              else if (fight.isCoMainEvent) 'Co-Main Event'
-              else if (fight.isMainCard) 'Main Card'
-              else 'Prelim',
-              '${fight.rounds} Rounds',
-              if (fight.titleFightType != TitleFightType.none) fight.titleFightType.label,
-            ].join(' · ')),
-          ),
+          Builder(builder: (context) {
+            final a = controller.fighterById(fight.fighterAId);
+            final b = controller.fighterById(fight.fighterBId);
+            final odds = (a != null && b != null)
+                ? OddsCalculator.forFight(a: a, b: b)
+                : null;
+            return ListTile(
+              title: Text('${a?.name ?? '?'} vs ${b?.name ?? '?'}'),
+              subtitle: Text([
+                if (fight.isMainEvent) 'Main Event'
+                else if (fight.isCoMainEvent) 'Co-Main Event'
+                else if (fight.isMainCard) 'Main Card'
+                else 'Prelim',
+                '${fight.rounds} Rounds',
+                if (fight.titleFightType != TitleFightType.none)
+                  fight.titleFightType.label,
+              ].join(' · ')),
+              trailing: odds == null
+                  ? null
+                  : Text(
+                      '${odds.displayA} / ${odds.displayB}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+            );
+          }),
         const SizedBox(height: 16),
         Text('Promotion Spend', style: Theme.of(context).textTheme.titleMedium),
         Text('${currency.format(promoSpend)} of up to ${currency.format(maxSpend)}'),
@@ -155,7 +167,7 @@ class _PreEventView extends StatelessWidget {
   }
 }
 
-class _ResultsView extends StatelessWidget {
+class _ResultsView extends StatefulWidget {
   final MmaEvent event;
   final List<Fight> card;
   final List<FighterOutcomeSummary>? fighterOutcomes;
@@ -167,7 +179,25 @@ class _ResultsView extends StatelessWidget {
   });
 
   @override
+  State<_ResultsView> createState() => _ResultsViewState();
+}
+
+class _ResultsViewState extends State<_ResultsView> {
+  /// Fights the player has already seen the outcome of, either by
+  /// watching them or by choosing to skip to the result. Everything that
+  /// would give an unseen fight away stays hidden until it's in here.
+  final Set<String> _revealed = {};
+
+  bool get _allRevealed =>
+      widget.card.every((f) => _revealed.contains(f.id) || f.result == null);
+
+  void _reveal(String fightId) => setState(() => _revealed.add(fightId));
+
+  @override
   Widget build(BuildContext context) {
+    final event = widget.event;
+    final card = widget.card;
+    final fighterOutcomes = widget.fighterOutcomes;
     final controller = context.watch<GameController>();
     final currency = NumberFormat.simpleCurrency();
     final outcomes = fighterOutcomes;
@@ -194,7 +224,37 @@ class _ResultsView extends StatelessWidget {
         ),
         const SizedBox(height: 24),
         Text('Results', style: Theme.of(context).textTheme.titleLarge),
-        for (final fight in card) _FightResultTile(fight: fight, controller: controller),
+        for (final fight in card)
+          _FightResultTile(
+            fight: fight,
+            controller: controller,
+            revealed: _revealed.contains(fight.id),
+            onReveal: () => _reveal(fight.id),
+          ),
+        // Awards, injuries and popularity swings all give away who won, so
+        // none of them appear until every fight on the card has been seen.
+        if (!_allRevealed) ...[
+          const SizedBox(height: 24),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  const Icon(Icons.visibility_off, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Awards, injuries and popularity changes are hidden '
+                      'until you\'ve seen every fight.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+        if (_allRevealed) ...[
         const SizedBox(height: 24),
         _AwardsSection(event: event, card: card, controller: controller),
         if (injured != null && injured.isNotEmpty) ...[
@@ -225,6 +285,7 @@ class _ResultsView extends StatelessWidget {
                 ),
               ),
             ),
+        ],
         ],
       ],
     );
@@ -363,7 +424,18 @@ class _FightResultTile extends StatelessWidget {
   final Fight fight;
   final GameController controller;
 
-  const _FightResultTile({required this.fight, required this.controller});
+  /// Whether the outcome may be shown. Until it is, the tile is a fight
+  /// preview with odds — the point being that you find out by watching,
+  /// not by reading it off a list.
+  final bool revealed;
+  final VoidCallback onReveal;
+
+  const _FightResultTile({
+    required this.fight,
+    required this.controller,
+    required this.revealed,
+    required this.onReveal,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -374,38 +446,66 @@ class _FightResultTile extends StatelessWidget {
       return ListTile(title: Text('${a?.name ?? '?'} vs ${b?.name ?? '?'}'));
     }
 
-    final winnerName = result.isDraw
-        ? null
-        : (result.winnerId == a.id ? a.name : b.name);
     final tag = fight.isMainEvent
         ? ' (Main Event)'
         : fight.isCoMainEvent
             ? ' (Co-Main Event)'
             : '';
+    final odds = OddsCalculator.forFight(a: a, b: b);
+    final canWatch = result.momentumTicks.isNotEmpty;
 
     return Card(
-      child: ListTile(
-        title: Text('${a.name} vs ${b.name}$tag'),
-        subtitle: Text(
-          result.isDraw
-              ? 'Draw / No Contest'
-              : '$winnerName def. by ${result.methodDisplay} · '
-                  'R${result.round} ${result.timeDisplay}',
-        ),
-        trailing: result.momentumTicks.isEmpty
-            ? null
-            : TextButton(
-                child: const Text('Watch Live'),
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => FightBreakdownScreen(
-                      fight: fight,
-                      fighterA: a,
-                      fighterB: b,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('${a.name} vs ${b.name}$tag'),
+            const SizedBox(height: 2),
+            Text(
+              '${a.name.split(' ').last} ${odds.displayA}  ·  '
+              '${b.name.split(' ').last} ${odds.displayB}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 4),
+            if (revealed)
+              Text(
+                result.isDraw
+                    ? 'Draw / No Contest'
+                    : '${result.winnerId == a.id ? a.name : b.name} def. by '
+                        '${result.methodDisplay} · R${result.round} '
+                        '${result.timeDisplay}',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              )
+            else
+              Row(
+                children: [
+                  if (canWatch)
+                    FilledButton.icon(
+                      icon: const Icon(Icons.play_arrow, size: 18),
+                      label: const Text('Watch Live'),
+                      onPressed: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => FightBreakdownScreen(
+                              fight: fight,
+                              fighterA: a,
+                              fighterB: b,
+                            ),
+                          ),
+                        );
+                        onReveal();
+                      },
                     ),
+                  const SizedBox(width: 8),
+                  TextButton(
+                    onPressed: onReveal,
+                    child: Text(canWatch ? 'Skip to result' : 'Show result'),
                   ),
-                ),
+                ],
               ),
+          ],
+        ),
       ),
     );
   }
