@@ -114,6 +114,17 @@ class Fighters extends Table {
   IntColumn get performanceOfTheNightCount =>
       integer().withDefault(const Constant(0))();
 
+  /// Physical freshness, 0-100. Drops with hard fights, recovers with
+  /// rest. Separate from [injuryStatus]: a fighter can be uninjured and
+  /// still worn down.
+  IntColumn get condition => integer().withDefault(const Constant(100))();
+
+  /// Absolute game week of this fighter's last bout for the org, or null
+  /// if they haven't fought here. Drives ring rust in the sharpness
+  /// reading, and is stored rather than derived so a roster list doesn't
+  /// query fight history per row.
+  IntColumn get lastFoughtWeek => integer().nullable()();
+
   /// Holder of this fighter's division belt. Set by winning a
   /// championship fight, cleared when they lose one.
   BoolColumn get isChampion => boolean().withDefault(const Constant(false))();
@@ -170,6 +181,10 @@ class Organizations extends Table {
 @DataClassName('EventRow')
 class Events extends Table {
   TextColumn get id => text()();
+
+  /// Game week the card was confirmed. The gap between this and the event
+  /// week is the fighters' camp length, which is what sharpness reads.
+  IntColumn get bookedAtWeek => integer().withDefault(const Constant(1))();
 
   /// The save (organization) this row belongs to. Every game-state
   /// table carries it so multiple playthroughs can live side by side in

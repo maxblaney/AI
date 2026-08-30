@@ -100,6 +100,8 @@ Fighter fighterFromRow(FighterRow row, ContractRow? contractRow) {
     retirementReason: row.retirementReason,
     fightOfTheNightCount: row.fightOfTheNightCount,
     performanceOfTheNightCount: row.performanceOfTheNightCount,
+    condition: row.condition,
+    lastFoughtWeek: row.lastFoughtWeek,
     isChampion: row.isChampion,
     isInterimChampion: row.isInterimChampion,
   );
@@ -190,6 +192,8 @@ FightersCompanion fighterToCompanion(Fighter fighter, String saveId) {
     retirementReason: Value(fighter.retirementReason),
     fightOfTheNightCount: Value(fighter.fightOfTheNightCount),
     performanceOfTheNightCount: Value(fighter.performanceOfTheNightCount),
+    condition: Value(fighter.condition),
+    lastFoughtWeek: Value(fighter.lastFoughtWeek),
     isChampion: Value(fighter.isChampion),
     isInterimChampion: Value(fighter.isInterimChampion),
   );
@@ -256,6 +260,7 @@ MmaEvent eventFromRow(EventRow row) {
     date: row.date,
     venue: Venue.values.byName(row.venue),
     ticketPrice: row.ticketPrice,
+    bookedAtWeek: row.bookedAtWeek,
     status: EventStatus.values.byName(row.status),
     promotionBudgetSpent: row.promotionBudgetSpent,
     attendance: row.attendance,
@@ -276,6 +281,7 @@ EventsCompanion eventToCompanion(MmaEvent event, String saveId) {
     date: event.date,
     venue: event.venue.name,
     ticketPrice: Value(event.ticketPrice),
+    bookedAtWeek: Value(event.bookedAtWeek),
     status: Value(event.status.name),
     promotionBudgetSpent: Value(event.promotionBudgetSpent),
     attendance: Value(event.attendance),

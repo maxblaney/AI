@@ -9,6 +9,10 @@ class MmaEvent {
   final DateTime date;
   final Venue venue;
   final int ticketPrice;
+
+  /// Game week the card was confirmed. The gap to the event's own week is
+  /// the camp length the fighters got, which is what sharpness reads.
+  final int bookedAtWeek;
   final EventStatus status;
   final int promotionBudgetSpent;
   final int attendance;
@@ -25,6 +29,7 @@ class MmaEvent {
     required this.date,
     required this.venue,
     required this.ticketPrice,
+    this.bookedAtWeek = 1,
     this.status = EventStatus.scheduled,
     this.promotionBudgetSpent = 0,
     this.attendance = 0,
@@ -45,6 +50,7 @@ class MmaEvent {
     DateTime? date,
     Venue? venue,
     int? ticketPrice,
+    int? bookedAtWeek,
     EventStatus? status,
     int? promotionBudgetSpent,
     int? attendance,
@@ -61,6 +67,7 @@ class MmaEvent {
       date: date ?? this.date,
       venue: venue ?? this.venue,
       ticketPrice: ticketPrice ?? this.ticketPrice,
+      bookedAtWeek: bookedAtWeek ?? this.bookedAtWeek,
       status: status ?? this.status,
       promotionBudgetSpent: promotionBudgetSpent ?? this.promotionBudgetSpent,
       attendance: attendance ?? this.attendance,

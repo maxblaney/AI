@@ -55,6 +55,15 @@ class Fighter {
   final int fightOfTheNightCount;
   final int performanceOfTheNightCount;
 
+  /// Physical freshness, 0-100. Falls with hard fights and recovers with
+  /// rest — distinct from [injuryStatus], since a fighter can be
+  /// uninjured and still worn down.
+  final int condition;
+
+  /// Game week of their last bout for the org, or null if they haven't
+  /// fought here yet.
+  final int? lastFoughtWeek;
+
   /// Holds their division's belt. Won by taking a championship fight,
   /// lost by dropping one.
   final bool isChampion;
@@ -93,6 +102,8 @@ class Fighter {
     this.retirementReason,
     this.fightOfTheNightCount = 0,
     this.performanceOfTheNightCount = 0,
+    this.condition = 100,
+    this.lastFoughtWeek,
     this.isChampion = false,
     this.isInterimChampion = false,
   });
@@ -149,6 +160,8 @@ class Fighter {
     String? retirementReason,
     int? fightOfTheNightCount,
     int? performanceOfTheNightCount,
+    int? condition,
+    int? lastFoughtWeek,
     bool? isChampion,
     bool? isInterimChampion,
   }) {
@@ -185,6 +198,8 @@ class Fighter {
       fightOfTheNightCount: fightOfTheNightCount ?? this.fightOfTheNightCount,
       performanceOfTheNightCount:
           performanceOfTheNightCount ?? this.performanceOfTheNightCount,
+      condition: condition ?? this.condition,
+      lastFoughtWeek: lastFoughtWeek ?? this.lastFoughtWeek,
       isChampion: isChampion ?? this.isChampion,
       isInterimChampion: isInterimChampion ?? this.isInterimChampion,
     );

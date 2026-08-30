@@ -568,6 +568,20 @@ class $FightersTable extends Fighters
           type: DriftSqlType.int,
           requiredDuringInsert: false,
           defaultValue: const Constant(0));
+  static const VerificationMeta _conditionMeta =
+      const VerificationMeta('condition');
+  @override
+  late final GeneratedColumn<int> condition = GeneratedColumn<int>(
+      'condition', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(100));
+  static const VerificationMeta _lastFoughtWeekMeta =
+      const VerificationMeta('lastFoughtWeek');
+  @override
+  late final GeneratedColumn<int> lastFoughtWeek = GeneratedColumn<int>(
+      'last_fought_week', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
   static const VerificationMeta _isChampionMeta =
       const VerificationMeta('isChampion');
   @override
@@ -673,6 +687,8 @@ class $FightersTable extends Fighters
         retirementReason,
         fightOfTheNightCount,
         performanceOfTheNightCount,
+        condition,
+        lastFoughtWeek,
         isChampion,
         isInterimChampion
       ];
@@ -1204,6 +1220,16 @@ class $FightersTable extends Fighters
               data['performance_of_the_night_count']!,
               _performanceOfTheNightCountMeta));
     }
+    if (data.containsKey('condition')) {
+      context.handle(_conditionMeta,
+          condition.isAcceptableOrUnknown(data['condition']!, _conditionMeta));
+    }
+    if (data.containsKey('last_fought_week')) {
+      context.handle(
+          _lastFoughtWeekMeta,
+          lastFoughtWeek.isAcceptableOrUnknown(
+              data['last_fought_week']!, _lastFoughtWeekMeta));
+    }
     if (data.containsKey('is_champion')) {
       context.handle(
           _isChampionMeta,
@@ -1393,6 +1419,10 @@ class $FightersTable extends Fighters
       performanceOfTheNightCount: attachedDatabase.typeMapping.read(
           DriftSqlType.int,
           data['${effectivePrefix}performance_of_the_night_count'])!,
+      condition: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}condition'])!,
+      lastFoughtWeek: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}last_fought_week']),
       isChampion: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}is_champion'])!,
       isInterimChampion: attachedDatabase.typeMapping.read(
@@ -1500,6 +1530,17 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
   final int fightOfTheNightCount;
   final int performanceOfTheNightCount;
 
+  /// Physical freshness, 0-100. Drops with hard fights, recovers with
+  /// rest. Separate from [injuryStatus]: a fighter can be uninjured and
+  /// still worn down.
+  final int condition;
+
+  /// Absolute game week of this fighter's last bout for the org, or null
+  /// if they haven't fought here. Drives ring rust in the sharpness
+  /// reading, and is stored rather than derived so a roster list doesn't
+  /// query fight history per row.
+  final int? lastFoughtWeek;
+
   /// Holder of this fighter's division belt. Set by winning a
   /// championship fight, cleared when they lose one.
   final bool isChampion;
@@ -1591,6 +1632,8 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       this.retirementReason,
       required this.fightOfTheNightCount,
       required this.performanceOfTheNightCount,
+      required this.condition,
+      this.lastFoughtWeek,
       required this.isChampion,
       required this.isInterimChampion});
   @override
@@ -1686,6 +1729,10 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
     map['fight_of_the_night_count'] = Variable<int>(fightOfTheNightCount);
     map['performance_of_the_night_count'] =
         Variable<int>(performanceOfTheNightCount);
+    map['condition'] = Variable<int>(condition);
+    if (!nullToAbsent || lastFoughtWeek != null) {
+      map['last_fought_week'] = Variable<int>(lastFoughtWeek);
+    }
     map['is_champion'] = Variable<bool>(isChampion);
     map['is_interim_champion'] = Variable<bool>(isInterimChampion);
     return map;
@@ -1782,6 +1829,10 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           : Value(retirementReason),
       fightOfTheNightCount: Value(fightOfTheNightCount),
       performanceOfTheNightCount: Value(performanceOfTheNightCount),
+      condition: Value(condition),
+      lastFoughtWeek: lastFoughtWeek == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastFoughtWeek),
       isChampion: Value(isChampion),
       isInterimChampion: Value(isInterimChampion),
     );
@@ -1883,6 +1934,8 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           serializer.fromJson<int>(json['fightOfTheNightCount']),
       performanceOfTheNightCount:
           serializer.fromJson<int>(json['performanceOfTheNightCount']),
+      condition: serializer.fromJson<int>(json['condition']),
+      lastFoughtWeek: serializer.fromJson<int?>(json['lastFoughtWeek']),
       isChampion: serializer.fromJson<bool>(json['isChampion']),
       isInterimChampion: serializer.fromJson<bool>(json['isInterimChampion']),
     );
@@ -1975,6 +2028,8 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       'fightOfTheNightCount': serializer.toJson<int>(fightOfTheNightCount),
       'performanceOfTheNightCount':
           serializer.toJson<int>(performanceOfTheNightCount),
+      'condition': serializer.toJson<int>(condition),
+      'lastFoughtWeek': serializer.toJson<int?>(lastFoughtWeek),
       'isChampion': serializer.toJson<bool>(isChampion),
       'isInterimChampion': serializer.toJson<bool>(isInterimChampion),
     };
@@ -2064,6 +2119,8 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           Value<String?> retirementReason = const Value.absent(),
           int? fightOfTheNightCount,
           int? performanceOfTheNightCount,
+          int? condition,
+          Value<int?> lastFoughtWeek = const Value.absent(),
           bool? isChampion,
           bool? isInterimChampion}) =>
       FighterRow(
@@ -2160,6 +2217,9 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
         fightOfTheNightCount: fightOfTheNightCount ?? this.fightOfTheNightCount,
         performanceOfTheNightCount:
             performanceOfTheNightCount ?? this.performanceOfTheNightCount,
+        condition: condition ?? this.condition,
+        lastFoughtWeek:
+            lastFoughtWeek.present ? lastFoughtWeek.value : this.lastFoughtWeek,
         isChampion: isChampion ?? this.isChampion,
         isInterimChampion: isInterimChampion ?? this.isInterimChampion,
       );
@@ -2333,6 +2393,10 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       performanceOfTheNightCount: data.performanceOfTheNightCount.present
           ? data.performanceOfTheNightCount.value
           : this.performanceOfTheNightCount,
+      condition: data.condition.present ? data.condition.value : this.condition,
+      lastFoughtWeek: data.lastFoughtWeek.present
+          ? data.lastFoughtWeek.value
+          : this.lastFoughtWeek,
       isChampion:
           data.isChampion.present ? data.isChampion.value : this.isChampion,
       isInterimChampion: data.isInterimChampion.present
@@ -2427,6 +2491,8 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           ..write('retirementReason: $retirementReason, ')
           ..write('fightOfTheNightCount: $fightOfTheNightCount, ')
           ..write('performanceOfTheNightCount: $performanceOfTheNightCount, ')
+          ..write('condition: $condition, ')
+          ..write('lastFoughtWeek: $lastFoughtWeek, ')
           ..write('isChampion: $isChampion, ')
           ..write('isInterimChampion: $isInterimChampion')
           ..write(')'))
@@ -2518,6 +2584,8 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
         retirementReason,
         fightOfTheNightCount,
         performanceOfTheNightCount,
+        condition,
+        lastFoughtWeek,
         isChampion,
         isInterimChampion
       ]);
@@ -2608,6 +2676,8 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           other.retirementReason == this.retirementReason &&
           other.fightOfTheNightCount == this.fightOfTheNightCount &&
           other.performanceOfTheNightCount == this.performanceOfTheNightCount &&
+          other.condition == this.condition &&
+          other.lastFoughtWeek == this.lastFoughtWeek &&
           other.isChampion == this.isChampion &&
           other.isInterimChampion == this.isInterimChampion);
 }
@@ -2696,6 +2766,8 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
   final Value<String?> retirementReason;
   final Value<int> fightOfTheNightCount;
   final Value<int> performanceOfTheNightCount;
+  final Value<int> condition;
+  final Value<int?> lastFoughtWeek;
   final Value<bool> isChampion;
   final Value<bool> isInterimChampion;
   final Value<int> rowid;
@@ -2783,6 +2855,8 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     this.retirementReason = const Value.absent(),
     this.fightOfTheNightCount = const Value.absent(),
     this.performanceOfTheNightCount = const Value.absent(),
+    this.condition = const Value.absent(),
+    this.lastFoughtWeek = const Value.absent(),
     this.isChampion = const Value.absent(),
     this.isInterimChampion = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -2871,6 +2945,8 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     this.retirementReason = const Value.absent(),
     this.fightOfTheNightCount = const Value.absent(),
     this.performanceOfTheNightCount = const Value.absent(),
+    this.condition = const Value.absent(),
+    this.lastFoughtWeek = const Value.absent(),
     this.isChampion = const Value.absent(),
     this.isInterimChampion = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -3002,6 +3078,8 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     Expression<String>? retirementReason,
     Expression<int>? fightOfTheNightCount,
     Expression<int>? performanceOfTheNightCount,
+    Expression<int>? condition,
+    Expression<int>? lastFoughtWeek,
     Expression<bool>? isChampion,
     Expression<bool>? isInterimChampion,
     Expression<int>? rowid,
@@ -3101,6 +3179,8 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
         'fight_of_the_night_count': fightOfTheNightCount,
       if (performanceOfTheNightCount != null)
         'performance_of_the_night_count': performanceOfTheNightCount,
+      if (condition != null) 'condition': condition,
+      if (lastFoughtWeek != null) 'last_fought_week': lastFoughtWeek,
       if (isChampion != null) 'is_champion': isChampion,
       if (isInterimChampion != null) 'is_interim_champion': isInterimChampion,
       if (rowid != null) 'rowid': rowid,
@@ -3191,6 +3271,8 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
       Value<String?>? retirementReason,
       Value<int>? fightOfTheNightCount,
       Value<int>? performanceOfTheNightCount,
+      Value<int>? condition,
+      Value<int?>? lastFoughtWeek,
       Value<bool>? isChampion,
       Value<bool>? isInterimChampion,
       Value<int>? rowid}) {
@@ -3283,6 +3365,8 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
       fightOfTheNightCount: fightOfTheNightCount ?? this.fightOfTheNightCount,
       performanceOfTheNightCount:
           performanceOfTheNightCount ?? this.performanceOfTheNightCount,
+      condition: condition ?? this.condition,
+      lastFoughtWeek: lastFoughtWeek ?? this.lastFoughtWeek,
       isChampion: isChampion ?? this.isChampion,
       isInterimChampion: isInterimChampion ?? this.isInterimChampion,
       rowid: rowid ?? this.rowid,
@@ -3547,6 +3631,12 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
       map['performance_of_the_night_count'] =
           Variable<int>(performanceOfTheNightCount.value);
     }
+    if (condition.present) {
+      map['condition'] = Variable<int>(condition.value);
+    }
+    if (lastFoughtWeek.present) {
+      map['last_fought_week'] = Variable<int>(lastFoughtWeek.value);
+    }
     if (isChampion.present) {
       map['is_champion'] = Variable<bool>(isChampion.value);
     }
@@ -3645,6 +3735,8 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
           ..write('retirementReason: $retirementReason, ')
           ..write('fightOfTheNightCount: $fightOfTheNightCount, ')
           ..write('performanceOfTheNightCount: $performanceOfTheNightCount, ')
+          ..write('condition: $condition, ')
+          ..write('lastFoughtWeek: $lastFoughtWeek, ')
           ..write('isChampion: $isChampion, ')
           ..write('isInterimChampion: $isInterimChampion, ')
           ..write('rowid: $rowid')
@@ -4650,6 +4742,14 @@ class $EventsTable extends Events with TableInfo<$EventsTable, EventRow> {
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
       'id', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _bookedAtWeekMeta =
+      const VerificationMeta('bookedAtWeek');
+  @override
+  late final GeneratedColumn<int> bookedAtWeek = GeneratedColumn<int>(
+      'booked_at_week', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(1));
   static const VerificationMeta _saveIdMeta = const VerificationMeta('saveId');
   @override
   late final GeneratedColumn<String> saveId = GeneratedColumn<String>(
@@ -4751,6 +4851,7 @@ class $EventsTable extends Events with TableInfo<$EventsTable, EventRow> {
   @override
   List<GeneratedColumn> get $columns => [
         id,
+        bookedAtWeek,
         saveId,
         name,
         date,
@@ -4780,6 +4881,12 @@ class $EventsTable extends Events with TableInfo<$EventsTable, EventRow> {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     } else if (isInserting) {
       context.missing(_idMeta);
+    }
+    if (data.containsKey('booked_at_week')) {
+      context.handle(
+          _bookedAtWeekMeta,
+          bookedAtWeek.isAcceptableOrUnknown(
+              data['booked_at_week']!, _bookedAtWeekMeta));
     }
     if (data.containsKey('save_id')) {
       context.handle(_saveIdMeta,
@@ -4868,6 +4975,8 @@ class $EventsTable extends Events with TableInfo<$EventsTable, EventRow> {
     return EventRow(
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      bookedAtWeek: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}booked_at_week'])!,
       saveId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}save_id'])!,
       name: attachedDatabase.typeMapping
@@ -4910,6 +5019,10 @@ class $EventsTable extends Events with TableInfo<$EventsTable, EventRow> {
 class EventRow extends DataClass implements Insertable<EventRow> {
   final String id;
 
+  /// Game week the card was confirmed. The gap between this and the event
+  /// week is the fighters' camp length, which is what sharpness reads.
+  final int bookedAtWeek;
+
   /// The save (organization) this row belongs to. Every game-state
   /// table carries it so multiple playthroughs can live side by side in
   /// one database — see `SaveScope`.
@@ -4929,6 +5042,7 @@ class EventRow extends DataClass implements Insertable<EventRow> {
   final String? performanceOfTheNightFighterId;
   const EventRow(
       {required this.id,
+      required this.bookedAtWeek,
       required this.saveId,
       required this.name,
       required this.date,
@@ -4947,6 +5061,7 @@ class EventRow extends DataClass implements Insertable<EventRow> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
+    map['booked_at_week'] = Variable<int>(bookedAtWeek);
     map['save_id'] = Variable<String>(saveId);
     map['name'] = Variable<String>(name);
     map['date'] = Variable<DateTime>(date);
@@ -4973,6 +5088,7 @@ class EventRow extends DataClass implements Insertable<EventRow> {
   EventsCompanion toCompanion(bool nullToAbsent) {
     return EventsCompanion(
       id: Value(id),
+      bookedAtWeek: Value(bookedAtWeek),
       saveId: Value(saveId),
       name: Value(name),
       date: Value(date),
@@ -5000,6 +5116,7 @@ class EventRow extends DataClass implements Insertable<EventRow> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return EventRow(
       id: serializer.fromJson<String>(json['id']),
+      bookedAtWeek: serializer.fromJson<int>(json['bookedAtWeek']),
       saveId: serializer.fromJson<String>(json['saveId']),
       name: serializer.fromJson<String>(json['name']),
       date: serializer.fromJson<DateTime>(json['date']),
@@ -5024,6 +5141,7 @@ class EventRow extends DataClass implements Insertable<EventRow> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
+      'bookedAtWeek': serializer.toJson<int>(bookedAtWeek),
       'saveId': serializer.toJson<String>(saveId),
       'name': serializer.toJson<String>(name),
       'date': serializer.toJson<DateTime>(date),
@@ -5045,6 +5163,7 @@ class EventRow extends DataClass implements Insertable<EventRow> {
 
   EventRow copyWith(
           {String? id,
+          int? bookedAtWeek,
           String? saveId,
           String? name,
           DateTime? date,
@@ -5062,6 +5181,7 @@ class EventRow extends DataClass implements Insertable<EventRow> {
               const Value.absent()}) =>
       EventRow(
         id: id ?? this.id,
+        bookedAtWeek: bookedAtWeek ?? this.bookedAtWeek,
         saveId: saveId ?? this.saveId,
         name: name ?? this.name,
         date: date ?? this.date,
@@ -5084,6 +5204,9 @@ class EventRow extends DataClass implements Insertable<EventRow> {
   EventRow copyWithCompanion(EventsCompanion data) {
     return EventRow(
       id: data.id.present ? data.id.value : this.id,
+      bookedAtWeek: data.bookedAtWeek.present
+          ? data.bookedAtWeek.value
+          : this.bookedAtWeek,
       saveId: data.saveId.present ? data.saveId.value : this.saveId,
       name: data.name.present ? data.name.value : this.name,
       date: data.date.present ? data.date.value : this.date,
@@ -5116,6 +5239,7 @@ class EventRow extends DataClass implements Insertable<EventRow> {
   String toString() {
     return (StringBuffer('EventRow(')
           ..write('id: $id, ')
+          ..write('bookedAtWeek: $bookedAtWeek, ')
           ..write('saveId: $saveId, ')
           ..write('name: $name, ')
           ..write('date: $date, ')
@@ -5138,6 +5262,7 @@ class EventRow extends DataClass implements Insertable<EventRow> {
   @override
   int get hashCode => Object.hash(
       id,
+      bookedAtWeek,
       saveId,
       name,
       date,
@@ -5157,6 +5282,7 @@ class EventRow extends DataClass implements Insertable<EventRow> {
       identical(this, other) ||
       (other is EventRow &&
           other.id == this.id &&
+          other.bookedAtWeek == this.bookedAtWeek &&
           other.saveId == this.saveId &&
           other.name == this.name &&
           other.date == this.date &&
@@ -5176,6 +5302,7 @@ class EventRow extends DataClass implements Insertable<EventRow> {
 
 class EventsCompanion extends UpdateCompanion<EventRow> {
   final Value<String> id;
+  final Value<int> bookedAtWeek;
   final Value<String> saveId;
   final Value<String> name;
   final Value<DateTime> date;
@@ -5193,6 +5320,7 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
   final Value<int> rowid;
   const EventsCompanion({
     this.id = const Value.absent(),
+    this.bookedAtWeek = const Value.absent(),
     this.saveId = const Value.absent(),
     this.name = const Value.absent(),
     this.date = const Value.absent(),
@@ -5211,6 +5339,7 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
   });
   EventsCompanion.insert({
     required String id,
+    this.bookedAtWeek = const Value.absent(),
     this.saveId = const Value.absent(),
     required String name,
     required DateTime date,
@@ -5232,6 +5361,7 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
         venue = Value(venue);
   static Insertable<EventRow> custom({
     Expression<String>? id,
+    Expression<int>? bookedAtWeek,
     Expression<String>? saveId,
     Expression<String>? name,
     Expression<DateTime>? date,
@@ -5250,6 +5380,7 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (bookedAtWeek != null) 'booked_at_week': bookedAtWeek,
       if (saveId != null) 'save_id': saveId,
       if (name != null) 'name': name,
       if (date != null) 'date': date,
@@ -5273,6 +5404,7 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
 
   EventsCompanion copyWith(
       {Value<String>? id,
+      Value<int>? bookedAtWeek,
       Value<String>? saveId,
       Value<String>? name,
       Value<DateTime>? date,
@@ -5290,6 +5422,7 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
       Value<int>? rowid}) {
     return EventsCompanion(
       id: id ?? this.id,
+      bookedAtWeek: bookedAtWeek ?? this.bookedAtWeek,
       saveId: saveId ?? this.saveId,
       name: name ?? this.name,
       date: date ?? this.date,
@@ -5315,6 +5448,9 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<String>(id.value);
+    }
+    if (bookedAtWeek.present) {
+      map['booked_at_week'] = Variable<int>(bookedAtWeek.value);
     }
     if (saveId.present) {
       map['save_id'] = Variable<String>(saveId.value);
@@ -5370,6 +5506,7 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
   String toString() {
     return (StringBuffer('EventsCompanion(')
           ..write('id: $id, ')
+          ..write('bookedAtWeek: $bookedAtWeek, ')
           ..write('saveId: $saveId, ')
           ..write('name: $name, ')
           ..write('date: $date, ')
@@ -7498,6 +7635,8 @@ typedef $$FightersTableCreateCompanionBuilder = FightersCompanion Function({
   Value<String?> retirementReason,
   Value<int> fightOfTheNightCount,
   Value<int> performanceOfTheNightCount,
+  Value<int> condition,
+  Value<int?> lastFoughtWeek,
   Value<bool> isChampion,
   Value<bool> isInterimChampion,
   Value<int> rowid,
@@ -7586,6 +7725,8 @@ typedef $$FightersTableUpdateCompanionBuilder = FightersCompanion Function({
   Value<String?> retirementReason,
   Value<int> fightOfTheNightCount,
   Value<int> performanceOfTheNightCount,
+  Value<int> condition,
+  Value<int?> lastFoughtWeek,
   Value<bool> isChampion,
   Value<bool> isInterimChampion,
   Value<int> rowid,
@@ -7871,6 +8012,13 @@ class $$FightersTableFilterComposer
 
   ColumnFilters<int> get performanceOfTheNightCount => $composableBuilder(
       column: $table.performanceOfTheNightCount,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get condition => $composableBuilder(
+      column: $table.condition, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get lastFoughtWeek => $composableBuilder(
+      column: $table.lastFoughtWeek,
       builder: (column) => ColumnFilters(column));
 
   ColumnFilters<bool> get isChampion => $composableBuilder(
@@ -8175,6 +8323,13 @@ class $$FightersTableOrderingComposer
       column: $table.performanceOfTheNightCount,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<int> get condition => $composableBuilder(
+      column: $table.condition, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get lastFoughtWeek => $composableBuilder(
+      column: $table.lastFoughtWeek,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<bool> get isChampion => $composableBuilder(
       column: $table.isChampion, builder: (column) => ColumnOrderings(column));
 
@@ -8441,6 +8596,12 @@ class $$FightersTableAnnotationComposer
   GeneratedColumn<int> get performanceOfTheNightCount => $composableBuilder(
       column: $table.performanceOfTheNightCount, builder: (column) => column);
 
+  GeneratedColumn<int> get condition =>
+      $composableBuilder(column: $table.condition, builder: (column) => column);
+
+  GeneratedColumn<int> get lastFoughtWeek => $composableBuilder(
+      column: $table.lastFoughtWeek, builder: (column) => column);
+
   GeneratedColumn<bool> get isChampion => $composableBuilder(
       column: $table.isChampion, builder: (column) => column);
 
@@ -8554,6 +8715,8 @@ class $$FightersTableTableManager extends RootTableManager<
             Value<String?> retirementReason = const Value.absent(),
             Value<int> fightOfTheNightCount = const Value.absent(),
             Value<int> performanceOfTheNightCount = const Value.absent(),
+            Value<int> condition = const Value.absent(),
+            Value<int?> lastFoughtWeek = const Value.absent(),
             Value<bool> isChampion = const Value.absent(),
             Value<bool> isInterimChampion = const Value.absent(),
             Value<int> rowid = const Value.absent(),
@@ -8642,6 +8805,8 @@ class $$FightersTableTableManager extends RootTableManager<
             retirementReason: retirementReason,
             fightOfTheNightCount: fightOfTheNightCount,
             performanceOfTheNightCount: performanceOfTheNightCount,
+            condition: condition,
+            lastFoughtWeek: lastFoughtWeek,
             isChampion: isChampion,
             isInterimChampion: isInterimChampion,
             rowid: rowid,
@@ -8730,6 +8895,8 @@ class $$FightersTableTableManager extends RootTableManager<
             Value<String?> retirementReason = const Value.absent(),
             Value<int> fightOfTheNightCount = const Value.absent(),
             Value<int> performanceOfTheNightCount = const Value.absent(),
+            Value<int> condition = const Value.absent(),
+            Value<int?> lastFoughtWeek = const Value.absent(),
             Value<bool> isChampion = const Value.absent(),
             Value<bool> isInterimChampion = const Value.absent(),
             Value<int> rowid = const Value.absent(),
@@ -8818,6 +8985,8 @@ class $$FightersTableTableManager extends RootTableManager<
             retirementReason: retirementReason,
             fightOfTheNightCount: fightOfTheNightCount,
             performanceOfTheNightCount: performanceOfTheNightCount,
+            condition: condition,
+            lastFoughtWeek: lastFoughtWeek,
             isChampion: isChampion,
             isInterimChampion: isInterimChampion,
             rowid: rowid,
@@ -9313,6 +9482,7 @@ typedef $$OrganizationsTableProcessedTableManager = ProcessedTableManager<
     PrefetchHooks Function()>;
 typedef $$EventsTableCreateCompanionBuilder = EventsCompanion Function({
   required String id,
+  Value<int> bookedAtWeek,
   Value<String> saveId,
   required String name,
   required DateTime date,
@@ -9331,6 +9501,7 @@ typedef $$EventsTableCreateCompanionBuilder = EventsCompanion Function({
 });
 typedef $$EventsTableUpdateCompanionBuilder = EventsCompanion Function({
   Value<String> id,
+  Value<int> bookedAtWeek,
   Value<String> saveId,
   Value<String> name,
   Value<DateTime> date,
@@ -9359,6 +9530,9 @@ class $$EventsTableFilterComposer
   });
   ColumnFilters<String> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get bookedAtWeek => $composableBuilder(
+      column: $table.bookedAtWeek, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get saveId => $composableBuilder(
       column: $table.saveId, builder: (column) => ColumnFilters(column));
@@ -9420,6 +9594,10 @@ class $$EventsTableOrderingComposer
   ColumnOrderings<String> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<int> get bookedAtWeek => $composableBuilder(
+      column: $table.bookedAtWeek,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get saveId => $composableBuilder(
       column: $table.saveId, builder: (column) => ColumnOrderings(column));
 
@@ -9479,6 +9657,9 @@ class $$EventsTableAnnotationComposer
   });
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get bookedAtWeek => $composableBuilder(
+      column: $table.bookedAtWeek, builder: (column) => column);
 
   GeneratedColumn<String> get saveId =>
       $composableBuilder(column: $table.saveId, builder: (column) => column);
@@ -9549,6 +9730,7 @@ class $$EventsTableTableManager extends RootTableManager<
               $$EventsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback: ({
             Value<String> id = const Value.absent(),
+            Value<int> bookedAtWeek = const Value.absent(),
             Value<String> saveId = const Value.absent(),
             Value<String> name = const Value.absent(),
             Value<DateTime> date = const Value.absent(),
@@ -9568,6 +9750,7 @@ class $$EventsTableTableManager extends RootTableManager<
           }) =>
               EventsCompanion(
             id: id,
+            bookedAtWeek: bookedAtWeek,
             saveId: saveId,
             name: name,
             date: date,
@@ -9586,6 +9769,7 @@ class $$EventsTableTableManager extends RootTableManager<
           ),
           createCompanionCallback: ({
             required String id,
+            Value<int> bookedAtWeek = const Value.absent(),
             Value<String> saveId = const Value.absent(),
             required String name,
             required DateTime date,
@@ -9605,6 +9789,7 @@ class $$EventsTableTableManager extends RootTableManager<
           }) =>
               EventsCompanion.insert(
             id: id,
+            bookedAtWeek: bookedAtWeek,
             saveId: saveId,
             name: name,
             date: date,

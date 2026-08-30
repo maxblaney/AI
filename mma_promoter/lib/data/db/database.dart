@@ -24,7 +24,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   /// Games persist on every platform now (web included), so a schema
   /// change without a matching migration step here would silently break
@@ -72,6 +72,15 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(fights, fights.statsBJson);
             await m.addColumn(fighters, fighters.isChampion);
             await m.addColumn(fighters, fighters.isInterimChampion);
+          }
+          if (from < 4) {
+            // v4 adds the condition/sharpness indicators. Existing
+            // fighters default to full condition and no recorded last
+            // fight, which reads as a rested roster — the alternative
+            // would be inventing wear that never happened.
+            await m.addColumn(fighters, fighters.condition);
+            await m.addColumn(fighters, fighters.lastFoughtWeek);
+            await m.addColumn(events, events.bookedAtWeek);
           }
         },
       );

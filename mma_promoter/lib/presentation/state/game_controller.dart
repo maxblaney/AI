@@ -16,6 +16,7 @@ import '../../data/repositories/repository_contracts.dart';
 import '../../data/repositories/save_scope.dart';
 import '../../data/seed/roster_seed.dart';
 import '../../domain/calendar/game_calendar.dart';
+import '../../domain/condition/fighter_condition.dart';
 import '../../domain/career/career_progression_engine.dart';
 import '../../domain/events/random_event_engine.dart';
 import '../../domain/finance/event_finance_calculator.dart';
@@ -361,6 +362,18 @@ class GameController extends ChangeNotifier {
   }
   Future<List<Fight>> getEventCard(String id) => _eventRepo.getCard(id);
 
+  /// How many weeks of camp a fighter got for their upcoming bout — the
+  /// gap between the card being booked and the event itself. Null when
+  /// they have nothing booked.
+  int? campWeeksFor(String fighterId) {
+    final booking = bookingsByFighterId[fighterId];
+    if (booking == null) return null;
+    final event = events.where((e) => e.id == booking.eventId).firstOrNull;
+    if (event == null) return null;
+    return (GameCalendar.weekNumberFor(event.date) - event.bookedAtWeek)
+        .clamp(0, 52);
+  }
+
   /// Rebuilds [bookingsByFighterId] from the cards of every event that
   /// hasn't been run yet.
   Future<void> _refreshBookings() async {
@@ -474,6 +487,9 @@ class GameController extends ChangeNotifier {
       date: date,
       venue: venue,
       ticketPrice: ticketPrice,
+      // Camp length is the gap between this and the event's own week —
+      // booking short notice is what leaves fighters unprepared.
+      bookedAtWeek: org.currentWeek,
     );
     await _eventRepo.saveEvent(event);
     final fightsWithEventId =
@@ -673,15 +689,27 @@ class GameController extends ChangeNotifier {
   }
 
   /// Clears any injury whose countdown has reached [Organization.currentWeek].
+  /// Weekly upkeep on every fighter: injuries that have run their course
+  /// clear, and everyone recovers a little condition. Only fighters who
+  /// actually change are written back.
   Future<void> _healInjuries(Organization org) async {
     for (final fighter in allFighters) {
       final clearsAt = fighter.injuryClearsAtWeek;
-      if (clearsAt != null && clearsAt <= org.currentWeek) {
-        await _fighterRepo.save(fighter.copyWith(
-          injuryStatus: InjuryStatus.healthy,
-          clearInjuryClearsAtWeek: true,
-        ));
-      }
+      final injuryOver = clearsAt != null && clearsAt <= org.currentWeek;
+      final recovered =
+          FighterConditionCalculator.conditionAfterRest(fighter.condition);
+
+      if (!injuryOver && recovered == fighter.condition) continue;
+
+      await _fighterRepo.save(
+        injuryOver
+            ? fighter.copyWith(
+                injuryStatus: InjuryStatus.healthy,
+                clearInjuryClearsAtWeek: true,
+                condition: recovered,
+              )
+            : fighter.copyWith(condition: recovered),
+      );
     }
   }
 
@@ -748,6 +776,11 @@ class GameController extends ChangeNotifier {
     final b = fighterLookup[fight.fighterBId];
     if (a == null || b == null) return [];
 
+    // How much the fight itself took out of them: how long it lasted, and
+    // whether it ended in a finish rather than going to the cards.
+    final roundsFought = result.round;
+    final wasFinished = result.method != FightMethod.decision && !result.isDraw;
+
     final scoreA = result.isDraw ? 0.5 : (result.winnerId == a.id ? 1.0 : 0.0);
     final (newEloA, newEloB) =
         _careerEngine.updateElo(a.eloRating, b.eloRating, scoreA);
@@ -758,12 +791,16 @@ class GameController extends ChangeNotifier {
         record: a.record.addDraw(),
         eloRating: newEloA,
         injuryFromFight: result.fighterAInjury,
+        roundsFought: roundsFought,
+        wasFinished: wasFinished,
       );
       final updatedB = await _applyPostFight(
         b,
         record: b.record.addDraw(),
         eloRating: newEloB,
         injuryFromFight: result.fighterBInjury,
+        roundsFought: roundsFought,
+        wasFinished: wasFinished,
       );
       await _fighterRepo.save(updatedA);
       await _fighterRepo.save(updatedB);
@@ -788,6 +825,8 @@ class GameController extends ChangeNotifier {
       popularityDelta: 2 + result.winnerPerformanceRating ~/ 20,
       moraleDelta: 8,
       injuryFromFight: winnerInjury,
+      roundsFought: roundsFought,
+      wasFinished: wasFinished,
     );
     final updatedLoser = await _applyPostFight(
       loser,
@@ -798,6 +837,8 @@ class GameController extends ChangeNotifier {
       popularityDelta: 1,
       moraleDelta: -10,
       injuryFromFight: loserInjury,
+      roundsFought: roundsFought,
+      wasFinished: wasFinished,
     );
     await _fighterRepo.save(updatedWinner);
     await _fighterRepo.save(updatedLoser);
@@ -823,6 +864,8 @@ class GameController extends ChangeNotifier {
     int popularityDelta = 0,
     int moraleDelta = 0,
     InjuryStatus injuryFromFight = InjuryStatus.healthy,
+    int roundsFought = 3,
+    bool wasFinished = false,
   }) async {
     final newWinStreak = winStreak ?? fighter.winStreak;
     final newLossStreak = lossStreak ?? fighter.lossStreak;
@@ -839,6 +882,14 @@ class GameController extends ChangeNotifier {
       // Fighting never heals a pre-existing injury, only matches or
       // worsens it with whatever this fight itself caused.
       injuryStatus: newInjuryStatus,
+      // Fights take a physical toll beyond injuries — a long war leaves a
+      // fighter worn even when nothing is torn.
+      condition: FighterConditionCalculator.conditionAfterFight(
+        current: fighter.condition,
+        roundsFought: roundsFought,
+        wasFinished: wasFinished,
+      ),
+      lastFoughtWeek: organization?.currentWeek,
     );
     updated = updated.copyWith(
       potential: _careerEngine.adjustPotential(

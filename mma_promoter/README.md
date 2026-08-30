@@ -325,6 +325,26 @@ the native mobile app with real persistence.
   neutral and warm greys, warm backdrops muddied the darker skin tones).
   It still falls back to an initial-letter circle for fighters saved
   before portraits existed.
+- **Condition and sharpness**: every roster row carries two readings.
+  **Condition** (Peak / Healthy / In-Shape / Injured / Battered) is
+  physical freshness — it falls with hard fights, more for a long war than
+  a quick finish, and recovers a little every week of rest. An actual
+  injury outranks freshness, so the bottom two tiers come straight from
+  [InjuryStatus]. **Sharpness** (Sharp / Prepared / Uneasy / Not Prepared
+  / Out of Shape) is how ready they are, driven by camp length — the gap
+  between the card being booked and the event. Eight weeks is a full camp
+  and the only way to be Sharp; book someone on two weeks' notice and
+  they'll show up Not Prepared. With nothing booked it falls back to ring
+  rust: a fighter idle for a year drifts to Out of Shape.
+  **Neither feeds the fight simulation yet** — they're indicators of the
+  state of your roster, not modifiers on outcomes. Wiring them into the
+  resolver would change how every fight resolves, which is a decision to
+  make deliberately rather than a side effect of showing a label.
+- **Booking needs two fighters in one division**, and the Book Event
+  screen now says so. Previously Add Fight simply greyed out with no
+  explanation, which reads as the game being broken; it now names the
+  actual shortfall (nobody signed, only one signed, too many injured, or
+  no division with two available fighters) and what to do about it.
 - **Record book**: the History tab's leaderboards are scoped to fights
   that happened *on this promotion's cards*. A fighter who arrives 10-2
   and goes 6-0 for you counts as 6 fights, not 18 — their record

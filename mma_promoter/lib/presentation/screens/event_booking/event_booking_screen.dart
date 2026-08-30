@@ -158,6 +158,14 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
               ),
             ],
           ),
+          // A disabled Add Fight button with no explanation is a dead end
+          // — this says exactly what's missing and how to fix it.
+          if (bookableClasses.isEmpty)
+            _CannotBookNotice(
+              signedCount: controller.signedRoster.length,
+              healthyCount: roster.length,
+              alreadyBooked: _usedFighterIds.length,
+            ),
           if (_card.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 8),
@@ -645,6 +653,74 @@ class _CompareRow extends StatelessWidget {
             child: Text('$b', textAlign: TextAlign.end, style: style(b > a)),
           ),
         ],
+      ),
+    );
+  }
+}
+
+
+/// Explains why no fight can be added. Booking needs two healthy, signed,
+/// not-already-booked fighters *in the same division* — several different
+/// shortfalls land here, and each one needs a different fix.
+class _CannotBookNotice extends StatelessWidget {
+  final int signedCount;
+  final int healthyCount;
+  final int alreadyBooked;
+
+  const _CannotBookNotice({
+    required this.signedCount,
+    required this.healthyCount,
+    required this.alreadyBooked,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    final String reason;
+    if (signedCount == 0) {
+      reason = "You haven't signed anyone yet. Head to Roster > Talent Pool, "
+          'open a fighter and sign them.';
+    } else if (signedCount == 1) {
+      reason = 'You have one fighter signed. A fight needs two, and both '
+          'must be in the same weight class.';
+    } else if (healthyCount < 2) {
+      reason = 'Too many of your roster are hurt to make a fight. Injured '
+          "fighters can't be booked — advance a few weeks to let them heal.";
+    } else if (alreadyBooked > 0) {
+      reason = 'Everyone left is either already on this card or has nobody '
+          'to face in their division.';
+    } else {
+      reason = 'No division has two available fighters. Fights can only be '
+          'made between fighters in the same weight class, so sign a second '
+          'fighter in a division you already have someone in.';
+    }
+
+    return Card(
+      color: scheme.surfaceContainerHighest,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.info_outline, size: 18, color: scheme.primary),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Can't add a fight yet",
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(reason,
+                      style: Theme.of(context).textTheme.bodySmall),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
