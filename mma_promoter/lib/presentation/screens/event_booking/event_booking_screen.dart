@@ -1,4 +1,5 @@
 import '../../../domain/betting/fight_odds.dart';
+import '../../../domain/booking/fight_hype.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -304,6 +305,7 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
                     _MatchupPreview(
                       a: available.firstWhere((f) => f.id == fighterAId),
                       b: available.firstWhere((f) => f.id == fighterBId),
+                      titleFightType: titleFightType,
                     ),
                   const SizedBox(height: 12),
                   const Text('Rounds'),
@@ -551,11 +553,24 @@ class _MatchupPreview extends StatelessWidget {
   final Fighter a;
   final Fighter b;
 
-  const _MatchupPreview({required this.a, required this.b});
+  /// Feeds the hype reading — a belt on the line changes how big the
+  /// fight is, so the bar has to move when the player sets it.
+  final TitleFightType titleFightType;
+
+  const _MatchupPreview({
+    required this.a,
+    required this.b,
+    this.titleFightType = TitleFightType.none,
+  });
 
   @override
   Widget build(BuildContext context) {
     final odds = OddsCalculator.forFight(a: a, b: b);
+    final hype = HypeCalculator.forFight(
+      a: a,
+      b: b,
+      titleFightType: titleFightType,
+    );
     final scheme = Theme.of(context).colorScheme;
 
     return Padding(
@@ -610,6 +625,8 @@ class _MatchupPreview extends StatelessWidget {
               ],
             ),
             const Divider(height: 16),
+            _HypeMeter(hype: hype),
+            const Divider(height: 16),
             _CompareRow(
                 label: 'Overall', a: a.overall.round(), b: b.overall.round()),
             _CompareRow(
@@ -648,6 +665,130 @@ class _MatchupPreview extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// How big a fight this is, as a bar. Booking on stats alone tells you
+/// who wins; this tells you whether anyone wants to watch — which is the
+/// promoter's actual job. The breakdown underneath says *why*, so a
+/// short bar is a prompt to fix something rather than a mystery.
+class _HypeMeter extends StatelessWidget {
+  final FightHype hype;
+
+  const _HypeMeter({required this.hype});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _hypeColor(hype.score);
+    final weakness = hype.weakestLink;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text('HYPE', style: Theme.of(context).textTheme.bodySmall),
+            const Spacer(),
+            Text(
+              hype.label,
+              style: Theme.of(context)
+                  .textTheme
+                  .labelLarge
+                  ?.copyWith(color: color, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(width: 6),
+            Text('${hype.score}',
+                style: Theme.of(context).textTheme.bodySmall),
+          ],
+        ),
+        const SizedBox(height: 6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: hype.score / 100,
+            minHeight: 8,
+            backgroundColor: Theme.of(context)
+                .colorScheme
+                .onSurfaceVariant
+                .withOpacity(0.18),
+            valueColor: AlwaysStoppedAnimation<Color>(color),
+          ),
+        ),
+        const SizedBox(height: 8),
+        // The four things that sell a fight, so the player can see which
+        // one is letting this matchup down.
+        Row(
+          children: [
+            _HypeFactor(label: 'Stars', value: hype.starPower),
+            _HypeFactor(label: 'Even', value: hype.competitiveness),
+            _HypeFactor(label: 'Violence', value: hype.violence),
+            _HypeFactor(label: 'Stakes', value: hype.stakes),
+          ],
+        ),
+        if (weakness != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            'Holding it back: $weakness.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Cold red through hot amber — a glance at the colour should read the
+/// same way as the number.
+Color _hypeColor(int score) {
+  if (score >= 80) return Colors.amber;
+  if (score >= 64) return Colors.orangeAccent;
+  if (score >= 48) return Colors.lightGreen;
+  if (score >= 30) return Colors.blueGrey;
+  return Colors.grey;
+}
+
+/// One contributing factor, as a short labelled sub-bar.
+class _HypeFactor extends StatelessWidget {
+  final String label;
+  final int value;
+
+  const _HypeFactor({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.only(right: 6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(fontSize: 10),
+            ),
+            const SizedBox(height: 2),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(2),
+              child: LinearProgressIndicator(
+                value: value / 100,
+                minHeight: 4,
+                backgroundColor: Theme.of(context)
+                    .colorScheme
+                    .onSurfaceVariant
+                    .withOpacity(0.18),
+                valueColor:
+                    AlwaysStoppedAnimation<Color>(_hypeColor(value)),
+              ),
             ),
           ],
         ),

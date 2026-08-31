@@ -353,6 +353,19 @@ the native mobile app with real persistence.
   actual shortfall (nobody signed, only one signed, too many injured,
   someone serving a suspension, or no division with two available
   fighters) and what to do about it.
+- **Hype rating** (`HypeCalculator`): the booking dialog's matchup
+  preview carries a hype bar, 0-100, with a band (Filler → Decent Scrap →
+  Solid Draw → Big Fight → Must-See) and the four factors behind it —
+  **Stars** (combined draw, weighted toward the bigger name, with a
+  little credit for raw skill), **Even** (straight off the betting line:
+  a pick'em is the best fight there is, a lock the worst), **Violence**
+  (power, aggression, killer instinct, striking frequency and head
+  hunting, minus positional control — a fighter whose plan is to hold
+  someone down works against it) and **Stakes** (a belt, a champion in a
+  non-title fight, win streaks, both men ranked). Whichever factor is
+  weakest is named underneath, so a short bar tells you what to fix
+  rather than just that something is wrong. Setting Title Implications
+  moves the bar live.
 - **Fighters can cross one division.** A fighter may be booked at their
   own weight or one class either side, flagged in the picker with an
   arrow and the weight they're leaving. This is a normal career move in
@@ -479,9 +492,13 @@ the native mobile app with real persistence.
   event in chronological order, flagging whichever one is ready to run.
 - **Fight of the Night / Performance of the Night**: after an event
   completes, award either from the results screen. Bonus scales with the
-  org's reputation tier (Local $500 → International $100k), paid out of
-  org cash, and gives the winner(s) a popularity/morale bump. One award of
-  each per event.
+  org's reputation tier (Local $500 → International $100k) and gives the
+  winner(s) a popularity/morale bump. One award of each per event. The
+  money comes off org cash **and is charged to that event's expenses**,
+  so the card's net profit on the results and Finance screens is what it
+  actually cost you — awards land after the finance calculator has run,
+  so they're added to the event's books rather than being part of the
+  original calculation.
 - **Fight history**: a fighter's profile lists their past fights (opponent,
   method, round, event/date) next to their contract, queried live from
   every event's card.

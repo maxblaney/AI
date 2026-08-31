@@ -1061,7 +1061,15 @@ class GameController extends ChangeNotifier {
     if (fight == null) return 'Fight not found.';
 
     final bonus = org.reputationTier.nightlyBonusAmount;
-    await _eventRepo.saveEvent(event.copyWith(fightOfTheNightFightId: fightId));
+    await _eventRepo.saveEvent(event.copyWith(
+      fightOfTheNightFightId: fightId,
+      // A bonus is money this show cost you, so it belongs on this
+      // show's books — not just quietly off the org's cash balance.
+      // Awards land after the card is simulated, which is why this adds
+      // to what the finance calculator already worked out rather than
+      // being part of it.
+      expenses: event.expenses + bonus,
+    ));
     await _orgRepo.save(org.copyWith(cashBalance: org.cashBalance - bonus));
 
     for (final id in [fight.fighterAId, fight.fighterBId]) {
@@ -1088,9 +1096,11 @@ class GameController extends ChangeNotifier {
     if (event.performanceOfTheNightFighterId != null) return 'Already awarded.';
 
     final bonus = org.reputationTier.nightlyBonusAmount;
-    await _eventRepo.saveEvent(
-      event.copyWith(performanceOfTheNightFighterId: fighterId),
-    );
+    await _eventRepo.saveEvent(event.copyWith(
+      performanceOfTheNightFighterId: fighterId,
+      // Same as Fight of the Night: the event wears the cost.
+      expenses: event.expenses + bonus,
+    ));
     await _orgRepo.save(org.copyWith(cashBalance: org.cashBalance - bonus));
 
     final fighter = fighterById(fighterId);

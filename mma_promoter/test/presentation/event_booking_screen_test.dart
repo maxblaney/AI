@@ -111,4 +111,40 @@ void main() {
 
     controller.dispose();
   });
+
+  testWidgets('the matchup preview shows a hype bar once both corners are set',
+      (tester) async {
+    final controller = await controllerWith([
+      _signed('a', 'Fighter A', WeightClass.lightweight),
+      _signed('b', 'Fighter B', WeightClass.lightweight),
+    ]);
+    await tester.pumpWidget(wrap(controller));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Add Fight'));
+    await tester.pumpAndSettle();
+
+    // Nothing to rate until there are two corners.
+    expect(find.text('HYPE'), findsNothing);
+
+    Future<void> pick(int dropdown, String name) async {
+      await tester
+          .tap(find.byType(DropdownButtonFormField<String>).at(dropdown));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(name).last);
+      await tester.pumpAndSettle();
+    }
+
+    await pick(0, 'Fighter A');
+    await pick(1, 'Fighter B');
+
+    expect(find.text('HYPE'), findsOneWidget);
+    expect(find.text('Stars'), findsOneWidget);
+    expect(find.text('Even'), findsOneWidget);
+    expect(find.text('Violence'), findsOneWidget);
+    expect(find.text('Stakes'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    controller.dispose();
+  });
 }
