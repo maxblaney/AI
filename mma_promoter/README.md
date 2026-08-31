@@ -353,6 +353,14 @@ the native mobile app with real persistence.
   actual shortfall (nobody signed, only one signed, too many injured,
   someone serving a suspension, or no division with two available
   fighters) and what to do about it.
+- **Roster search**: a search box above both roster tabs, matching name
+  or nationality, plus a "12 of 400 free agents" count so it's obvious
+  when the rest are hidden rather than missing. The talent pool is 400
+  fighters deep (50 per division) in one alphabetical list, and the only
+  tools before this were a sort sheet and a filter sheet behind app-bar
+  icons — which also apply to *both* tabs at once, so a filter set on My
+  Roster silently emptied the Talent Pool. A banner now says so, with a
+  one-tap Clear.
 - **Hype rating** (`HypeCalculator`): the booking dialog's matchup
   preview carries a hype bar, 0-100, with a band (Filler → Decent Scrap →
   Solid Draw → Big Fight → Must-See) and the four factors behind it —

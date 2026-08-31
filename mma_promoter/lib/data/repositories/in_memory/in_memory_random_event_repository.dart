@@ -15,10 +15,20 @@ class InMemoryRandomEventRepository implements RandomEventRepositoryContract {
   void _emit() => _controller.add(_unresolvedSnapshot());
 
   @override
-  Stream<List<RandomEvent>> watchUnresolved() async* {
-    yield _unresolvedSnapshot();
-    yield* _controller.stream;
-  }
+  // Stream.multi rather than an `async*` generator: a generator yields
+  // the snapshot and only *then* subscribes to the broadcast stream, so
+  // anything saved in between is dropped and the listener is stuck on a
+  // stale snapshot forever. Here the subscription is attached before the
+  // snapshot goes out, which closes that window.
+  Stream<List<RandomEvent>> watchUnresolved() => Stream.multi((listener) {
+        final subscription = _controller.stream.listen(
+          listener.addSync,
+          onError: listener.addErrorSync,
+          onDone: listener.closeSync,
+        );
+        listener.onCancel = subscription.cancel;
+        listener.addSync(_unresolvedSnapshot());
+      });
 
   @override
   Future<void> save(RandomEvent event) async {
