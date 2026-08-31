@@ -40,17 +40,13 @@ class _Judge {
   });
 }
 
+/// The commission's pool of officials. Four names, three seats — so the
+/// panel changes fight to fight and one judge always sits out.
 const _judgeNames = [
-  'Sal D\'Amato',
-  'Chris Lee',
-  'Derek Cleary',
-  'Junichiro Kamijo',
-  'Ron McCarthy',
-  'Eric Colon',
-  'Mike Bell',
-  'Doug Crosby',
-  'Glenn Trowbridge',
-  'Marcos Rosales',
+  'Kyle Gates',
+  'Eric Parsons',
+  'Lucas Craft',
+  'Pablo Llorente',
 ];
 
 /// Scores a completed fight the way a three-judge panel would.
@@ -89,16 +85,9 @@ class JudgePanel {
     final scoreA = _impression(judge, a);
     final scoreB = _impression(judge, b);
     final margin = (scoreA - scoreB).abs();
-    final leader = max(scoreA, scoreB);
-
-    // A 10-8 needs genuine domination, not just a clear round: either two
-    // knockdowns, or a big margin that's also a big *share* of the round.
-    final dominant = (a.knockdowns + b.knockdowns) >= 2 ||
-        (margin > 22 && leader > 0 && margin / leader > 0.62) ||
-        (margin > 45);
 
     const winnerPoints = 10;
-    final loserPoints = dominant ? 8 : 9;
+    final loserPoints = _isTenEight(a, b, scoreA, scoreB, margin) ? 8 : 9;
 
     if (scoreA > scoreB) {
       return RoundScore(round: round, fighterAScore: winnerPoints, fighterBScore: loserPoints);
@@ -110,6 +99,57 @@ class JudgePanel {
     return _random.nextBool()
         ? RoundScore(round: round, fighterAScore: 10, fighterBScore: 9)
         : RoundScore(round: round, fighterAScore: 9, fighterBScore: 10);
+  }
+
+  /// Whether the round was one-sided enough to be scored 10-8.
+  ///
+  /// A 10-8 is not "a clear round" — it's a round the loser barely
+  /// survived, and it has to be rare enough to mean something when it
+  /// appears on a card. The unified rules ask a judge to weigh three
+  /// things: **impact** (did the winner hurt them), **dominance** (was it
+  /// one-way traffic) and **duration** (did it last, or was it one
+  /// flurry). All three have to be there.
+  ///
+  /// Requiring all three is what keeps the number honest. A round spent
+  /// grinding out control with nothing behind it is a 10-9 however wide
+  /// the points gap looks, and so is a round with one knockdown in it
+  /// where the other man fought back. Scoring on the points margin alone
+  /// — which is what the old rule did — made two thirds of all rounds
+  /// 10-8s; requiring impact alone still left a quarter of them.
+  bool _isTenEight(
+    RoundTally a,
+    RoundTally b,
+    double scoreA,
+    double scoreB,
+    double margin,
+  ) {
+    if (scoreA == scoreB) return false;
+    final winner = scoreA > scoreB ? a : b;
+    final loser = scoreA > scoreB ? b : a;
+
+    // Two knockdowns is a 10-8 on its own, every time.
+    if (winner.knockdowns >= 2) return true;
+
+    // Impact: they were dropped, nearly finished, or took a beating that
+    // was overwhelmingly one-way.
+    final damageEdge = winner.damage - loser.damage;
+    final impact = winner.knockdowns >= 1 ||
+        winner.nearFinishes >= 1 ||
+        (damageEdge > 20 && loser.damage < damageEdge * 0.3);
+    if (!impact) return false;
+
+    // Dominance: the loser gave almost nothing back.
+    final loserOutput = loser.significantStrikes +
+        loser.takedowns * 3 +
+        loser.controlValue * 0.05 +
+        loser.knockdowns * 10 +
+        loser.submissionAttempts * 3;
+    final dominance = loserOutput < 4 && margin > 30;
+
+    // Duration: it went on, rather than being one good exchange.
+    final duration = winner.controlValue > 230 || winner.significantStrikes > 34;
+
+    return dominance && duration;
   }
 
   /// Damage is weighted heaviest, then volume, then grappling — roughly

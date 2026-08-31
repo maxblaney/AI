@@ -268,11 +268,31 @@ the native mobile app with real persistence.
   fight in the results right after simulating — with 1x/2x/4x speed and a
   skip button (`FightBreakdownScreen`). This data isn't persisted, so it's
   only available immediately after simulating.
-- **Realistic judging**: each of the three judges draws their own
-  striking- vs grappling-weighting bias for the fight, so close rounds
-  genuinely divide a panel — which is what produces split and majority
-  decisions instead of every fight being unanimous. Rounds are scored
-  10-9, or 10-8 for genuine domination (`judging.dart`).
+- **Realistic judging**: three judges — drawn from a commission pool of
+  four (Kyle Gates, Eric Parsons, Lucas Craft, Pablo Llorente), so the
+  panel changes fight to fight — each draw their own striking- vs
+  grappling-weighting bias, so close rounds genuinely divide a panel,
+  which is what produces split and majority decisions instead of every
+  fight being unanimous (`judging.dart`).
+- **10-8 rounds mean something.** A 10-8 needs all three of what the
+  unified rules ask a judge to weigh: **impact** (a knockdown, a near
+  finish, or a beating that was overwhelmingly one-way), **dominance**
+  (the loser gave almost nothing back) and **duration** (it lasted,
+  rather than being one good exchange). Two knockdowns is a 10-8 on its
+  own. Nothing else is: a round won on control alone is a 10-9 however
+  wide the points gap, and so is a round with one knockdown in it where
+  the other man fought back. This lands at ~4-5% of scored rounds, in
+  line with the real sport. The previous rule scored on the points margin
+  and made **68%** of all rounds 10-8s.
+- **Submissions match the sport's mix**: rear-naked chokes are 38.5% of
+  all taps, guillotines 17.4%, armbars 13.1%, and a calf slicer is a
+  rounding error (`submissions.dart`). Each hold carries both its target
+  share and the positions it can genuinely be applied from — you can't
+  take someone's back from inside their guard — and a per-hold weight
+  reconciles the two, since a hold reachable from positions the sim
+  visits constantly would otherwise overshoot. The weights are fitted
+  against the simulator; `test/domain/submission_mix_test.dart` measures
+  the real output and fails if a change to the ground game skews it.
 - **56-attribute fighter model**: **23 Fighting** stats across striking
   (punching, kicking, power, speed, accuracy, defense, head movement,
   blocking, footwork), wrestling/clinch (takedowns, takedown defense,
@@ -581,10 +601,19 @@ sweeping, or attacking a submission off their back.
 **Referee.** A ground position with nothing happening for ~70 seconds gets
 stood up, which is what stops fights becoming 60% control time.
 
-**Judging.** Three judges each draw a striking-vs-grappling bias for the
-fight and score every round on damage (weighted heaviest), significant
-strikes, knockdowns, position-weighted control time, takedowns and
-submission attempts. That disagreement is what produces split decisions.
+**Judging.** Three of the four commission judges each draw a
+striking-vs-grappling bias for the fight and score every round on damage
+(weighted heaviest), significant strikes, knockdowns, position-weighted
+control time, takedowns and submission attempts. That disagreement is what
+produces split decisions. A 10-8 is gated separately from the points
+margin — see `_isTenEight` — because scoring it off the margin turned two
+thirds of all rounds into 10-8s.
+
+**Determinism.** `GameController` takes an optional `Random`, which seeds
+the fight resolver, the finance calculator and both event engines
+together. Tests pass one so a run is repeatable; the app leaves it null.
+Before that existed, every controller-backed test was quietly rolling
+dice and could fail on an unlucky simulation.
 
 ### Calibration
 
@@ -628,8 +657,9 @@ lib/
   domain/
     simulation/        # FightResolver — position-based bout simulation
                        #   (standing/clinch/ground, damage, stamina) and
-                       #   judging.dart, the three-judge panel. Pure Dart,
-                       #   seedable.
+                       #   judging.dart, the three-judge panel, and
+                       #   submissions.dart, the weighted hold catalog.
+                       #   Pure Dart, seedable.
     finance/            # EventFinanceCalculator — attendance/PPV/revenue/
                        #   expenses/reputation from a resolved card
     events/              # RandomEventEngine — generates and resolves

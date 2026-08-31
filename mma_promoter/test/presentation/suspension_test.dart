@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mma_promoter/data/db/database.dart';
@@ -15,7 +16,7 @@ void main() {
 
   setUp(() async {
     db = AppDatabase.forTesting(NativeDatabase.memory());
-    controller = GameController(database: db);
+    controller = GameController(database: db, random: Random(11));
     await controller.init();
     await controller.startNewGame(
       orgName: 'Ban FC',

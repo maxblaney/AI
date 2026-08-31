@@ -2,6 +2,7 @@ import 'dart:math';
 
 import '../../data/models/models.dart';
 import 'judging.dart';
+import 'submissions.dart';
 
 /// Live, mutable state for one fighter over the course of one bout.
 ///
@@ -1432,19 +1433,15 @@ class FightResolver {
     return name[0].toUpperCase() + name.substring(1);
   }
 
+  /// Which hold this attempt is. Positions still gate what's possible,
+  /// but within a position the pick is weighted by how often each
+  /// submission actually finishes fights — see [SubmissionCatalog].
   String _submissionName({required bool fromTop}) {
-    if (!fromTop) {
-      const guardSubs = ['Triangle Choke', 'Armbar', 'Omoplata', 'Guillotine Choke', 'Heel Hook'];
-      return guardSubs[_random.nextInt(guardSubs.length)];
-    }
-    final options = switch (_groundPosition) {
-      GroundPosition.backMount => const ['Rear-Naked Choke', 'Rear-Naked Choke', 'Neck Crank'],
-      GroundPosition.mount => const ['Armbar', 'Arm-Triangle Choke', 'Americana'],
-      GroundPosition.sideControl => const ['Kimura', 'Arm-Triangle Choke', "D'Arce Choke"],
-      GroundPosition.halfGuard => const ['Kimura', "D'Arce Choke", 'Arm-Triangle Choke'],
-      GroundPosition.guard => const ['Guillotine Choke', 'Kneebar', 'Heel Hook'],
-    };
-    return options[_random.nextInt(options.length)];
+    return SubmissionCatalog.roll(
+      _random,
+      position: _groundPosition,
+      fromTop: fromTop,
+    ).name;
   }
 }
 

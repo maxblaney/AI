@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -15,7 +16,7 @@ import '../support/fighter_fixtures.dart';
 /// against a pool it has already filled.
 void main() {
   Future<GameController> controllerWith(List<Fighter> pool) async {
-    final controller = GameController.inMemory();
+    final controller = GameController.inMemory(random: Random(11));
     await controller.startNewGame(
       orgName: 'Search FC',
       tier: ReputationTier.regional,

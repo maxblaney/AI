@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mma_promoter/data/db/database.dart';
@@ -112,7 +113,7 @@ void main() {
 
   group('GameController', () {
     test('starts on the saves screen when there are no saves', () async {
-      final controller = GameController(database: db);
+      final controller = GameController(database: db, random: Random(11));
       await controller.init();
       expect(controller.needsNewGame, isTrue);
       expect(controller.activeSaveId, isNull);
@@ -120,7 +121,7 @@ void main() {
     });
 
     test('creates, switches between and deletes saves', () async {
-      final controller = GameController(database: db);
+      final controller = GameController(database: db, random: Random(11));
       await controller.init();
 
       await controller.startNewGame(
@@ -163,7 +164,7 @@ void main() {
     });
 
     test('reopens the most recently played save on startup', () async {
-      final first = GameController(database: db);
+      final first = GameController(database: db, random: Random(11));
       await first.init();
       await first.startNewGame(
           orgName: 'Alpha FC', tier: ReputationTier.regional);
@@ -172,7 +173,7 @@ void main() {
       first.dispose();
 
       // A fresh controller over the same database is what a relaunch is.
-      final relaunched = GameController(database: db);
+      final relaunched = GameController(database: db, random: Random(11));
       await relaunched.init();
       expect(relaunched.needsNewGame, isFalse);
       expect(relaunched.organization!.name, 'Bravo MMA');

@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -32,7 +33,7 @@ Fighter _signed(String id, String name, WeightClass division,
 
 void main() {
   Future<GameController> controllerWith(List<Fighter> roster) async {
-    final controller = GameController.inMemory();
+    final controller = GameController.inMemory(random: Random(11));
     await controller.startNewGame(
       orgName: 'Booking FC',
       tier: ReputationTier.regional,

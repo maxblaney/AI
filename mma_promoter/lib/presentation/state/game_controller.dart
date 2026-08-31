@@ -96,12 +96,16 @@ class GameController extends ChangeNotifier {
   final RandomEventRepositoryContract _randomEventRepo;
   final InboxItemRepositoryContract _inboxRepo;
 
-  final FightResolver _fightResolver = FightResolver();
-  final EventFinanceCalculator _financeCalculator = EventFinanceCalculator();
-  final RandomEventEngine _randomEventEngine = RandomEventEngine();
-  final RosterIncidentEngine _incidentEngine = RosterIncidentEngine();
+  // Every source of chance in the game hangs off one generator, so a
+  // test can seed the whole controller and get the same save twice.
+  // Left unseeded in the app, where the point is that no two playthroughs
+  // are alike.
+  final FightResolver _fightResolver;
+  final EventFinanceCalculator _financeCalculator;
+  final RandomEventEngine _randomEventEngine;
+  final RosterIncidentEngine _incidentEngine;
   final CareerProgressionEngine _careerEngine = CareerProgressionEngine();
-  final Random _rng = Random();
+  final Random _rng;
 
   StreamSubscription<List<Fighter>>? _fighterSub;
   StreamSubscription<Organization?>? _orgSub;
@@ -112,7 +116,10 @@ class GameController extends ChangeNotifier {
   /// Persists to on-device SQLite via Drift. This is the real, shipping
   /// backend — not available on Flutter web (no `dart:io`), which is why
   /// [GameController.inMemory] exists separately.
-  factory GameController({AppDatabase? database}) {
+  /// [random] seeds every roll the controller makes — fight outcomes,
+  /// gate noise, roster incidents. Tests pass one so a run is repeatable;
+  /// the app leaves it null.
+  factory GameController({AppDatabase? database, Random? random}) {
     final db = database ?? AppDatabase();
     final scope = SaveScope();
     return GameController._(
@@ -122,6 +129,7 @@ class GameController extends ChangeNotifier {
       eventRepo: EventRepository(db, scope),
       randomEventRepo: RandomEventRepository(db, scope),
       inboxRepo: InboxItemRepository(db, scope),
+      random: random,
     );
   }
 
@@ -132,22 +140,33 @@ class GameController extends ChangeNotifier {
     required EventRepositoryContract eventRepo,
     required RandomEventRepositoryContract randomEventRepo,
     required InboxItemRepositoryContract inboxRepo,
+    Random? random,
   })  : _scope = scope,
         _fighterRepo = fighterRepo,
         _orgRepo = orgRepo,
         _eventRepo = eventRepo,
         _randomEventRepo = randomEventRepo,
-        _inboxRepo = inboxRepo;
+        _inboxRepo = inboxRepo,
+        _rng = random ?? Random(),
+        _fightResolver = FightResolver(random: random),
+        _financeCalculator = EventFinanceCalculator(random: random),
+        _randomEventEngine = RandomEventEngine(random: random),
+        _incidentEngine = RosterIncidentEngine(random: random);
 
   /// Volatile, non-persistent mode used for the Flutter-web preview build.
   /// Game state resets on every page reload.
-  GameController.inMemory()
+  GameController.inMemory({Random? random})
       : _scope = SaveScope(),
         _fighterRepo = InMemoryFighterRepository(),
         _orgRepo = InMemoryOrganizationRepository(),
         _eventRepo = InMemoryEventRepository(),
         _randomEventRepo = InMemoryRandomEventRepository(),
-        _inboxRepo = InMemoryInboxItemRepository();
+        _inboxRepo = InMemoryInboxItemRepository(),
+        _rng = random ?? Random(),
+        _fightResolver = FightResolver(random: random),
+        _financeCalculator = EventFinanceCalculator(random: random),
+        _randomEventEngine = RandomEventEngine(random: random),
+        _incidentEngine = RosterIncidentEngine(random: random);
 
   bool isLoading = true;
   Organization? organization;
@@ -290,7 +309,7 @@ class GameController extends ChangeNotifier {
     await _orgRepo.touch(org.id, DateTime.now());
 
     // Everyone starts as a free agent — nobody's signed to "My Roster" yet.
-    for (final fighter in generateStartingRoster()) {
+    for (final fighter in generateStartingRoster(random: _rng)) {
       await _fighterRepo.save(fighter);
     }
 
@@ -714,7 +733,7 @@ class GameController extends ChangeNotifier {
 
     final refreshes = weeksElapsed ~/ weeksPerRefresh;
     for (var i = 0; i < refreshes; i++) {
-      for (final fighter in generateMonthlyTalentPool()) {
+      for (final fighter in generateMonthlyTalentPool(random: _rng)) {
         await _fighterRepo.save(fighter);
       }
     }

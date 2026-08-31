@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mma_promoter/data/db/database.dart';
@@ -10,7 +11,7 @@ void main() {
   test('signing a fighter moves them from the talent pool to the roster',
       () async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
-    final controller = GameController(database: db);
+    final controller = GameController(database: db, random: Random(11));
     await controller.init();
     await controller.startNewGame(
         orgName: 'Sign FC', tier: ReputationTier.regional);
