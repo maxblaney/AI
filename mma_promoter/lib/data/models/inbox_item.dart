@@ -1,6 +1,22 @@
 /// What kind of notification an [InboxItem] is — drives its icon and, for
 /// [fightRequest], whether it links to booking a fight for [InboxItem.fighterId].
-enum InboxItemType { injury, retirement, fightRequest }
+enum InboxItemType {
+  injury,
+  retirement,
+  fightRequest,
+
+  /// A failed drug test — the fighter is suspended and the promotion
+  /// wears the story.
+  suspension,
+
+  /// Off-the-clock trouble: a DUI, a bad night out. No suspension, but
+  /// the fighter's head isn't right.
+  misconduct,
+
+  /// Backstage beef between two of your own — bad for the peace, good
+  /// for business.
+  altercation,
+}
 
 extension InboxItemTypeLabel on InboxItemType {
   String get label {
@@ -11,6 +27,12 @@ extension InboxItemTypeLabel on InboxItemType {
         return 'Retirement';
       case InboxItemType.fightRequest:
         return 'Fight Request';
+      case InboxItemType.suspension:
+        return 'Suspension';
+      case InboxItemType.misconduct:
+        return 'Misconduct';
+      case InboxItemType.altercation:
+        return 'Backstage';
     }
   }
 }

@@ -12,6 +12,22 @@ enum WeightClass {
   heavyweight,
 }
 
+extension WeightClassMovement on WeightClass {
+  /// Whether a fighter whose home division is this one can be booked at
+  /// [other]. One step either way: moving up a division (or, with a
+  /// harder cut, down one) is a normal career move in MMA, and it's what
+  /// makes chasing a second belt possible at all. Two divisions in one
+  /// jump is not a fight anyone would sanction.
+  bool canFightAt(WeightClass other) => (index - other.index).abs() <= 1;
+
+  /// How this fighter is crossing over to reach [division]: 'up',
+  /// 'down', or null when it's their own weight.
+  String? movementTo(WeightClass division) {
+    if (division == this) return null;
+    return division.index > index ? 'up' : 'down';
+  }
+}
+
 extension WeightClassLabel on WeightClass {
   String get label {
     switch (this) {

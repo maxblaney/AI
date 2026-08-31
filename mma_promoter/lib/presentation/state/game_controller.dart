@@ -15,12 +15,14 @@ import '../../data/repositories/random_event_repository.dart';
 import '../../data/repositories/repository_contracts.dart';
 import '../../data/repositories/save_scope.dart';
 import '../../data/seed/roster_seed.dart';
+import '../../domain/betting/fight_odds.dart';
 import '../../domain/calendar/game_calendar.dart';
 import '../../domain/condition/fighter_condition.dart';
 import '../../domain/career/career_progression_engine.dart';
 import '../../domain/events/random_event_engine.dart';
 import '../../domain/finance/event_finance_calculator.dart';
 import '../../domain/history/record_book.dart';
+import '../../domain/incidents/roster_incidents.dart';
 import '../../domain/simulation/fight_resolver.dart';
 
 /// Result of resolving one event, kept around so the results screen can
@@ -97,6 +99,7 @@ class GameController extends ChangeNotifier {
   final FightResolver _fightResolver = FightResolver();
   final EventFinanceCalculator _financeCalculator = EventFinanceCalculator();
   final RandomEventEngine _randomEventEngine = RandomEventEngine();
+  final RosterIncidentEngine _incidentEngine = RosterIncidentEngine();
   final CareerProgressionEngine _careerEngine = CareerProgressionEngine();
   final Random _rng = Random();
 
@@ -407,6 +410,7 @@ class GameController extends ChangeNotifier {
     return RecordBook.build(
       fights: fights,
       fighters: {for (final f in allFighters) f.id: f},
+      events: completedEvents,
     );
   }
 
@@ -532,7 +536,15 @@ class GameController extends ChangeNotifier {
         fighterB: b,
         rounds: fight.rounds,
       );
-      resolvedCard.add(fight.copyWith(result: result));
+      // Stamp the line as it stood going in. Both fighters' Elo, record
+      // and condition change the moment this card is applied, so the
+      // pre-fight price is unrecoverable a second later — and it's what
+      // "biggest upset" in the record book is measured against.
+      final odds = OddsCalculator.forFight(a: a, b: b);
+      resolvedCard.add(fight.copyWith(
+        result: result,
+        preFightProbabilityA: odds.probabilityA,
+      ));
     }
 
     final finance = _financeCalculator.calculate(
@@ -580,11 +592,16 @@ class GameController extends ChangeNotifier {
     );
   }
 
-  /// Moves belts after a card. Winning a championship fight takes the
-  /// division's title off whoever held it; winning an interim fight takes
-  /// the interim belt, which is tracked separately because it doesn't
-  /// displace the undisputed champion. A draw leaves the belt where it is,
-  /// as it does in the sport.
+  /// Moves belts after a card. Winning a championship fight takes that
+  /// *division's* title off whoever held it; winning an interim fight
+  /// takes the interim belt, which is tracked apart because it doesn't
+  /// displace the undisputed champion. A draw leaves the belt where it
+  /// is, as it does in the sport.
+  ///
+  /// Belts are per-division rather than per-fighter, which is what makes
+  /// a double champ possible: a lightweight champion who takes the
+  /// welterweight belt keeps both, and only loses the one he defends and
+  /// drops.
   ///
   /// Fighters are re-read rather than taken from [allFighters], which is
   /// stream-backed and may still be a step behind the record and Elo
@@ -596,28 +613,46 @@ class GameController extends ChangeNotifier {
       if (result == null || !fight.isTitleFight || result.isDraw) continue;
 
       final interim = fight.titleFightType == TitleFightType.interim;
-      final division = allFighters
-          .where((f) => f.weightClass == fight.weightClass)
-          .toList();
+      final division = fight.weightClass;
 
-      for (final fighter in division) {
-        final isWinner = fighter.id == result.winnerId;
-        final holdsBelt = interim ? fighter.isInterimChampion : fighter.isChampion;
-        // Only the new champion and the outgoing one need writing.
-        if (!isWinner && !holdsBelt) continue;
+      // Only three kinds of fighter can change hands here: the winner,
+      // the loser, and whoever was holding this belt coming in (usually
+      // one of the two, but not if the champ was stripped or the belt was
+      // vacant).
+      final affectedIds = <String>{
+        fight.fighterAId,
+        fight.fighterBId,
+        ...allFighters
+            .where((f) => interim
+                ? f.interimChampionOf(division)
+                : f.championOf(division))
+            .map((f) => f.id),
+      };
 
-        final fresh = await _fighterRepo.getById(fighter.id);
+      for (final id in affectedIds) {
+        final fresh = await _fighterRepo.getById(id);
         if (fresh == null) continue;
+        final isWinner = id == result.winnerId;
 
+        final belts = {...fresh.belts};
+        final interimBelts = {...fresh.interimBelts};
+        if (interim) {
+          isWinner ? interimBelts.add(division) : interimBelts.remove(division);
+        } else {
+          if (isWinner) {
+            belts.add(division);
+            // Unifying ends your own interim claim in that division.
+            interimBelts.remove(division);
+          } else {
+            belts.remove(division);
+          }
+        }
+        if (setEquals(belts, fresh.belts) &&
+            setEquals(interimBelts, fresh.interimBelts)) {
+          continue;
+        }
         await _fighterRepo.save(
-          interim
-              ? fresh.copyWith(isInterimChampion: isWinner)
-              : fresh.copyWith(
-                  isChampion: isWinner,
-                  // Taking the undisputed belt ends your own interim claim.
-                  isInterimChampion:
-                      isWinner ? false : fresh.isInterimChampion,
-                ),
+          fresh.copyWith(belts: belts, interimBelts: interimBelts),
         );
       }
     }
@@ -647,6 +682,8 @@ class GameController extends ChangeNotifier {
 
     updated = await _maybeRefreshTalentPool(updated);
     await _healInjuries(updated);
+    await _clearExpiredSuspensions(updated);
+    await _maybeRollIncident(updated);
     await _maybeGenerateFightRequests(updated);
 
     organization = updated;
@@ -712,6 +749,58 @@ class GameController extends ChangeNotifier {
       );
     }
   }
+
+  /// Lifts suspensions that have run their term, and tells the player —
+  /// a fighter coming off a six-month ban is bookable again, and that's
+  /// news you'd otherwise have to go looking for.
+  Future<void> _clearExpiredSuspensions(Organization org) async {
+    for (final fighter in allFighters) {
+      final until = fighter.suspendedUntilWeek;
+      if (until == null || until > org.currentWeek) continue;
+
+      await _fighterRepo.save(fighter.copyWith(clearSuspension: true));
+      if (fighter.isSigned) {
+        await _inboxRepo.save(_newInboxItem(
+          org,
+          InboxItemType.suspension,
+          fighterId: fighter.id,
+          title: '${fighter.name} is eligible again',
+          body: '${fighter.name} has served their suspension in full and can '
+              'be booked from this week.',
+        ));
+      }
+    }
+  }
+
+  /// Rolls the roster's off-camera trouble for the week — failed tests,
+  /// DUIs, backstage scraps, and getting hurt doing something stupid.
+  /// The consequences are already applied by the time the player reads
+  /// about it; all they get is the mailbox item.
+  Future<void> _maybeRollIncident(Organization org) async {
+    final incident = _incidentEngine.maybeGenerate(
+      roster: signedRoster,
+      currentWeek: org.currentWeek,
+    );
+    if (incident == null) return;
+
+    for (final fighter in incident.updatedFighters) {
+      await _fighterRepo.save(fighter);
+    }
+    await _inboxRepo.save(_newInboxItem(
+      org,
+      _inboxTypeFor(incident.type),
+      fighterId: incident.primaryFighterId,
+      title: incident.headline,
+      body: incident.body,
+    ));
+  }
+
+  static InboxItemType _inboxTypeFor(IncidentType type) => switch (type) {
+        IncidentType.failedDrugTest => InboxItemType.suspension,
+        IncidentType.dui => InboxItemType.misconduct,
+        IncidentType.backstageAltercation => InboxItemType.altercation,
+        IncidentType.freakInjury => InboxItemType.injury,
+      };
 
   /// Small per-week chance for an idle, healthy, signed fighter with no
   /// upcoming booking to ask for a fight — surfaced in the Inbox.

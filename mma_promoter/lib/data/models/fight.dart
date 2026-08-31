@@ -219,6 +219,13 @@ class Fight {
   final int cardOrder; // 0 = first main card bout, higher = later.
   final FightResult? result;
 
+  /// Fighter A's win probability as the oddsmakers saw it *before* the
+  /// bout, 0-1. Stamped at simulation time from [OddsCalculator], because
+  /// it can't be recovered afterwards — both fighters' skill, Elo and
+  /// popularity have moved on by the time the record book reads the
+  /// fight. Null for bouts resolved before this was recorded.
+  final double? preFightProbabilityA;
+
   const Fight({
     required this.id,
     required this.eventId,
@@ -231,9 +238,21 @@ class Fight {
     this.isCoMainEvent = false,
     this.rounds = 3,
     this.result,
+    this.preFightProbabilityA,
   });
 
   bool get isResolved => result != null;
+
+  /// How much of an underdog the actual winner was, 0-1 — 0.5 is a
+  /// pick'em, higher is a bigger upset. Null when the pre-fight line
+  /// wasn't recorded or the fight ended in a draw.
+  double? get upsetMagnitude {
+    final p = preFightProbabilityA;
+    final outcome = result;
+    if (p == null || outcome == null || outcome.isDraw) return null;
+    final winnerProbability = outcome.winnerId == fighterAId ? p : 1 - p;
+    return 1 - winnerProbability;
+  }
   bool get isMainCard => cardOrder < mainCardSize;
   bool get isTitleFight => titleFightType != TitleFightType.none;
 
@@ -249,6 +268,7 @@ class Fight {
     int? rounds,
     int? cardOrder,
     FightResult? result,
+    double? preFightProbabilityA,
   }) {
     return Fight(
       id: id ?? this.id,
@@ -262,6 +282,8 @@ class Fight {
       rounds: rounds ?? this.rounds,
       cardOrder: cardOrder ?? this.cardOrder,
       result: result ?? this.result,
+      preFightProbabilityA:
+          preFightProbabilityA ?? this.preFightProbabilityA,
     );
   }
 }

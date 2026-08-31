@@ -43,6 +43,12 @@ class _InboxTile extends StatelessWidget {
         return Icons.emoji_events;
       case InboxItemType.fightRequest:
         return Icons.handshake;
+      case InboxItemType.suspension:
+        return Icons.gavel;
+      case InboxItemType.misconduct:
+        return Icons.report_problem;
+      case InboxItemType.altercation:
+        return Icons.bolt;
     }
   }
 
@@ -55,6 +61,12 @@ class _InboxTile extends StatelessWidget {
         return Colors.amber[800];
       case InboxItemType.fightRequest:
         return Theme.of(context).colorScheme.primary;
+      case InboxItemType.suspension:
+        return Colors.redAccent;
+      case InboxItemType.misconduct:
+        return Colors.orangeAccent;
+      case InboxItemType.altercation:
+        return Colors.purpleAccent;
     }
   }
 

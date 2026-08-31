@@ -125,14 +125,20 @@ class Fighters extends Table {
   /// query fight history per row.
   IntColumn get lastFoughtWeek => integer().nullable()();
 
-  /// Holder of this fighter's division belt. Set by winning a
-  /// championship fight, cleared when they lose one.
-  BoolColumn get isChampion => boolean().withDefault(const Constant(false))();
+  /// JSON array of `WeightClass.name`s whose undisputed belt this fighter
+  /// holds — a list rather than a flag so a champion who moves divisions
+  /// and wins again shows up as a double champ. Written by the title
+  /// bookkeeping after every card.
+  TextColumn get beltsJson => text().withDefault(const Constant('[]'))();
 
-  /// Holder of an interim belt in the division — a separate marker, since
-  /// an interim champ doesn't displace the undisputed one.
-  BoolColumn get isInterimChampion =>
-      boolean().withDefault(const Constant(false))();
+  /// Same shape, for interim belts: an interim champ doesn't displace the
+  /// undisputed one, so the two are tracked apart.
+  TextColumn get interimBeltsJson =>
+      text().withDefault(const Constant('[]'))();
+
+  /// Absolute game week a suspension runs through (a failed drug test,
+  /// say). Null when eligible to compete.
+  IntColumn get suspendedUntilWeek => integer().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -238,6 +244,12 @@ class Fights extends Table {
   /// them in Dart. Empty string on fights resolved before v3.
   TextColumn get statsAJson => text().withDefault(const Constant(''))();
   TextColumn get statsBJson => text().withDefault(const Constant(''))();
+
+  /// Fighter A's pre-fight win probability, 0-1, as the betting line saw
+  /// it. Stamped at simulation time because it can't be recomputed later
+  /// — both corners' skill and Elo have moved on by then. Null on fights
+  /// resolved before v5.
+  RealColumn get preFightProbabilityA => real().nullable()();
 
   IntColumn get winnerPerformanceRating => integer().nullable()();
   IntColumn get loserPerformanceRating => integer().nullable()();

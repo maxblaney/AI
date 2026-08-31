@@ -27,11 +27,40 @@ class EventFinanceResult {
 class EventFinanceCalculator {
   /// What a booked bout is worth in demand terms before anyone's name is
   /// considered — the value of simply having another fight on the card.
-  static const double _drawPerBout = 6;
+  /// Set high enough that a middling prelim roughly pays for the seats it
+  /// fills: a card that grows should be worth building, not just longer.
+  static const double _drawPerBout = 30;
 
   /// Exponent applied to a fighter's popularity. Below 1 so star power
   /// has diminishing returns: two 40s draw less than one 80.
   static const double _popularityDamping = 0.8;
+
+  /// What a card of *one* fight retains of a full show's demand. Nobody
+  /// buys a ticket, books a hotel and drives to an arena for a single
+  /// bout — the night has to be worth turning up for.
+  static const double _shortCardFloor = 0.18;
+
+  /// How fast the show fills out toward a full night. Higher = you need
+  /// more bouts before the card stops feeling thin.
+  static const double _depthScale = 3.2;
+
+  /// How much of a full night's demand a card of [bouts] fights earns.
+  /// Rises from [_shortCardFloor] at one bout toward 1.0, effectively
+  /// saturating around a real 10-12 fight card:
+  ///
+  ///   1 -> 0.18   2 -> 0.40   3 -> 0.56   4 -> 0.67
+  ///   6 -> 0.81   8 -> 0.90  10 -> 0.94  12 -> 0.97
+  ///
+  /// This multiplies *all* demand, including the fanbase and main-event
+  /// terms, which is the whole point: a promotion with 20,000 fans still
+  /// can't sell out on the strength of one fight. It's separate from
+  /// [_drawPerBout] — that says another bout adds draw, this says a thin
+  /// card suppresses the draw everything else generated.
+  static double cardDepthMultiplier(int bouts) {
+    if (bouts <= 0) return 0;
+    final fill = 1 - exp(-(bouts - 1) / _depthScale);
+    return _shortCardFloor + (1 - _shortCardFloor) * fill;
+  }
 
   final Random _random;
 
@@ -77,11 +106,13 @@ class EventFinanceCalculator {
     // Diminishing returns on promo spend: sqrt curve.
     final promoEffect = sqrt(promotionBudgetSpent.clamp(0, 500000)) * 4;
 
-    final baseDemand =
-        (organization.fanbaseSize * 0.015) +
-        (mainEventPopularity * 9) +
-        (cardDraw * 1.6) +
-        promoEffect;
+    final depth = cardDepthMultiplier(card.length);
+
+    final baseDemand = ((organization.fanbaseSize * 0.015) +
+            (mainEventPopularity * 9) +
+            (cardDraw * 1.6) +
+            promoEffect) *
+        depth;
 
     // Price elasticity: pricing above the venue's suggested price softens
     // demand, pricing below it boosts demand, with diminishing effect at
@@ -105,10 +136,11 @@ class EventFinanceCalculator {
     // PPV moves on the same two levers as the gate — who's headlining,
     // and how much show there is behind them.
     final ppvBuys = canSellPpv
-        ? ((organization.fanbaseSize * 0.01) +
-                (mainEventPopularity * 15) +
-                (cardDraw * 2.2) +
-                promoEffect * 2)
+        ? (((organization.fanbaseSize * 0.01) +
+                    (mainEventPopularity * 15) +
+                    (cardDraw * 2.2) +
+                    promoEffect * 2) *
+                depth)
             .round()
         : 0;
     final ppvRevenue = ppvBuys * 40;

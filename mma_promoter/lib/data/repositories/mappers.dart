@@ -102,8 +102,9 @@ Fighter fighterFromRow(FighterRow row, ContractRow? contractRow) {
     performanceOfTheNightCount: row.performanceOfTheNightCount,
     condition: row.condition,
     lastFoughtWeek: row.lastFoughtWeek,
-    isChampion: row.isChampion,
-    isInterimChampion: row.isInterimChampion,
+    belts: _beltsFromJson(row.beltsJson),
+    interimBelts: _beltsFromJson(row.interimBeltsJson),
+    suspendedUntilWeek: row.suspendedUntilWeek,
   );
 }
 
@@ -194,10 +195,28 @@ FightersCompanion fighterToCompanion(Fighter fighter, String saveId) {
     performanceOfTheNightCount: Value(fighter.performanceOfTheNightCount),
     condition: Value(fighter.condition),
     lastFoughtWeek: Value(fighter.lastFoughtWeek),
-    isChampion: Value(fighter.isChampion),
-    isInterimChampion: Value(fighter.isInterimChampion),
+    beltsJson: Value(_beltsToJson(fighter.belts)),
+    interimBeltsJson: Value(_beltsToJson(fighter.interimBelts)),
+    suspendedUntilWeek: Value(fighter.suspendedUntilWeek),
   );
 }
+
+/// Belts are stored as a JSON array of `WeightClass.name`s. Unknown
+/// names are dropped rather than thrown on, so a save written by a newer
+/// build with an extra division still loads.
+Set<WeightClass> _beltsFromJson(String raw) {
+  if (raw.isEmpty) return const {};
+  final decoded = jsonDecode(raw);
+  if (decoded is! List) return const {};
+  final byName = {for (final w in WeightClass.values) w.name: w};
+  return {
+    for (final entry in decoded)
+      if (entry is String && byName.containsKey(entry)) byName[entry]!,
+  };
+}
+
+String _beltsToJson(Set<WeightClass> belts) =>
+    jsonEncode([for (final w in WeightClass.values) if (belts.contains(w)) w.name]);
 
 Contract contractFromRow(ContractRow row) {
   return Contract(
@@ -371,6 +390,7 @@ Fight fightFromRow(FightRow row) {
     rounds: row.rounds,
     cardOrder: row.cardOrder,
     result: result,
+    preFightProbabilityA: row.preFightProbabilityA,
   );
 }
 
@@ -402,6 +422,7 @@ FightsCompanion fightToCompanion(Fight fight) {
     statsBJson: Value(fight.result == null
         ? ''
         : jsonEncode(_statlineToJson(fight.result!.statsB))),
+    preFightProbabilityA: Value(fight.preFightProbabilityA),
   );
 }
 

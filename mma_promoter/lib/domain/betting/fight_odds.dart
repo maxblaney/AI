@@ -73,6 +73,10 @@ class OddsCalculator {
     return rating;
   }
 
+  /// Public entry point for pricing a bare probability — the record book
+  /// uses it to quote the line an upset winner went off at.
+  static int moneylineFor(double probability) => _toMoneyline(probability);
+
   /// Converts a win probability into an American moneyline, with the
   /// book's margin applied so both sides are a touch worse than fair.
   static int _toMoneyline(double probability) {

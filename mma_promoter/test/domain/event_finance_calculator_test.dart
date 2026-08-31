@@ -225,6 +225,56 @@ void _cardSizeAndPopularityTests() {
       );
 
   group('card size and popularity drive revenue', () {
+    test('nobody turns out for a one-fight show', () {
+      // The complaint this answers: a single bout was still drawing a
+      // real crowd off the promotion's fanbase alone. A night of fights
+      // is the product; one fight is not.
+      final lookup = <String, Fighter>{};
+      List<Fight> buildCard(int bouts) {
+        final card = <Fight>[];
+        for (var i = 0; i < bouts; i++) {
+          lookup['a$i'] = _fighter('a$i', popularity: i == 0 ? 70 : 35);
+          lookup['b$i'] = _fighter('b$i', popularity: i == 0 ? 70 : 35);
+          card.add(Fight(
+            id: 'f$i',
+            eventId: 'e',
+            fighterAId: 'a$i',
+            fighterBId: 'b$i',
+            weightClass: WeightClass.lightweight,
+            cardOrder: i,
+            isMainEvent: i == 0,
+          ));
+        }
+        return card;
+      }
+
+      // Same headliner both times — only the depth behind them changes.
+      final onlyTheMainEvent = run(buildCard(1), lookup);
+      final fullCard = run(buildCard(10), lookup);
+
+      expect(onlyTheMainEvent.attendance * 4,
+          lessThan(fullCard.attendance),
+          reason: 'a one-fight card should draw a small fraction of a '
+              'full show, not most of it');
+    });
+
+    test('the depth multiplier climbs from a thin card to a full one', () {
+      double depth(int bouts) =>
+          EventFinanceCalculator.cardDepthMultiplier(bouts);
+
+      expect(depth(0), 0, reason: 'no fights, no show');
+      expect(depth(1), lessThan(0.25));
+      expect(depth(5), greaterThan(0.6));
+      expect(depth(12), greaterThan(0.95));
+      expect(depth(30), lessThanOrEqualTo(1.0),
+          reason: 'it saturates rather than running away');
+
+      for (var bouts = 1; bouts < 20; bouts++) {
+        expect(depth(bouts + 1), greaterThan(depth(bouts)),
+            reason: 'another bout always helps');
+      }
+    });
+
     test('a deeper card out-earns a short one with the same headliner', () {
       final lookup = <String, Fighter>{};
       List<Fight> buildCard(int bouts) {

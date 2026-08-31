@@ -24,7 +24,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   /// Games persist on every platform now (web included), so a schema
   /// change without a matching migration step here would silently break
@@ -70,8 +70,15 @@ class AppDatabase extends _$AppDatabase {
             // entries in the record book.
             await m.addColumn(fights, fights.statsAJson);
             await m.addColumn(fights, fights.statsBJson);
-            await m.addColumn(fighters, fighters.isChampion);
-            await m.addColumn(fighters, fighters.isInterimChampion);
+            // Raw SQL rather than m.addColumn: v5 replaced these two
+            // flags with a set of belts, so they no longer exist in the
+            // Dart schema. A database coming from v2 still needs the
+            // columns created here, because the v5 step below reads them
+            // to work out who was champion of what.
+            await customStatement('ALTER TABLE fighters ADD COLUMN '
+                'is_champion INTEGER NOT NULL DEFAULT 0');
+            await customStatement('ALTER TABLE fighters ADD COLUMN '
+                'is_interim_champion INTEGER NOT NULL DEFAULT 0');
           }
           if (from < 4) {
             // v4 adds the condition/sharpness indicators. Existing
@@ -81,6 +88,32 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(fighters, fighters.condition);
             await m.addColumn(fighters, fighters.lastFoughtWeek);
             await m.addColumn(events, events.bookedAtWeek);
+          }
+          if (from < 5) {
+            // v5 lets one fighter hold belts in more than one division —
+            // the single is_champion flag couldn't express a double champ
+            // — adds drug-test suspensions, and records the pre-fight
+            // betting line so "biggest upset" is answerable after the
+            // fact.
+            await m.addColumn(fighters, fighters.beltsJson);
+            await m.addColumn(fighters, fighters.interimBeltsJson);
+            await m.addColumn(fighters, fighters.suspendedUntilWeek);
+            await m.addColumn(fights, fights.preFightProbabilityA);
+
+            // Carry existing champions over: whatever division they sit
+            // in is the belt they hold. The old columns are left in place
+            // on upgraded databases (SQLite makes dropping one a table
+            // rebuild, and they're harmless with a default) — nothing
+            // reads or writes them from here on, and fresh databases
+            // never get them at all.
+            await customStatement(
+              "UPDATE fighters SET belts_json = '[\"' || weight_class || '\"]' "
+              'WHERE is_champion = 1',
+            );
+            await customStatement(
+              "UPDATE fighters SET interim_belts_json = "
+              "'[\"' || weight_class || '\"]' WHERE is_interim_champion = 1",
+            );
           }
         },
       );

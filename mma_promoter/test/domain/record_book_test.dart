@@ -32,13 +32,16 @@ Fight _fight({
   FightStatline statsA = const FightStatline(),
   FightStatline statsB = const FightStatline(),
   bool draw = false,
+  double? preFightProbabilityA,
+  WeightClass weightClass = WeightClass.lightweight,
 }) {
   return Fight(
     id: id,
     eventId: 'event-$id',
     fighterAId: a,
     fighterBId: b,
-    weightClass: WeightClass.lightweight,
+    preFightProbabilityA: preFightProbabilityA,
+    weightClass: weightClass,
     cardOrder: 0,
     rounds: 3,
     isMainEvent: mainEvent,
@@ -278,6 +281,139 @@ void main() {
 
     test('an empty history produces no leaderboards at all', () {
       expect(RecordBook.build(fights: const [], fighters: const {}), isEmpty);
+    });
+  });
+
+  group('biggest upsets', () {
+    test('ranks underdog wins by how big a dog they were', () {
+      final fights = [
+        // A 10% shot lands: the biggest upset on the card.
+        _fight(id: '1', a: 'a', b: 'b', winnerId: 'a',
+            preFightProbabilityA: 0.10),
+        // A 40% underdog wins: an upset, but a smaller one.
+        _fight(id: '2', a: 'c', b: 'd', winnerId: 'c',
+            preFightProbabilityA: 0.40),
+        // The heavy favourite wins: not an upset at all.
+        _fight(id: '3', a: 'e', b: 'f', winnerId: 'e',
+            preFightProbabilityA: 0.90),
+      ];
+      final categories = RecordBook.build(
+        fights: fights,
+        fighters: _roster(['a', 'b', 'c', 'd', 'e', 'f']),
+      );
+      final upsets = _category(categories, 'Biggest Upsets');
+
+      expect(upsets.entries, hasLength(2),
+          reason: 'the favourite winning is not an upset');
+      expect(upsets.entries.first.fighterId, 'a');
+      expect(upsets.entries.first.fighterName, contains('bt'));
+      expect(upsets.entries.first.value, startsWith('+'),
+          reason: 'an underdog is priced as a plus-money line');
+      expect(upsets.entries[1].fighterId, 'c');
+    });
+
+    test('fights with no recorded line simply do not qualify', () {
+      final categories = RecordBook.build(
+        fights: [_fight(id: '1', a: 'a', b: 'b', winnerId: 'a')],
+        fighters: _roster(['a', 'b']),
+      );
+      expect(
+        categories.where((c) => c.title == 'Biggest Upsets'),
+        isEmpty,
+        reason: 'scoring an old fight on a line that was never taken '
+            'would be inventing history',
+      );
+    });
+  });
+
+  group('double champs', () {
+    test('lists fighters who won titles in two divisions', () {
+      final fights = [
+        _fight(id: '1', a: 'a', b: 'b', winnerId: 'a', titleFight: true),
+        _fight(id: '2', a: 'a', b: 'c', winnerId: 'a', titleFight: true,
+            weightClass: WeightClass.welterweight),
+        // One belt only — not a double champ.
+        _fight(id: '3', a: 'd', b: 'e', winnerId: 'd', titleFight: true,
+            weightClass: WeightClass.heavyweight),
+      ];
+      final categories = RecordBook.build(
+        fights: fights,
+        fighters: _roster(['a', 'b', 'c', 'd', 'e']),
+      );
+      final doubles = _category(categories, 'Double Champs');
+
+      expect(doubles.entries, hasLength(1));
+      expect(doubles.entries.single.fighterId, 'a');
+      expect(doubles.entries.single.value, contains('Lightweight'));
+      expect(doubles.entries.single.value, contains('Welterweight'));
+    });
+
+    test('marks a fighter still holding both belts as current', () {
+      final fights = [
+        _fight(id: '1', a: 'a', b: 'b', winnerId: 'a', titleFight: true),
+        _fight(id: '2', a: 'a', b: 'c', winnerId: 'a', titleFight: true,
+            weightClass: WeightClass.welterweight),
+      ];
+      final roster = _roster(['a', 'b', 'c']);
+      roster['a'] = roster['a']!.copyWith(belts: {
+        WeightClass.lightweight,
+        WeightClass.welterweight,
+      });
+
+      final doubles = _category(
+        RecordBook.build(fights: fights, fighters: roster),
+        'Double Champs',
+      );
+      expect(doubles.entries.single.value, contains('current'));
+    });
+  });
+
+  group('event records', () {
+    MmaEvent event(String name, {int ppvBuys = 0, int revenue = 0}) => MmaEvent(
+          id: name,
+          name: name,
+          date: DateTime(2026, 3, 1),
+          venue: Venue.regionalUsa,
+          ticketPrice: 35,
+          status: EventStatus.completed,
+          ppvBuys: ppvBuys,
+          revenue: revenue,
+        );
+
+    test('rank the biggest nights by PPV buys and by revenue', () {
+      final categories = RecordBook.build(
+        fights: [_fight(id: '1', a: 'a', b: 'b', winnerId: 'a')],
+        fighters: _roster(['a', 'b']),
+        events: [
+          event('Small Show', ppvBuys: 1200, revenue: 90000),
+          event('Big Show', ppvBuys: 48000, revenue: 2400000),
+          event('Scheduled Show'),
+        ],
+      );
+
+      final ppv = _category(categories, 'Most PPV Buys in One Event');
+      expect(ppv.entries.first.fighterName, 'Big Show');
+      expect(ppv.entries.first.value, '48,000');
+      expect(ppv.entries.first.fighterId, isNull,
+          reason: 'an event record names a show, not a fighter');
+      expect(ppv.entries, hasLength(2),
+          reason: 'a show with no buys does not belong on the board');
+
+      final revenue = _category(categories, 'Highest Revenue in One Event');
+      expect(revenue.entries.first.value, r'$2,400,000');
+    });
+
+    test('show up even before anyone has fought', () {
+      final categories = RecordBook.build(
+        fights: const [],
+        fighters: const {},
+        events: [event('Opening Night', revenue: 50000)],
+      );
+      expect(
+        _category(categories, 'Highest Revenue in One Event').entries.single
+            .fighterName,
+        'Opening Night',
+      );
     });
   });
 }

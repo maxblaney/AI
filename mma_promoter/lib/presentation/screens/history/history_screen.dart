@@ -145,13 +145,17 @@ class _RecordCard extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 3),
                 child: InkWell(
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => FighterProfileScreen(
-                        fighterId: category.entries[i].fighterId,
-                      ),
-                    ),
-                  ),
+                  // Event-level records name a show, not a person, so
+                  // there's nothing to open.
+                  onTap: category.entries[i].fighterId == null
+                      ? null
+                      : () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => FighterProfileScreen(
+                                fighterId: category.entries[i].fighterId!,
+                              ),
+                            ),
+                          ),
                   child: Row(
                     children: [
                       SizedBox(

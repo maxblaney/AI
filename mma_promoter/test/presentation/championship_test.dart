@@ -154,6 +154,112 @@ void main() {
         reason: 'an interim title is not the undisputed one');
   });
 
+  test('a champion who wins a belt one division up holds both', () async {
+    // The whole reason belts are a set: a lightweight champion moving to
+    // welterweight and winning that title is a double champ, not a
+    // welterweight who used to be a lightweight.
+    final (champId, _) = await runTitleFight(statA: 99, statB: 40);
+    expect(controller.fighterById(champId)!.belts,
+        {WeightClass.lightweight});
+
+    final wwChamp = testFighter('ww-champ', stat: 45).copyWith(
+      weightClass: WeightClass.welterweight,
+      name: 'Welterweight Champ',
+    );
+    await controller.saveFighter(wwChamp);
+    await settle();
+
+    final org = controller.organization!;
+    final error = await controller.bookEvent(
+      name: 'Champ vs Champ',
+      date: GameCalendar.dateForWeek(org.currentWeek + 1),
+      venue: Venue.regionalUsa,
+      ticketPrice: Venue.regionalUsa.suggestedTicketPrice,
+      card: [
+        Fight(
+          id: 'double-champ-fight',
+          eventId: '',
+          fighterAId: champId,
+          fighterBId: wwChamp.id,
+          weightClass: WeightClass.welterweight,
+          cardOrder: 0,
+          isMainEvent: true,
+          rounds: 5,
+          titleFightType: TitleFightType.championship,
+        ),
+      ],
+    );
+    expect(error, isNull);
+
+    await controller.advanceWeek();
+    await settle();
+    final event = controller.scheduledEvents.single;
+    final summary =
+        await controller.simulateEvent(event.id, promotionBudgetSpent: 0);
+    await settle();
+    expect(summary!.resolvedCard.single.result!.winnerId, champId,
+        reason: 'a 99 should beat a 45 — otherwise this test proves nothing');
+
+    final doubleChamp = controller.fighterById(champId)!;
+    expect(doubleChamp.belts,
+        {WeightClass.lightweight, WeightClass.welterweight});
+    expect(doubleChamp.isDoubleChampion, isTrue);
+    expect(doubleChamp.weightClass, WeightClass.lightweight,
+        reason: 'moving up for one fight does not change their home weight');
+  });
+
+  test('losing a belt in one division leaves the other alone', () async {
+    // Same setup, then the double champ defends the borrowed belt and
+    // loses it. He should still be the lightweight champion.
+    final (champId, _) = await runTitleFight(statA: 99, statB: 40);
+    final fresh = controller.fighterById(champId)!;
+    await controller.saveFighter(fresh.copyWith(belts: {
+      WeightClass.lightweight,
+      WeightClass.welterweight,
+    }));
+    await settle();
+
+    final challenger = testFighter('ww-challenger', stat: 99).copyWith(
+      weightClass: WeightClass.welterweight,
+      name: 'Welterweight Challenger',
+    );
+    await controller.saveFighter(challenger);
+    await settle();
+
+    final org = controller.organization!;
+    await controller.bookEvent(
+      name: 'Welterweight Title',
+      date: GameCalendar.dateForWeek(org.currentWeek + 1),
+      venue: Venue.regionalUsa,
+      ticketPrice: Venue.regionalUsa.suggestedTicketPrice,
+      card: [
+        Fight(
+          id: 'ww-defence',
+          eventId: '',
+          fighterAId: challenger.id,
+          fighterBId: champId,
+          weightClass: WeightClass.welterweight,
+          cardOrder: 0,
+          isMainEvent: true,
+          rounds: 5,
+          titleFightType: TitleFightType.championship,
+        ),
+      ],
+    );
+    await controller.advanceWeek();
+    await settle();
+    final event = controller.scheduledEvents.single;
+    final summary =
+        await controller.simulateEvent(event.id, promotionBudgetSpent: 0);
+    await settle();
+
+    final winnerId = summary!.resolvedCard.single.result!.winnerId;
+    final after = controller.fighterById(champId)!;
+    expect(after.championOf(WeightClass.lightweight), isTrue,
+        reason: 'the lightweight belt was never on the line');
+    expect(after.championOf(WeightClass.welterweight), winnerId == champId);
+  });
+
   test('a non-title fight leaves belts alone', () async {
     final (winnerId, _) =
         await runTitleFight(statA: 90, statB: 55, type: TitleFightType.none);

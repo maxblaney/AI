@@ -39,6 +39,8 @@ class FighterListTile extends StatelessWidget {
           Expanded(child: Text(fighter.name)),
           if (fighter.isChampion)
             Icon(Icons.emoji_events, size: 15, color: scheme.primary),
+          if (fighter.isDoubleChampion)
+            Icon(Icons.emoji_events, size: 15, color: scheme.primary),
         ],
       ),
       subtitle: Column(
@@ -53,7 +55,15 @@ class FighterListTile extends StatelessWidget {
             spacing: 6,
             runSpacing: 4,
             children: [
-              // Condition first: an injured fighter can't be booked, so
+              // A ban outranks everything else on the row: however fit
+              // and sharp they are, you can't put them on a card.
+              if (fighter.isSuspendedOn(currentWeek))
+                _Pill(
+                  label: 'Suspended · '
+                      '${fighter.suspendedUntilWeek! - currentWeek}w',
+                  color: Colors.redAccent,
+                ),
+              // Condition next: an injured fighter can't be booked, so
               // it's the thing that changes what you can do with them.
               _Pill(
                 label: condition.label,

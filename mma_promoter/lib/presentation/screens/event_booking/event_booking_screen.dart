@@ -47,25 +47,36 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
   Set<String> get _usedFighterIds =>
       _card.expand((f) => [f.fighterAId, f.fighterBId]).toSet();
 
-  /// Weight classes with at least 2 unused signed fighters — the only ones
-  /// a new fight can be booked in.
+  /// Everyone on [roster] who could be booked at [weightClass] — the
+  /// division's own fighters plus anyone one class either side, since
+  /// moving up or down a weight is a normal career move and the only way
+  /// a champion ever gets a shot at a second belt.
+  List<Fighter> _eligibleAt(List<Fighter> roster, WeightClass weightClass) {
+    return roster
+        .where((f) =>
+            f.weightClass.canFightAt(weightClass) &&
+            !_usedFighterIds.contains(f.id))
+        .toList();
+  }
+
+  /// Weight classes with at least 2 available fighters — the only ones a
+  /// new fight can be booked in.
   List<WeightClass> _bookableWeightClasses(List<Fighter> roster) {
-    return WeightClass.values.where((wc) {
-      final count = roster
-          .where((f) => f.weightClass == wc && !_usedFighterIds.contains(f.id))
-          .length;
-      return count >= 2;
-    }).toList();
+    return WeightClass.values
+        .where((wc) => _eligibleAt(roster, wc).length >= 2)
+        .toList();
   }
 
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<GameController>();
+    final currentWeek = controller.organization?.currentWeek ?? 1;
     final roster = controller.signedRoster
-        .where((f) => f.injuryStatus != InjuryStatus.major)
+        .where((f) =>
+            f.injuryStatus != InjuryStatus.major &&
+            !f.isSuspendedOn(currentWeek))
         .toList();
     final bookableClasses = _bookableWeightClasses(roster);
-    final currentWeek = controller.organization?.currentWeek ?? 1;
     final bookedWeek = currentWeek + _weeksFromNow;
 
     final mainCard = <Fight>[];
@@ -165,6 +176,9 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
               signedCount: controller.signedRoster.length,
               healthyCount: roster.length,
               alreadyBooked: _usedFighterIds.length,
+              suspendedCount: controller.signedRoster
+                  .where((f) => f.isSuspendedOn(currentWeek))
+                  .length,
             ),
           if (_card.isEmpty)
             const Padding(
@@ -234,11 +248,7 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setState) {
-          final available = roster
-              .where((f) =>
-                  f.weightClass == weightClass &&
-                  !_usedFighterIds.contains(f.id))
-              .toList();
+          final available = _eligibleAt(roster, weightClass);
 
           return AlertDialog(
             title: const Text('Add Fight'),
@@ -267,7 +277,9 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
                     items: available
                         .where((f) => f.id != fighterBId)
                         .map((f) => DropdownMenuItem(
-                            value: f.id, child: _fighterOption(context, f)))
+                            value: f.id,
+                            child: _fighterOption(context, f,
+                                bookedAt: weightClass)))
                         .toList(),
                     onChanged: (v) => setState(() => fighterAId = v),
                   ),
@@ -278,7 +290,9 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
                     items: available
                         .where((f) => f.id != fighterAId)
                         .map((f) => DropdownMenuItem(
-                            value: f.id, child: _fighterOption(context, f)))
+                            value: f.id,
+                            child: _fighterOption(context, f,
+                                bookedAt: weightClass)))
                         .toList(),
                     onChanged: (v) => setState(() => fighterBId = v),
                   ),
@@ -485,8 +499,16 @@ class _FightTile extends StatelessWidget {
 
 /// One line in a fighter dropdown — name plus the figures that actually
 /// decide a matchup, so you're not picking from a list of bare names.
-Widget _fighterOption(BuildContext context, Fighter fighter) {
+Widget _fighterOption(
+  BuildContext context,
+  Fighter fighter, {
+  WeightClass? bookedAt,
+}) {
   final hurt = fighter.injuryStatus != InjuryStatus.healthy;
+  // Crossing divisions is worth calling out — it's the player's own
+  // decision to move someone, not something to discover afterwards.
+  final movement =
+      bookedAt == null ? null : fighter.weightClass.movementTo(bookedAt);
   return Row(
     children: [
       if (fighter.isChampion)
@@ -495,6 +517,21 @@ Widget _fighterOption(BuildContext context, Fighter fighter) {
           child: Icon(Icons.emoji_events, size: 14),
         ),
       Expanded(child: Text(fighter.name, overflow: TextOverflow.ellipsis)),
+      if (movement != null) ...[
+        const SizedBox(width: 4),
+        Icon(
+          movement == 'up' ? Icons.arrow_upward : Icons.arrow_downward,
+          size: 13,
+          color: Colors.amber,
+        ),
+        Text(
+          fighter.weightClass.label,
+          style: Theme.of(context)
+              .textTheme
+              .bodySmall
+              ?.copyWith(color: Colors.amber, fontSize: 11),
+        ),
+      ],
       const SizedBox(width: 6),
       Text(
         '${fighter.record.display} · OVR ${fighter.overall.round()}'
@@ -666,11 +703,13 @@ class _CannotBookNotice extends StatelessWidget {
   final int signedCount;
   final int healthyCount;
   final int alreadyBooked;
+  final int suspendedCount;
 
   const _CannotBookNotice({
     required this.signedCount,
     required this.healthyCount,
     required this.alreadyBooked,
+    required this.suspendedCount,
   });
 
   @override
@@ -684,16 +723,23 @@ class _CannotBookNotice extends StatelessWidget {
     } else if (signedCount == 1) {
       reason = 'You have one fighter signed. A fight needs two, and both '
           'must be in the same weight class.';
+    } else if (healthyCount < 2 && suspendedCount > 0) {
+      reason = suspendedCount == 1
+          ? 'One of your fighters is serving a suspension and the rest are '
+              "hurt. Suspended fighters can't be booked until their ban runs "
+              'out — check the Inbox for the week they return.'
+          : '$suspendedCount of your fighters are suspended, and there '
+              "aren't two healthy fighters left to make a fight.";
     } else if (healthyCount < 2) {
       reason = 'Too many of your roster are hurt to make a fight. Injured '
           "fighters can't be booked — advance a few weeks to let them heal.";
     } else if (alreadyBooked > 0) {
       reason = 'Everyone left is either already on this card or has nobody '
-          'to face in their division.';
+          'to face at their weight.';
     } else {
-      reason = 'No division has two available fighters. Fights can only be '
-          'made between fighters in the same weight class, so sign a second '
-          'fighter in a division you already have someone in.';
+      reason = 'No division has two available fighters. A fighter can be '
+          'booked at their own weight or one division either side, so sign '
+          'someone close in weight to a fighter you already have.';
     }
 
     return Card(

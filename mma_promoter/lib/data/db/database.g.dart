@@ -582,26 +582,28 @@ class $FightersTable extends Fighters
   late final GeneratedColumn<int> lastFoughtWeek = GeneratedColumn<int>(
       'last_fought_week', aliasedName, true,
       type: DriftSqlType.int, requiredDuringInsert: false);
-  static const VerificationMeta _isChampionMeta =
-      const VerificationMeta('isChampion');
+  static const VerificationMeta _beltsJsonMeta =
+      const VerificationMeta('beltsJson');
   @override
-  late final GeneratedColumn<bool> isChampion = GeneratedColumn<bool>(
-      'is_champion', aliasedName, false,
-      type: DriftSqlType.bool,
+  late final GeneratedColumn<String> beltsJson = GeneratedColumn<String>(
+      'belts_json', aliasedName, false,
+      type: DriftSqlType.string,
       requiredDuringInsert: false,
-      defaultConstraints:
-          GeneratedColumn.constraintIsAlways('CHECK ("is_champion" IN (0, 1))'),
-      defaultValue: const Constant(false));
-  static const VerificationMeta _isInterimChampionMeta =
-      const VerificationMeta('isInterimChampion');
+      defaultValue: const Constant('[]'));
+  static const VerificationMeta _interimBeltsJsonMeta =
+      const VerificationMeta('interimBeltsJson');
   @override
-  late final GeneratedColumn<bool> isInterimChampion = GeneratedColumn<bool>(
-      'is_interim_champion', aliasedName, false,
-      type: DriftSqlType.bool,
+  late final GeneratedColumn<String> interimBeltsJson = GeneratedColumn<String>(
+      'interim_belts_json', aliasedName, false,
+      type: DriftSqlType.string,
       requiredDuringInsert: false,
-      defaultConstraints: GeneratedColumn.constraintIsAlways(
-          'CHECK ("is_interim_champion" IN (0, 1))'),
-      defaultValue: const Constant(false));
+      defaultValue: const Constant('[]'));
+  static const VerificationMeta _suspendedUntilWeekMeta =
+      const VerificationMeta('suspendedUntilWeek');
+  @override
+  late final GeneratedColumn<int> suspendedUntilWeek = GeneratedColumn<int>(
+      'suspended_until_week', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -689,8 +691,9 @@ class $FightersTable extends Fighters
         performanceOfTheNightCount,
         condition,
         lastFoughtWeek,
-        isChampion,
-        isInterimChampion
+        beltsJson,
+        interimBeltsJson,
+        suspendedUntilWeek
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1230,17 +1233,21 @@ class $FightersTable extends Fighters
           lastFoughtWeek.isAcceptableOrUnknown(
               data['last_fought_week']!, _lastFoughtWeekMeta));
     }
-    if (data.containsKey('is_champion')) {
-      context.handle(
-          _isChampionMeta,
-          isChampion.isAcceptableOrUnknown(
-              data['is_champion']!, _isChampionMeta));
+    if (data.containsKey('belts_json')) {
+      context.handle(_beltsJsonMeta,
+          beltsJson.isAcceptableOrUnknown(data['belts_json']!, _beltsJsonMeta));
     }
-    if (data.containsKey('is_interim_champion')) {
+    if (data.containsKey('interim_belts_json')) {
       context.handle(
-          _isInterimChampionMeta,
-          isInterimChampion.isAcceptableOrUnknown(
-              data['is_interim_champion']!, _isInterimChampionMeta));
+          _interimBeltsJsonMeta,
+          interimBeltsJson.isAcceptableOrUnknown(
+              data['interim_belts_json']!, _interimBeltsJsonMeta));
+    }
+    if (data.containsKey('suspended_until_week')) {
+      context.handle(
+          _suspendedUntilWeekMeta,
+          suspendedUntilWeek.isAcceptableOrUnknown(
+              data['suspended_until_week']!, _suspendedUntilWeekMeta));
     }
     return context;
   }
@@ -1423,10 +1430,12 @@ class $FightersTable extends Fighters
           .read(DriftSqlType.int, data['${effectivePrefix}condition'])!,
       lastFoughtWeek: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}last_fought_week']),
-      isChampion: attachedDatabase.typeMapping
-          .read(DriftSqlType.bool, data['${effectivePrefix}is_champion'])!,
-      isInterimChampion: attachedDatabase.typeMapping.read(
-          DriftSqlType.bool, data['${effectivePrefix}is_interim_champion'])!,
+      beltsJson: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}belts_json'])!,
+      interimBeltsJson: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}interim_belts_json'])!,
+      suspendedUntilWeek: attachedDatabase.typeMapping.read(
+          DriftSqlType.int, data['${effectivePrefix}suspended_until_week']),
     );
   }
 
@@ -1541,13 +1550,19 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
   /// query fight history per row.
   final int? lastFoughtWeek;
 
-  /// Holder of this fighter's division belt. Set by winning a
-  /// championship fight, cleared when they lose one.
-  final bool isChampion;
+  /// JSON array of `WeightClass.name`s whose undisputed belt this fighter
+  /// holds — a list rather than a flag so a champion who moves divisions
+  /// and wins again shows up as a double champ. Written by the title
+  /// bookkeeping after every card.
+  final String beltsJson;
 
-  /// Holder of an interim belt in the division — a separate marker, since
-  /// an interim champ doesn't displace the undisputed one.
-  final bool isInterimChampion;
+  /// Same shape, for interim belts: an interim champ doesn't displace the
+  /// undisputed one, so the two are tracked apart.
+  final String interimBeltsJson;
+
+  /// Absolute game week a suspension runs through (a failed drug test,
+  /// say). Null when eligible to compete.
+  final int? suspendedUntilWeek;
   const FighterRow(
       {required this.id,
       required this.name,
@@ -1634,8 +1649,9 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       required this.performanceOfTheNightCount,
       required this.condition,
       this.lastFoughtWeek,
-      required this.isChampion,
-      required this.isInterimChampion});
+      required this.beltsJson,
+      required this.interimBeltsJson,
+      this.suspendedUntilWeek});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -1733,8 +1749,11 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
     if (!nullToAbsent || lastFoughtWeek != null) {
       map['last_fought_week'] = Variable<int>(lastFoughtWeek);
     }
-    map['is_champion'] = Variable<bool>(isChampion);
-    map['is_interim_champion'] = Variable<bool>(isInterimChampion);
+    map['belts_json'] = Variable<String>(beltsJson);
+    map['interim_belts_json'] = Variable<String>(interimBeltsJson);
+    if (!nullToAbsent || suspendedUntilWeek != null) {
+      map['suspended_until_week'] = Variable<int>(suspendedUntilWeek);
+    }
     return map;
   }
 
@@ -1833,8 +1852,11 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       lastFoughtWeek: lastFoughtWeek == null && nullToAbsent
           ? const Value.absent()
           : Value(lastFoughtWeek),
-      isChampion: Value(isChampion),
-      isInterimChampion: Value(isInterimChampion),
+      beltsJson: Value(beltsJson),
+      interimBeltsJson: Value(interimBeltsJson),
+      suspendedUntilWeek: suspendedUntilWeek == null && nullToAbsent
+          ? const Value.absent()
+          : Value(suspendedUntilWeek),
     );
   }
 
@@ -1936,8 +1958,9 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           serializer.fromJson<int>(json['performanceOfTheNightCount']),
       condition: serializer.fromJson<int>(json['condition']),
       lastFoughtWeek: serializer.fromJson<int?>(json['lastFoughtWeek']),
-      isChampion: serializer.fromJson<bool>(json['isChampion']),
-      isInterimChampion: serializer.fromJson<bool>(json['isInterimChampion']),
+      beltsJson: serializer.fromJson<String>(json['beltsJson']),
+      interimBeltsJson: serializer.fromJson<String>(json['interimBeltsJson']),
+      suspendedUntilWeek: serializer.fromJson<int?>(json['suspendedUntilWeek']),
     );
   }
   @override
@@ -2030,8 +2053,9 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           serializer.toJson<int>(performanceOfTheNightCount),
       'condition': serializer.toJson<int>(condition),
       'lastFoughtWeek': serializer.toJson<int?>(lastFoughtWeek),
-      'isChampion': serializer.toJson<bool>(isChampion),
-      'isInterimChampion': serializer.toJson<bool>(isInterimChampion),
+      'beltsJson': serializer.toJson<String>(beltsJson),
+      'interimBeltsJson': serializer.toJson<String>(interimBeltsJson),
+      'suspendedUntilWeek': serializer.toJson<int?>(suspendedUntilWeek),
     };
   }
 
@@ -2121,8 +2145,9 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           int? performanceOfTheNightCount,
           int? condition,
           Value<int?> lastFoughtWeek = const Value.absent(),
-          bool? isChampion,
-          bool? isInterimChampion}) =>
+          String? beltsJson,
+          String? interimBeltsJson,
+          Value<int?> suspendedUntilWeek = const Value.absent()}) =>
       FighterRow(
         id: id ?? this.id,
         name: name ?? this.name,
@@ -2220,8 +2245,11 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
         condition: condition ?? this.condition,
         lastFoughtWeek:
             lastFoughtWeek.present ? lastFoughtWeek.value : this.lastFoughtWeek,
-        isChampion: isChampion ?? this.isChampion,
-        isInterimChampion: isInterimChampion ?? this.isInterimChampion,
+        beltsJson: beltsJson ?? this.beltsJson,
+        interimBeltsJson: interimBeltsJson ?? this.interimBeltsJson,
+        suspendedUntilWeek: suspendedUntilWeek.present
+            ? suspendedUntilWeek.value
+            : this.suspendedUntilWeek,
       );
   FighterRow copyWithCompanion(FightersCompanion data) {
     return FighterRow(
@@ -2397,11 +2425,13 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       lastFoughtWeek: data.lastFoughtWeek.present
           ? data.lastFoughtWeek.value
           : this.lastFoughtWeek,
-      isChampion:
-          data.isChampion.present ? data.isChampion.value : this.isChampion,
-      isInterimChampion: data.isInterimChampion.present
-          ? data.isInterimChampion.value
-          : this.isInterimChampion,
+      beltsJson: data.beltsJson.present ? data.beltsJson.value : this.beltsJson,
+      interimBeltsJson: data.interimBeltsJson.present
+          ? data.interimBeltsJson.value
+          : this.interimBeltsJson,
+      suspendedUntilWeek: data.suspendedUntilWeek.present
+          ? data.suspendedUntilWeek.value
+          : this.suspendedUntilWeek,
     );
   }
 
@@ -2493,8 +2523,9 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           ..write('performanceOfTheNightCount: $performanceOfTheNightCount, ')
           ..write('condition: $condition, ')
           ..write('lastFoughtWeek: $lastFoughtWeek, ')
-          ..write('isChampion: $isChampion, ')
-          ..write('isInterimChampion: $isInterimChampion')
+          ..write('beltsJson: $beltsJson, ')
+          ..write('interimBeltsJson: $interimBeltsJson, ')
+          ..write('suspendedUntilWeek: $suspendedUntilWeek')
           ..write(')'))
         .toString();
   }
@@ -2586,8 +2617,9 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
         performanceOfTheNightCount,
         condition,
         lastFoughtWeek,
-        isChampion,
-        isInterimChampion
+        beltsJson,
+        interimBeltsJson,
+        suspendedUntilWeek
       ]);
   @override
   bool operator ==(Object other) =>
@@ -2678,8 +2710,9 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           other.performanceOfTheNightCount == this.performanceOfTheNightCount &&
           other.condition == this.condition &&
           other.lastFoughtWeek == this.lastFoughtWeek &&
-          other.isChampion == this.isChampion &&
-          other.isInterimChampion == this.isInterimChampion);
+          other.beltsJson == this.beltsJson &&
+          other.interimBeltsJson == this.interimBeltsJson &&
+          other.suspendedUntilWeek == this.suspendedUntilWeek);
 }
 
 class FightersCompanion extends UpdateCompanion<FighterRow> {
@@ -2768,8 +2801,9 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
   final Value<int> performanceOfTheNightCount;
   final Value<int> condition;
   final Value<int?> lastFoughtWeek;
-  final Value<bool> isChampion;
-  final Value<bool> isInterimChampion;
+  final Value<String> beltsJson;
+  final Value<String> interimBeltsJson;
+  final Value<int?> suspendedUntilWeek;
   final Value<int> rowid;
   const FightersCompanion({
     this.id = const Value.absent(),
@@ -2857,8 +2891,9 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     this.performanceOfTheNightCount = const Value.absent(),
     this.condition = const Value.absent(),
     this.lastFoughtWeek = const Value.absent(),
-    this.isChampion = const Value.absent(),
-    this.isInterimChampion = const Value.absent(),
+    this.beltsJson = const Value.absent(),
+    this.interimBeltsJson = const Value.absent(),
+    this.suspendedUntilWeek = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   FightersCompanion.insert({
@@ -2947,8 +2982,9 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     this.performanceOfTheNightCount = const Value.absent(),
     this.condition = const Value.absent(),
     this.lastFoughtWeek = const Value.absent(),
-    this.isChampion = const Value.absent(),
-    this.isInterimChampion = const Value.absent(),
+    this.beltsJson = const Value.absent(),
+    this.interimBeltsJson = const Value.absent(),
+    this.suspendedUntilWeek = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         name = Value(name),
@@ -3080,8 +3116,9 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     Expression<int>? performanceOfTheNightCount,
     Expression<int>? condition,
     Expression<int>? lastFoughtWeek,
-    Expression<bool>? isChampion,
-    Expression<bool>? isInterimChampion,
+    Expression<String>? beltsJson,
+    Expression<String>? interimBeltsJson,
+    Expression<int>? suspendedUntilWeek,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -3181,8 +3218,10 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
         'performance_of_the_night_count': performanceOfTheNightCount,
       if (condition != null) 'condition': condition,
       if (lastFoughtWeek != null) 'last_fought_week': lastFoughtWeek,
-      if (isChampion != null) 'is_champion': isChampion,
-      if (isInterimChampion != null) 'is_interim_champion': isInterimChampion,
+      if (beltsJson != null) 'belts_json': beltsJson,
+      if (interimBeltsJson != null) 'interim_belts_json': interimBeltsJson,
+      if (suspendedUntilWeek != null)
+        'suspended_until_week': suspendedUntilWeek,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -3273,8 +3312,9 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
       Value<int>? performanceOfTheNightCount,
       Value<int>? condition,
       Value<int?>? lastFoughtWeek,
-      Value<bool>? isChampion,
-      Value<bool>? isInterimChampion,
+      Value<String>? beltsJson,
+      Value<String>? interimBeltsJson,
+      Value<int?>? suspendedUntilWeek,
       Value<int>? rowid}) {
     return FightersCompanion(
       id: id ?? this.id,
@@ -3367,8 +3407,9 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
           performanceOfTheNightCount ?? this.performanceOfTheNightCount,
       condition: condition ?? this.condition,
       lastFoughtWeek: lastFoughtWeek ?? this.lastFoughtWeek,
-      isChampion: isChampion ?? this.isChampion,
-      isInterimChampion: isInterimChampion ?? this.isInterimChampion,
+      beltsJson: beltsJson ?? this.beltsJson,
+      interimBeltsJson: interimBeltsJson ?? this.interimBeltsJson,
+      suspendedUntilWeek: suspendedUntilWeek ?? this.suspendedUntilWeek,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -3637,11 +3678,14 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     if (lastFoughtWeek.present) {
       map['last_fought_week'] = Variable<int>(lastFoughtWeek.value);
     }
-    if (isChampion.present) {
-      map['is_champion'] = Variable<bool>(isChampion.value);
+    if (beltsJson.present) {
+      map['belts_json'] = Variable<String>(beltsJson.value);
     }
-    if (isInterimChampion.present) {
-      map['is_interim_champion'] = Variable<bool>(isInterimChampion.value);
+    if (interimBeltsJson.present) {
+      map['interim_belts_json'] = Variable<String>(interimBeltsJson.value);
+    }
+    if (suspendedUntilWeek.present) {
+      map['suspended_until_week'] = Variable<int>(suspendedUntilWeek.value);
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
@@ -3737,8 +3781,9 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
           ..write('performanceOfTheNightCount: $performanceOfTheNightCount, ')
           ..write('condition: $condition, ')
           ..write('lastFoughtWeek: $lastFoughtWeek, ')
-          ..write('isChampion: $isChampion, ')
-          ..write('isInterimChampion: $isInterimChampion, ')
+          ..write('beltsJson: $beltsJson, ')
+          ..write('interimBeltsJson: $interimBeltsJson, ')
+          ..write('suspendedUntilWeek: $suspendedUntilWeek, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -5663,6 +5708,12 @@ class $FightsTable extends Fights with TableInfo<$FightsTable, FightRow> {
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant(''));
+  static const VerificationMeta _preFightProbabilityAMeta =
+      const VerificationMeta('preFightProbabilityA');
+  @override
+  late final GeneratedColumn<double> preFightProbabilityA =
+      GeneratedColumn<double>('pre_fight_probability_a', aliasedName, true,
+          type: DriftSqlType.double, requiredDuringInsert: false);
   static const VerificationMeta _winnerPerformanceRatingMeta =
       const VerificationMeta('winnerPerformanceRating');
   @override
@@ -5707,6 +5758,7 @@ class $FightsTable extends Fights with TableInfo<$FightsTable, FightRow> {
         resultMethodDetail,
         statsAJson,
         statsBJson,
+        preFightProbabilityA,
         winnerPerformanceRating,
         loserPerformanceRating,
         resultFighterAInjury,
@@ -5831,6 +5883,12 @@ class $FightsTable extends Fights with TableInfo<$FightsTable, FightRow> {
           statsBJson.isAcceptableOrUnknown(
               data['stats_b_json']!, _statsBJsonMeta));
     }
+    if (data.containsKey('pre_fight_probability_a')) {
+      context.handle(
+          _preFightProbabilityAMeta,
+          preFightProbabilityA.isAcceptableOrUnknown(
+              data['pre_fight_probability_a']!, _preFightProbabilityAMeta));
+    }
     if (data.containsKey('winner_performance_rating')) {
       context.handle(
           _winnerPerformanceRatingMeta,
@@ -5901,6 +5959,9 @@ class $FightsTable extends Fights with TableInfo<$FightsTable, FightRow> {
           .read(DriftSqlType.string, data['${effectivePrefix}stats_a_json'])!,
       statsBJson: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}stats_b_json'])!,
+      preFightProbabilityA: attachedDatabase.typeMapping.read(
+          DriftSqlType.double,
+          data['${effectivePrefix}pre_fight_probability_a']),
       winnerPerformanceRating: attachedDatabase.typeMapping.read(
           DriftSqlType.int,
           data['${effectivePrefix}winner_performance_rating']),
@@ -5945,6 +6006,12 @@ class FightRow extends DataClass implements Insertable<FightRow> {
   /// them in Dart. Empty string on fights resolved before v3.
   final String statsAJson;
   final String statsBJson;
+
+  /// Fighter A's pre-fight win probability, 0-1, as the betting line saw
+  /// it. Stamped at simulation time because it can't be recomputed later
+  /// — both corners' skill and Elo have moved on by then. Null on fights
+  /// resolved before v5.
+  final double? preFightProbabilityA;
   final int? winnerPerformanceRating;
   final int? loserPerformanceRating;
   final String? resultFighterAInjury;
@@ -5968,6 +6035,7 @@ class FightRow extends DataClass implements Insertable<FightRow> {
       required this.resultMethodDetail,
       required this.statsAJson,
       required this.statsBJson,
+      this.preFightProbabilityA,
       this.winnerPerformanceRating,
       this.loserPerformanceRating,
       this.resultFighterAInjury,
@@ -5999,6 +6067,9 @@ class FightRow extends DataClass implements Insertable<FightRow> {
     map['result_method_detail'] = Variable<String>(resultMethodDetail);
     map['stats_a_json'] = Variable<String>(statsAJson);
     map['stats_b_json'] = Variable<String>(statsBJson);
+    if (!nullToAbsent || preFightProbabilityA != null) {
+      map['pre_fight_probability_a'] = Variable<double>(preFightProbabilityA);
+    }
     if (!nullToAbsent || winnerPerformanceRating != null) {
       map['winner_performance_rating'] = Variable<int>(winnerPerformanceRating);
     }
@@ -6040,6 +6111,9 @@ class FightRow extends DataClass implements Insertable<FightRow> {
       resultMethodDetail: Value(resultMethodDetail),
       statsAJson: Value(statsAJson),
       statsBJson: Value(statsBJson),
+      preFightProbabilityA: preFightProbabilityA == null && nullToAbsent
+          ? const Value.absent()
+          : Value(preFightProbabilityA),
       winnerPerformanceRating: winnerPerformanceRating == null && nullToAbsent
           ? const Value.absent()
           : Value(winnerPerformanceRating),
@@ -6079,6 +6153,8 @@ class FightRow extends DataClass implements Insertable<FightRow> {
           serializer.fromJson<String>(json['resultMethodDetail']),
       statsAJson: serializer.fromJson<String>(json['statsAJson']),
       statsBJson: serializer.fromJson<String>(json['statsBJson']),
+      preFightProbabilityA:
+          serializer.fromJson<double?>(json['preFightProbabilityA']),
       winnerPerformanceRating:
           serializer.fromJson<int?>(json['winnerPerformanceRating']),
       loserPerformanceRating:
@@ -6111,6 +6187,7 @@ class FightRow extends DataClass implements Insertable<FightRow> {
       'resultMethodDetail': serializer.toJson<String>(resultMethodDetail),
       'statsAJson': serializer.toJson<String>(statsAJson),
       'statsBJson': serializer.toJson<String>(statsBJson),
+      'preFightProbabilityA': serializer.toJson<double?>(preFightProbabilityA),
       'winnerPerformanceRating':
           serializer.toJson<int?>(winnerPerformanceRating),
       'loserPerformanceRating': serializer.toJson<int?>(loserPerformanceRating),
@@ -6138,6 +6215,7 @@ class FightRow extends DataClass implements Insertable<FightRow> {
           String? resultMethodDetail,
           String? statsAJson,
           String? statsBJson,
+          Value<double?> preFightProbabilityA = const Value.absent(),
           Value<int?> winnerPerformanceRating = const Value.absent(),
           Value<int?> loserPerformanceRating = const Value.absent(),
           Value<String?> resultFighterAInjury = const Value.absent(),
@@ -6163,6 +6241,9 @@ class FightRow extends DataClass implements Insertable<FightRow> {
         resultMethodDetail: resultMethodDetail ?? this.resultMethodDetail,
         statsAJson: statsAJson ?? this.statsAJson,
         statsBJson: statsBJson ?? this.statsBJson,
+        preFightProbabilityA: preFightProbabilityA.present
+            ? preFightProbabilityA.value
+            : this.preFightProbabilityA,
         winnerPerformanceRating: winnerPerformanceRating.present
             ? winnerPerformanceRating.value
             : this.winnerPerformanceRating,
@@ -6217,6 +6298,9 @@ class FightRow extends DataClass implements Insertable<FightRow> {
           data.statsAJson.present ? data.statsAJson.value : this.statsAJson,
       statsBJson:
           data.statsBJson.present ? data.statsBJson.value : this.statsBJson,
+      preFightProbabilityA: data.preFightProbabilityA.present
+          ? data.preFightProbabilityA.value
+          : this.preFightProbabilityA,
       winnerPerformanceRating: data.winnerPerformanceRating.present
           ? data.winnerPerformanceRating.value
           : this.winnerPerformanceRating,
@@ -6253,6 +6337,7 @@ class FightRow extends DataClass implements Insertable<FightRow> {
           ..write('resultMethodDetail: $resultMethodDetail, ')
           ..write('statsAJson: $statsAJson, ')
           ..write('statsBJson: $statsBJson, ')
+          ..write('preFightProbabilityA: $preFightProbabilityA, ')
           ..write('winnerPerformanceRating: $winnerPerformanceRating, ')
           ..write('loserPerformanceRating: $loserPerformanceRating, ')
           ..write('resultFighterAInjury: $resultFighterAInjury, ')
@@ -6281,6 +6366,7 @@ class FightRow extends DataClass implements Insertable<FightRow> {
         resultMethodDetail,
         statsAJson,
         statsBJson,
+        preFightProbabilityA,
         winnerPerformanceRating,
         loserPerformanceRating,
         resultFighterAInjury,
@@ -6308,6 +6394,7 @@ class FightRow extends DataClass implements Insertable<FightRow> {
           other.resultMethodDetail == this.resultMethodDetail &&
           other.statsAJson == this.statsAJson &&
           other.statsBJson == this.statsBJson &&
+          other.preFightProbabilityA == this.preFightProbabilityA &&
           other.winnerPerformanceRating == this.winnerPerformanceRating &&
           other.loserPerformanceRating == this.loserPerformanceRating &&
           other.resultFighterAInjury == this.resultFighterAInjury &&
@@ -6333,6 +6420,7 @@ class FightsCompanion extends UpdateCompanion<FightRow> {
   final Value<String> resultMethodDetail;
   final Value<String> statsAJson;
   final Value<String> statsBJson;
+  final Value<double?> preFightProbabilityA;
   final Value<int?> winnerPerformanceRating;
   final Value<int?> loserPerformanceRating;
   final Value<String?> resultFighterAInjury;
@@ -6357,6 +6445,7 @@ class FightsCompanion extends UpdateCompanion<FightRow> {
     this.resultMethodDetail = const Value.absent(),
     this.statsAJson = const Value.absent(),
     this.statsBJson = const Value.absent(),
+    this.preFightProbabilityA = const Value.absent(),
     this.winnerPerformanceRating = const Value.absent(),
     this.loserPerformanceRating = const Value.absent(),
     this.resultFighterAInjury = const Value.absent(),
@@ -6382,6 +6471,7 @@ class FightsCompanion extends UpdateCompanion<FightRow> {
     this.resultMethodDetail = const Value.absent(),
     this.statsAJson = const Value.absent(),
     this.statsBJson = const Value.absent(),
+    this.preFightProbabilityA = const Value.absent(),
     this.winnerPerformanceRating = const Value.absent(),
     this.loserPerformanceRating = const Value.absent(),
     this.resultFighterAInjury = const Value.absent(),
@@ -6411,6 +6501,7 @@ class FightsCompanion extends UpdateCompanion<FightRow> {
     Expression<String>? resultMethodDetail,
     Expression<String>? statsAJson,
     Expression<String>? statsBJson,
+    Expression<double>? preFightProbabilityA,
     Expression<int>? winnerPerformanceRating,
     Expression<int>? loserPerformanceRating,
     Expression<String>? resultFighterAInjury,
@@ -6438,6 +6529,8 @@ class FightsCompanion extends UpdateCompanion<FightRow> {
         'result_method_detail': resultMethodDetail,
       if (statsAJson != null) 'stats_a_json': statsAJson,
       if (statsBJson != null) 'stats_b_json': statsBJson,
+      if (preFightProbabilityA != null)
+        'pre_fight_probability_a': preFightProbabilityA,
       if (winnerPerformanceRating != null)
         'winner_performance_rating': winnerPerformanceRating,
       if (loserPerformanceRating != null)
@@ -6469,6 +6562,7 @@ class FightsCompanion extends UpdateCompanion<FightRow> {
       Value<String>? resultMethodDetail,
       Value<String>? statsAJson,
       Value<String>? statsBJson,
+      Value<double?>? preFightProbabilityA,
       Value<int?>? winnerPerformanceRating,
       Value<int?>? loserPerformanceRating,
       Value<String?>? resultFighterAInjury,
@@ -6493,6 +6587,7 @@ class FightsCompanion extends UpdateCompanion<FightRow> {
       resultMethodDetail: resultMethodDetail ?? this.resultMethodDetail,
       statsAJson: statsAJson ?? this.statsAJson,
       statsBJson: statsBJson ?? this.statsBJson,
+      preFightProbabilityA: preFightProbabilityA ?? this.preFightProbabilityA,
       winnerPerformanceRating:
           winnerPerformanceRating ?? this.winnerPerformanceRating,
       loserPerformanceRating:
@@ -6560,6 +6655,10 @@ class FightsCompanion extends UpdateCompanion<FightRow> {
     if (statsBJson.present) {
       map['stats_b_json'] = Variable<String>(statsBJson.value);
     }
+    if (preFightProbabilityA.present) {
+      map['pre_fight_probability_a'] =
+          Variable<double>(preFightProbabilityA.value);
+    }
     if (winnerPerformanceRating.present) {
       map['winner_performance_rating'] =
           Variable<int>(winnerPerformanceRating.value);
@@ -6603,6 +6702,7 @@ class FightsCompanion extends UpdateCompanion<FightRow> {
           ..write('resultMethodDetail: $resultMethodDetail, ')
           ..write('statsAJson: $statsAJson, ')
           ..write('statsBJson: $statsBJson, ')
+          ..write('preFightProbabilityA: $preFightProbabilityA, ')
           ..write('winnerPerformanceRating: $winnerPerformanceRating, ')
           ..write('loserPerformanceRating: $loserPerformanceRating, ')
           ..write('resultFighterAInjury: $resultFighterAInjury, ')
@@ -7637,8 +7737,9 @@ typedef $$FightersTableCreateCompanionBuilder = FightersCompanion Function({
   Value<int> performanceOfTheNightCount,
   Value<int> condition,
   Value<int?> lastFoughtWeek,
-  Value<bool> isChampion,
-  Value<bool> isInterimChampion,
+  Value<String> beltsJson,
+  Value<String> interimBeltsJson,
+  Value<int?> suspendedUntilWeek,
   Value<int> rowid,
 });
 typedef $$FightersTableUpdateCompanionBuilder = FightersCompanion Function({
@@ -7727,8 +7828,9 @@ typedef $$FightersTableUpdateCompanionBuilder = FightersCompanion Function({
   Value<int> performanceOfTheNightCount,
   Value<int> condition,
   Value<int?> lastFoughtWeek,
-  Value<bool> isChampion,
-  Value<bool> isInterimChampion,
+  Value<String> beltsJson,
+  Value<String> interimBeltsJson,
+  Value<int?> suspendedUntilWeek,
   Value<int> rowid,
 });
 
@@ -8021,11 +8123,15 @@ class $$FightersTableFilterComposer
       column: $table.lastFoughtWeek,
       builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<bool> get isChampion => $composableBuilder(
-      column: $table.isChampion, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get beltsJson => $composableBuilder(
+      column: $table.beltsJson, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<bool> get isInterimChampion => $composableBuilder(
-      column: $table.isInterimChampion,
+  ColumnFilters<String> get interimBeltsJson => $composableBuilder(
+      column: $table.interimBeltsJson,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get suspendedUntilWeek => $composableBuilder(
+      column: $table.suspendedUntilWeek,
       builder: (column) => ColumnFilters(column));
 }
 
@@ -8330,11 +8436,15 @@ class $$FightersTableOrderingComposer
       column: $table.lastFoughtWeek,
       builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<bool> get isChampion => $composableBuilder(
-      column: $table.isChampion, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<String> get beltsJson => $composableBuilder(
+      column: $table.beltsJson, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<bool> get isInterimChampion => $composableBuilder(
-      column: $table.isInterimChampion,
+  ColumnOrderings<String> get interimBeltsJson => $composableBuilder(
+      column: $table.interimBeltsJson,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get suspendedUntilWeek => $composableBuilder(
+      column: $table.suspendedUntilWeek,
       builder: (column) => ColumnOrderings(column));
 }
 
@@ -8602,11 +8712,14 @@ class $$FightersTableAnnotationComposer
   GeneratedColumn<int> get lastFoughtWeek => $composableBuilder(
       column: $table.lastFoughtWeek, builder: (column) => column);
 
-  GeneratedColumn<bool> get isChampion => $composableBuilder(
-      column: $table.isChampion, builder: (column) => column);
+  GeneratedColumn<String> get beltsJson =>
+      $composableBuilder(column: $table.beltsJson, builder: (column) => column);
 
-  GeneratedColumn<bool> get isInterimChampion => $composableBuilder(
-      column: $table.isInterimChampion, builder: (column) => column);
+  GeneratedColumn<String> get interimBeltsJson => $composableBuilder(
+      column: $table.interimBeltsJson, builder: (column) => column);
+
+  GeneratedColumn<int> get suspendedUntilWeek => $composableBuilder(
+      column: $table.suspendedUntilWeek, builder: (column) => column);
 }
 
 class $$FightersTableTableManager extends RootTableManager<
@@ -8717,8 +8830,9 @@ class $$FightersTableTableManager extends RootTableManager<
             Value<int> performanceOfTheNightCount = const Value.absent(),
             Value<int> condition = const Value.absent(),
             Value<int?> lastFoughtWeek = const Value.absent(),
-            Value<bool> isChampion = const Value.absent(),
-            Value<bool> isInterimChampion = const Value.absent(),
+            Value<String> beltsJson = const Value.absent(),
+            Value<String> interimBeltsJson = const Value.absent(),
+            Value<int?> suspendedUntilWeek = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               FightersCompanion(
@@ -8807,8 +8921,9 @@ class $$FightersTableTableManager extends RootTableManager<
             performanceOfTheNightCount: performanceOfTheNightCount,
             condition: condition,
             lastFoughtWeek: lastFoughtWeek,
-            isChampion: isChampion,
-            isInterimChampion: isInterimChampion,
+            beltsJson: beltsJson,
+            interimBeltsJson: interimBeltsJson,
+            suspendedUntilWeek: suspendedUntilWeek,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -8897,8 +9012,9 @@ class $$FightersTableTableManager extends RootTableManager<
             Value<int> performanceOfTheNightCount = const Value.absent(),
             Value<int> condition = const Value.absent(),
             Value<int?> lastFoughtWeek = const Value.absent(),
-            Value<bool> isChampion = const Value.absent(),
-            Value<bool> isInterimChampion = const Value.absent(),
+            Value<String> beltsJson = const Value.absent(),
+            Value<String> interimBeltsJson = const Value.absent(),
+            Value<int?> suspendedUntilWeek = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               FightersCompanion.insert(
@@ -8987,8 +9103,9 @@ class $$FightersTableTableManager extends RootTableManager<
             performanceOfTheNightCount: performanceOfTheNightCount,
             condition: condition,
             lastFoughtWeek: lastFoughtWeek,
-            isChampion: isChampion,
-            isInterimChampion: isInterimChampion,
+            beltsJson: beltsJson,
+            interimBeltsJson: interimBeltsJson,
+            suspendedUntilWeek: suspendedUntilWeek,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
@@ -9844,6 +9961,7 @@ typedef $$FightsTableCreateCompanionBuilder = FightsCompanion Function({
   Value<String> resultMethodDetail,
   Value<String> statsAJson,
   Value<String> statsBJson,
+  Value<double?> preFightProbabilityA,
   Value<int?> winnerPerformanceRating,
   Value<int?> loserPerformanceRating,
   Value<String?> resultFighterAInjury,
@@ -9869,6 +9987,7 @@ typedef $$FightsTableUpdateCompanionBuilder = FightsCompanion Function({
   Value<String> resultMethodDetail,
   Value<String> statsAJson,
   Value<String> statsBJson,
+  Value<double?> preFightProbabilityA,
   Value<int?> winnerPerformanceRating,
   Value<int?> loserPerformanceRating,
   Value<String?> resultFighterAInjury,
@@ -9943,6 +10062,10 @@ class $$FightsTableFilterComposer
 
   ColumnFilters<String> get statsBJson => $composableBuilder(
       column: $table.statsBJson, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get preFightProbabilityA => $composableBuilder(
+      column: $table.preFightProbabilityA,
+      builder: (column) => ColumnFilters(column));
 
   ColumnFilters<int> get winnerPerformanceRating => $composableBuilder(
       column: $table.winnerPerformanceRating,
@@ -10031,6 +10154,10 @@ class $$FightsTableOrderingComposer
   ColumnOrderings<String> get statsBJson => $composableBuilder(
       column: $table.statsBJson, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<double> get preFightProbabilityA => $composableBuilder(
+      column: $table.preFightProbabilityA,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<int> get winnerPerformanceRating => $composableBuilder(
       column: $table.winnerPerformanceRating,
       builder: (column) => ColumnOrderings(column));
@@ -10111,6 +10238,9 @@ class $$FightsTableAnnotationComposer
   GeneratedColumn<String> get statsBJson => $composableBuilder(
       column: $table.statsBJson, builder: (column) => column);
 
+  GeneratedColumn<double> get preFightProbabilityA => $composableBuilder(
+      column: $table.preFightProbabilityA, builder: (column) => column);
+
   GeneratedColumn<int> get winnerPerformanceRating => $composableBuilder(
       column: $table.winnerPerformanceRating, builder: (column) => column);
 
@@ -10165,6 +10295,7 @@ class $$FightsTableTableManager extends RootTableManager<
             Value<String> resultMethodDetail = const Value.absent(),
             Value<String> statsAJson = const Value.absent(),
             Value<String> statsBJson = const Value.absent(),
+            Value<double?> preFightProbabilityA = const Value.absent(),
             Value<int?> winnerPerformanceRating = const Value.absent(),
             Value<int?> loserPerformanceRating = const Value.absent(),
             Value<String?> resultFighterAInjury = const Value.absent(),
@@ -10190,6 +10321,7 @@ class $$FightsTableTableManager extends RootTableManager<
             resultMethodDetail: resultMethodDetail,
             statsAJson: statsAJson,
             statsBJson: statsBJson,
+            preFightProbabilityA: preFightProbabilityA,
             winnerPerformanceRating: winnerPerformanceRating,
             loserPerformanceRating: loserPerformanceRating,
             resultFighterAInjury: resultFighterAInjury,
@@ -10215,6 +10347,7 @@ class $$FightsTableTableManager extends RootTableManager<
             Value<String> resultMethodDetail = const Value.absent(),
             Value<String> statsAJson = const Value.absent(),
             Value<String> statsBJson = const Value.absent(),
+            Value<double?> preFightProbabilityA = const Value.absent(),
             Value<int?> winnerPerformanceRating = const Value.absent(),
             Value<int?> loserPerformanceRating = const Value.absent(),
             Value<String?> resultFighterAInjury = const Value.absent(),
@@ -10240,6 +10373,7 @@ class $$FightsTableTableManager extends RootTableManager<
             resultMethodDetail: resultMethodDetail,
             statsAJson: statsAJson,
             statsBJson: statsBJson,
+            preFightProbabilityA: preFightProbabilityA,
             winnerPerformanceRating: winnerPerformanceRating,
             loserPerformanceRating: loserPerformanceRating,
             resultFighterAInjury: resultFighterAInjury,

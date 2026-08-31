@@ -1,4 +1,5 @@
 import '../../data/models/models.dart';
+import '../betting/fight_odds.dart';
 
 /// One fighter's career *inside this promotion*. Every figure here is
 /// accumulated from fights that happened on the org's own cards — a
@@ -61,7 +62,11 @@ class RecordCategory {
 }
 
 class RecordEntry {
-  final String fighterId;
+  /// The fighter this row is about, or null for event-level records
+  /// (biggest gate, most PPV buys) where the row is a show, not a person.
+  final String? fighterId;
+
+  /// Row label — a fighter's name, or an event's.
   final String fighterName;
 
   /// Preformatted, because these span counts, percentages and clock times.
@@ -71,10 +76,10 @@ class RecordEntry {
   final double sortValue;
 
   const RecordEntry({
-    required this.fighterId,
     required this.fighterName,
     required this.value,
     required this.sortValue,
+    this.fighterId,
   });
 }
 
@@ -99,9 +104,11 @@ class RecordBook {
   static List<RecordCategory> build({
     required List<Fight> fights,
     required Map<String, Fighter> fighters,
+    List<MmaEvent> events = const [],
   }) {
     final careers = tally(fights: fights);
-    if (careers.isEmpty) return const [];
+    final eventCategories = _eventCategories(events);
+    if (careers.isEmpty) return eventCategories;
 
     String name(String id) => fighters[id]?.name ?? 'Unknown fighter';
     final all = careers.values.toList();
@@ -153,11 +160,142 @@ class RecordBook {
         qualifier: 'min $minTakedownsFaced faced',
       ),
       _count('Most Main Events', all, name, (c) => c.mainEvents),
+      _biggestUpsets(fights, name),
+      _doubleChamps(fights, fighters, name),
+      ...eventCategories,
     ];
 
     // A leaderboard where everyone sits on zero says nothing — drop it
     // until someone has actually done the thing.
     return categories.where((c) => c.entries.isNotEmpty).toList();
+  }
+
+  /// The nights themselves, rather than the fighters on them. Built
+  /// straight off completed events — the promotion's own box office.
+  static List<RecordCategory> _eventCategories(List<MmaEvent> events) {
+    final completed = events.where((e) => e.isCompleted).toList();
+    if (completed.isEmpty) return const [];
+
+    List<RecordEntry> rank(num Function(MmaEvent) valueOf,
+        String Function(num) format) {
+      return (completed
+              .map((e) => (e, valueOf(e)))
+              .where((pair) => pair.$2 > 0)
+              .map((pair) => RecordEntry(
+                    fighterName: pair.$1.name,
+                    value: format(pair.$2),
+                    sortValue: pair.$2.toDouble(),
+                  ))
+              .toList()
+            ..sort((x, y) => y.sortValue.compareTo(x.sortValue)))
+          .take(topN)
+          .toList();
+    }
+
+    return [
+      RecordCategory(
+        title: 'Most PPV Buys in One Event',
+        entries: rank((e) => e.ppvBuys, _thousands),
+      ),
+      RecordCategory(
+        title: 'Highest Revenue in One Event',
+        entries: rank((e) => e.revenue, (v) => '\$${_thousands(v)}'),
+      ),
+    ].where((c) => c.entries.isNotEmpty).toList();
+  }
+
+  /// Fights the betting line got most wrong. Measured off the price as
+  /// it stood before the bout — bouts resolved before that was recorded
+  /// simply don't qualify, rather than being scored on numbers that have
+  /// since moved.
+  static RecordCategory _biggestUpsets(
+    List<Fight> fights,
+    String Function(String) name,
+  ) {
+    final entries = fights
+        .map((f) => (f, f.upsetMagnitude))
+        .where((pair) => pair.$2 != null && pair.$2! > 0.5)
+        .map((pair) {
+          final fight = pair.$1;
+          final winnerId = fight.result!.winnerId;
+          final loserId = winnerId == fight.fighterAId
+              ? fight.fighterBId
+              : fight.fighterAId;
+          final line = OddsCalculator.moneylineFor(1 - pair.$2!);
+          return RecordEntry(
+            fighterId: winnerId,
+            fighterName: '${name(winnerId)} bt ${name(loserId)}',
+            value: FightOdds.format(line),
+            sortValue: pair.$2!,
+          );
+        })
+        .toList()
+      ..sort((x, y) => y.sortValue.compareTo(x.sortValue));
+
+    return RecordCategory(
+      title: 'Biggest Upsets',
+      qualifier: 'underdog wins',
+      entries: entries.take(topN).toList(),
+    );
+  }
+
+  /// Fighters who have won an undisputed title in more than one
+  /// division. Read off the fight history rather than who currently
+  /// holds what, so a champion who later loses a belt keeps the record —
+  /// it happened.
+  static RecordCategory _doubleChamps(
+    List<Fight> fights,
+    Map<String, Fighter> fighters,
+    String Function(String) name,
+  ) {
+    final divisionsWon = <String, Set<WeightClass>>{};
+    for (final fight in fights) {
+      final result = fight.result;
+      if (result == null || result.isDraw) continue;
+      if (fight.titleFightType != TitleFightType.championship) continue;
+      divisionsWon
+          .putIfAbsent(result.winnerId, () => <WeightClass>{})
+          .add(fight.weightClass);
+    }
+
+    final entries = divisionsWon.entries
+        .where((e) => e.value.length >= 2)
+        .map((e) {
+          final divisions = WeightClass.values
+              .where(e.value.contains)
+              .map((w) => w.label)
+              .join(' & ');
+          // Holding them at the same time is the rarer thing, and worth
+          // separating from winning them years apart.
+          final simultaneous =
+              (fighters[e.key]?.belts.length ?? 0) >= 2;
+          return RecordEntry(
+            fighterId: e.key,
+            fighterName: name(e.key),
+            value: simultaneous ? '$divisions (current)' : divisions,
+            sortValue: e.value.length + (simultaneous ? 0.5 : 0),
+          );
+        })
+        .toList()
+      ..sort((x, y) => y.sortValue.compareTo(x.sortValue));
+
+    return RecordCategory(
+      title: 'Double Champs',
+      qualifier: 'titles in 2+ divisions',
+      entries: entries.take(topN).toList(),
+    );
+  }
+
+  /// 12,400 rather than 12400 — these are numbers people read at a
+  /// glance, not compare digit by digit.
+  static String _thousands(num value) {
+    final digits = value.round().toString();
+    final buffer = StringBuffer();
+    for (var i = 0; i < digits.length; i++) {
+      if (i > 0 && (digits.length - i) % 3 == 0) buffer.write(',');
+      buffer.write(digits[i]);
+    }
+    return buffer.toString();
   }
 
   /// Accumulates per-fighter org careers. Exposed separately so the

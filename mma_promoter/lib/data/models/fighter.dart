@@ -64,13 +64,20 @@ class Fighter {
   /// fought here yet.
   final int? lastFoughtWeek;
 
-  /// Holds their division's belt. Won by taking a championship fight,
-  /// lost by dropping one.
-  final bool isChampion;
+  /// Every division whose undisputed belt this fighter currently holds.
+  /// A set rather than a flag because a fighter can move up (or down) and
+  /// win a second belt without giving up the first — that's what makes a
+  /// double champ possible at all.
+  final Set<WeightClass> belts;
 
-  /// Holds an interim belt in their division — tracked separately, since
-  /// it doesn't displace the undisputed champion.
-  final bool isInterimChampion;
+  /// Interim belts held, tracked separately: an interim champion doesn't
+  /// displace the undisputed one.
+  final Set<WeightClass> interimBelts;
+
+  /// Absolute game week a suspension (a failed drug test, say) runs
+  /// through. Null when the fighter is free to compete. They can't be
+  /// booked until [Organization.currentWeek] passes it.
+  final int? suspendedUntilWeek;
 
   const Fighter({
     required this.id,
@@ -104,12 +111,44 @@ class Fighter {
     this.performanceOfTheNightCount = 0,
     this.condition = 100,
     this.lastFoughtWeek,
-    this.isChampion = false,
-    this.isInterimChampion = false,
+    this.belts = const {},
+    this.interimBelts = const {},
+    this.suspendedUntilWeek,
   });
 
   bool get isSigned => contract != null;
+
+  /// Serving a suspension as of [currentWeek].
+  bool isSuspendedOn(int currentWeek) =>
+      suspendedUntilWeek != null && suspendedUntilWeek! > currentWeek;
+
+  /// Whether they're fit to fight — ignores suspensions, which are a
+  /// booking restriction rather than a physical one. Call
+  /// [isBookableOn] when the game week is known.
   bool get isAvailableToFight => injuryStatus == InjuryStatus.healthy && !retired;
+
+  /// Fit *and* eligible: healthy, not retired, not serving a ban.
+  bool isBookableOn(int currentWeek) =>
+      isAvailableToFight && !isSuspendedOn(currentWeek);
+
+  /// Holds any undisputed belt.
+  bool get isChampion => belts.isNotEmpty;
+
+  /// Holds any interim belt.
+  bool get isInterimChampion => interimBelts.isNotEmpty;
+
+  /// Simultaneous holder of two or more undisputed belts.
+  bool get isDoubleChampion => belts.length >= 2;
+
+  bool championOf(WeightClass division) => belts.contains(division);
+
+  bool interimChampionOf(WeightClass division) =>
+      interimBelts.contains(division);
+
+  /// Belt-holder in [division] under either banner — what the rankings
+  /// list needs to decide who sits above #1.
+  bool holdsAnyBeltIn(WeightClass division) =>
+      championOf(division) || interimChampionOf(division);
 
   /// Single-number overview across all three ability categories, used for
   /// matchmaking/scouting display and as the baseline for [potential].
@@ -162,8 +201,10 @@ class Fighter {
     int? performanceOfTheNightCount,
     int? condition,
     int? lastFoughtWeek,
-    bool? isChampion,
-    bool? isInterimChampion,
+    Set<WeightClass>? belts,
+    Set<WeightClass>? interimBelts,
+    int? suspendedUntilWeek,
+    bool clearSuspension = false,
   }) {
     return Fighter(
       id: id ?? this.id,
@@ -200,8 +241,11 @@ class Fighter {
           performanceOfTheNightCount ?? this.performanceOfTheNightCount,
       condition: condition ?? this.condition,
       lastFoughtWeek: lastFoughtWeek ?? this.lastFoughtWeek,
-      isChampion: isChampion ?? this.isChampion,
-      isInterimChampion: isInterimChampion ?? this.isInterimChampion,
+      belts: belts ?? this.belts,
+      interimBelts: interimBelts ?? this.interimBelts,
+      suspendedUntilWeek: clearSuspension
+          ? null
+          : (suspendedUntilWeek ?? this.suspendedUntilWeek),
     );
   }
 }

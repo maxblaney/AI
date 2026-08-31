@@ -5,11 +5,13 @@ import 'package:mma_promoter/data/repositories/organization_repository.dart';
 import 'package:mma_promoter/data/repositories/save_scope.dart';
 import 'package:sqlite3/sqlite3.dart' as sql;
 
-/// v1 databases exist in the wild — anyone already playing has one. The
-/// upgrade path since then adds save scoping (v2) and persisted box
-/// scores plus championship flags (v3). The risk worth testing is that an
-/// in-progress game ends up tagged with no save and becomes invisible
-/// behind a saves list that can't see it.
+/// Old databases exist in the wild — anyone already playing has one. The
+/// upgrade path adds save scoping (v2), persisted box scores plus
+/// championship flags (v3), condition (v4) and per-division belts (v5).
+/// Two risks are worth testing: that an in-progress v1 game ends up
+/// tagged with no save and becomes invisible behind a saves list that
+/// can't see it, and that a champion crowned before v5 keeps their belt
+/// once belts became a set.
 ///
 /// The old schema is built with a raw sqlite3 handle rather than through
 /// drift, because opening an [AppDatabase] runs the migration and creates
@@ -37,8 +39,11 @@ void main() {
         current_week INTEGER NOT NULL DEFAULT 1,
         PRIMARY KEY (id)
       )''');
+    // weight_class has always been on fighters, and the v5 step reads it
+    // to work out which belt a pre-v5 champion held.
+    raw.execute('CREATE TABLE fighters (id TEXT NOT NULL PRIMARY KEY, '
+        "weight_class TEXT NOT NULL DEFAULT 'lightweight')");
     for (final table in [
-      'fighters',
       'events',
       'random_events',
       'inbox_items',
@@ -59,7 +64,8 @@ void main() {
       "current_week) VALUES ('legacy-save', 'Legacy FC', 250000, "
       "'Midwest, USA', 17)",
     );
-    raw.execute("INSERT INTO fighters (id) VALUES ('legacy-fighter')");
+    raw.execute("INSERT INTO fighters (id, weight_class) VALUES "
+        "('legacy-fighter', 'welterweight')");
 
     // Opening with the current code runs onUpgrade against that v1 database.
     final db = AppDatabase.forTesting(NativeDatabase.opened(raw));
@@ -81,6 +87,46 @@ void main() {
     scope.saveId = list.single.organization.id;
     final org = await saves.get();
     expect(org?.cashBalance, 250000);
+
+    await db.close();
+  });
+
+  test('a champion crowned before v5 keeps the belt for their division',
+      () async {
+    final raw = sql.sqlite3.openInMemory();
+    raw.execute('PRAGMA user_version = 4');
+    // Only what the v5 step touches: it ALTERs both tables and reads the
+    // two old championship flags off fighters.
+    raw.execute('''
+      CREATE TABLE fighters (
+        id TEXT NOT NULL PRIMARY KEY,
+        weight_class TEXT NOT NULL,
+        is_champion INTEGER NOT NULL DEFAULT 0,
+        is_interim_champion INTEGER NOT NULL DEFAULT 0
+      )''');
+    raw.execute('CREATE TABLE fights (id TEXT NOT NULL PRIMARY KEY)');
+
+    raw.execute("INSERT INTO fighters VALUES ('champ', 'lightweight', 1, 0)");
+    raw.execute("INSERT INTO fighters VALUES ('interim', 'heavyweight', 0, 1)");
+    raw.execute("INSERT INTO fighters VALUES ('nobody', 'flyweight', 0, 0)");
+
+    final db = AppDatabase.forTesting(NativeDatabase.opened(raw));
+    // Any query forces the migration to run.
+    await db.customSelect('SELECT 1').get();
+
+    String beltsOf(String id) => raw
+        .select('SELECT belts_json FROM fighters WHERE id = ?', [id])
+        .single['belts_json'] as String;
+    String interimOf(String id) => raw
+        .select('SELECT interim_belts_json FROM fighters WHERE id = ?', [id])
+        .single['interim_belts_json'] as String;
+
+    expect(beltsOf('champ'), '["lightweight"]');
+    expect(interimOf('champ'), '[]');
+    expect(beltsOf('interim'), '[]',
+        reason: 'an interim belt is not an undisputed one');
+    expect(interimOf('interim'), '["heavyweight"]');
+    expect(beltsOf('nobody'), '[]');
 
     await db.close();
   });
