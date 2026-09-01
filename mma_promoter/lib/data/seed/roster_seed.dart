@@ -511,41 +511,45 @@ List<Fighter> generateStartingRoster({
   ];
 }
 
-/// The overall band every fighter a promotion starts with under contract
-/// falls inside. A starting roster is meant to be a going concern — no
-/// journeymen making up the numbers — so the floor is well above the
-/// talent pool's average.
-const int signedRosterMinOverall = 70;
-const int signedRosterMaxOverall = 95;
-
-/// Stat centre for a fighter already on the books. Unlike the talent
-/// pool this has no journeyman tier at all: the spread runs from solid
-/// roster fighter up to the odd genuine superstar, weighted so most of a
-/// division is the former.
-int _rollSignedStatCenter(Random rng) {
+/// Stat centre for a fighter already on the books, placed inside
+/// [min]-[max]. Unlike the talent pool there is no journeyman tier: the
+/// spread runs from solid roster fighter up to the odd genuine draw,
+/// weighted toward the bottom of the band because most of any division
+/// is the former.
+int _rollSignedStatCenter(Random rng, int min, int max) {
+  final span = (max - min).toDouble();
   final roll = rng.nextDouble();
-  if (roll < 0.03) return 92 + rng.nextInt(4); // 92-95: a real draw
-  if (roll < 0.15) return 86 + rng.nextInt(6); // 86-91: title picture
-  if (roll < 0.45) return 79 + rng.nextInt(7); // 79-85: contenders
-  return 72 + rng.nextInt(7); //                  72-78: the bulk of it
+  final double position; // 0 = floor of the band, 1 = ceiling
+  if (roll < 0.03) {
+    position = 0.90 + rng.nextDouble() * 0.10; // a real draw
+  } else if (roll < 0.15) {
+    position = 0.68 + rng.nextDouble() * 0.22; // the title picture
+  } else if (roll < 0.45) {
+    position = 0.36 + rng.nextDouble() * 0.32; // contenders
+  } else {
+    position = rng.nextDouble() * 0.36; //        the bulk of a division
+  }
+  return (min + position * span).round();
 }
 
 /// Generates a promotion's starting *signed* roster — fighters already
 /// under contract when the save begins, [fightersPerWeightClass] to a
-/// division, every one of them between [signedRosterMinOverall] and
-/// [signedRosterMaxOverall].
+/// division, every one of them inside [tier]'s
+/// [ReputationTierInfo.signedRosterOverall] band.
 ///
 /// [signedOn] dates the contracts; pass the save's opening week.
 List<Fighter> generateSignedRoster({
-  int fightersPerWeightClass = 20,
+  required ReputationTier tier,
   required DateTime signedOn,
+  int fightersPerWeightClass = 20,
   Random? random,
 }) {
   final rng = random ?? Random();
+  final band = tier.signedRosterOverall;
   return [
     for (final weightClass in WeightClass.values)
       for (var i = 0; i < fightersPerWeightClass; i++)
-        _signedFighter(weightClass, rng, signedOn),
+        _signedFighter(weightClass, rng, signedOn, band.min, band.max),
   ];
 }
 
@@ -557,18 +561,23 @@ List<Fighter> generateSignedRoster({
 /// the stat curve can never hang a new game; if it ever ran out of
 /// attempts the fighter would still be signed, just fractionally outside
 /// the band, which is a far better failure than an infinite loop.
-Fighter _signedFighter(WeightClass weightClass, Random rng, DateTime signedOn) {
+Fighter _signedFighter(
+  WeightClass weightClass,
+  Random rng,
+  DateTime signedOn,
+  int minOverall,
+  int maxOverall,
+) {
   Fighter fighter;
   var attempts = 0;
   do {
     fighter = _generateFighter(
       weightClass,
       rng,
-      centerOverride: _rollSignedStatCenter(rng),
+      centerOverride: _rollSignedStatCenter(rng, minOverall, maxOverall),
     );
     attempts++;
-  } while ((fighter.overall < signedRosterMinOverall ||
-          fighter.overall > signedRosterMaxOverall) &&
+  } while ((fighter.overall < minOverall || fighter.overall > maxOverall) &&
       attempts < 40);
 
   final pay = PayScale.suggest(

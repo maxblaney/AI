@@ -199,13 +199,23 @@ the native mobile app with real persistence.
   — signing normally charges the show money as a bonus, and 160 of those
   would bankrupt the save before week one.
 
-  **This roster only fits the bigger starting tiers.** Purses scale hard
-  with overall, and a floor of 70 means the cheapest 8-bout card you can
-  assemble costs about $100,000 in purses. Measured, cheapest-16 card at
-  each tier: Local **-$70,760**, Regional **-$67,295**, National
-  **+$37,604**, International **+$686,045**. Local and Regional are in
-  debt after one show. Start National or above, or lower the roster's
-  overall floor.
+  **The band is set by the starting tier**
+  ([`ReputationTierInfo.signedRosterOverall`](lib/data/models/enums.dart)):
+  Local 48-68, Regional 56-78, National 70-95, International 75-99. This
+  is not decoration — purses scale hard with overall, so a roster of
+  80-overall fighters costs more per card than a local promotion takes at
+  the gate all year. A single 70-95 band across every tier put Local
+  **$70,760** and Regional **$67,295** in the red on the *cheapest* card
+  they could assemble; scaling the roster to the tier keeps all four
+  playable and makes the choice say something about the kind of promotion
+  you're running rather than just how much cash you happen to have.
+
+  Net on an 8-bout card built from the cheapest half of your own roster,
+  measured per tier: Local **+$8,910**, Regional **+$4,300**, National
+  **+$49,505**, International **+$572,449**. Booking the *most expensive*
+  half loses money at every tier, which is the intended matchmaking
+  tension — you cannot main-event your best fighters every week and stay
+  solvent.
 - **Weight classes**: `WeightClass` has the real 8 divisions (Flyweight
   125 → Heavyweight 265). The starting roster spreads fighters across all
   of them, and fights can only be booked between fighters in the same

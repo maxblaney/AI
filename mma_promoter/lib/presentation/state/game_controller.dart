@@ -315,6 +315,7 @@ class GameController extends ChangeNotifier {
     // bankrupt the save before week one.
     final openingWeek = GameCalendar.dateForWeek(org.currentWeek);
     for (final fighter in generateSignedRoster(
+      tier: tier,
       signedOn: openingWeek,
       random: _rng,
     )) {

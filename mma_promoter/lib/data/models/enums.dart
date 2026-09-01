@@ -153,6 +153,28 @@ extension ReputationTierInfo on ReputationTier {
     }
   }
 
+  /// The overall band the fighters a promotion of this tier starts under
+  /// contract with fall inside.
+  ///
+  /// Tied to the tier because purses scale hard with overall: a roster
+  /// full of 80-overall fighters costs more per card than a local
+  /// promotion takes at the gate all year. Scaling the roster to the tier
+  /// keeps every starting option playable and makes the choice mean
+  /// something about the *kind* of promotion you're running, rather than
+  /// just how much money you happen to have.
+  ({int min, int max}) get signedRosterOverall {
+    switch (this) {
+      case ReputationTier.local:
+        return (min: 48, max: 68);
+      case ReputationTier.regional:
+        return (min: 56, max: 78);
+      case ReputationTier.national:
+        return (min: 70, max: 95);
+      case ReputationTier.international:
+        return (min: 75, max: 99);
+    }
+  }
+
   int get startingCash {
     switch (this) {
       case ReputationTier.local:
