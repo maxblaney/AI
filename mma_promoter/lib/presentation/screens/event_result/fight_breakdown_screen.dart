@@ -524,7 +524,10 @@ class _BoxScore extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       children: [
         _StatRow(
-          label: 'Significant strikes',
+          // Landed / attempted, same as a broadcast graphic — spelled out
+          // because "38/91" on its own is a coin flip between that and a
+          // score.
+          label: 'Significant strikes (landed/thrown)',
           a: '${a.significantStrikesLanded}/${a.significantStrikesAttempted}',
           b: '${b.significantStrikesLanded}/${b.significantStrikesAttempted}',
           isHeader: true,
@@ -539,7 +542,7 @@ class _BoxScore extends StatelessWidget {
         _StatRow(label: 'Leg', a: '${a.legStrikes}', b: '${b.legStrikes}'),
         const Divider(height: 24),
         _StatRow(
-          label: 'Takedowns',
+          label: 'Takedowns (landed/attempted)',
           a: '${a.takedownsLanded}/${a.takedownsAttempted}',
           b: '${b.takedownsLanded}/${b.takedownsAttempted}',
           isHeader: true,
@@ -638,7 +641,7 @@ class _Scorecards extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Text(
-            'No scorecards — this one never reached the judges.',
+            'No scorecards — this one ended before a round was completed.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium,
           ),
@@ -646,9 +649,27 @@ class _Scorecards extends StatelessWidget {
       );
     }
 
+    // A finish doesn't erase the rounds the judges already scored, and
+    // they're often the interesting part — the man who got stopped was
+    // sometimes winning.
+    final endedEarly = result.method != FightMethod.decision && !result.isDraw;
+    final scored = result.scorecards.first.rounds.length;
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        if (endedEarly)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              scored == 1
+                  ? 'The fight ended in round ${result.round}. Round 1 had '
+                      'already been scored:'
+                  : 'The fight ended in round ${result.round}. The first '
+                      '$scored rounds had already been scored:',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
         for (final card in result.scorecards)
           Card(
             margin: const EdgeInsets.only(bottom: 12),

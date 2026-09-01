@@ -274,16 +274,29 @@ the native mobile app with real persistence.
   grappling-weighting bias, so close rounds genuinely divide a panel,
   which is what produces split and majority decisions instead of every
   fight being unanimous (`judging.dart`).
-- **10-8 rounds mean something.** A 10-8 needs all three of what the
-  unified rules ask a judge to weigh: **impact** (a knockdown, a near
-  finish, or a beating that was overwhelmingly one-way), **dominance**
-  (the loser gave almost nothing back) and **duration** (it lasted,
-  rather than being one good exchange). Two knockdowns is a 10-8 on its
-  own. Nothing else is: a round won on control alone is a 10-9 however
-  wide the points gap, and so is a round with one knockdown in it where
-  the other man fought back. This lands at ~4-5% of scored rounds, in
-  line with the real sport. The previous rule scored on the points margin
-  and made **68%** of all rounds 10-8s.
+- **10-8 rounds mean something.** `JudgePanel.dominanceOf` scores how
+  overwhelming a round was on a 0-100 curve built from what the unified
+  rules ask a judge to weigh — **impact** (knockdowns, near finishes,
+  one-way damage), **dominance** (what the loser managed in reply) and
+  **duration** — and each judge writes a 10-8 once it clears *their own*
+  bar, drawn per fight. Two knockdowns is a 10-8 on every card; otherwise
+  a round also has to show real impact, so one won on control alone is a
+  10-9 however wide the points gap.
+
+  Per-judge bars matter as much as the height of them: a marginal 10-8
+  now lands on one card and not the other two, which is how the sport
+  works and wasn't possible when the test was a shared boolean. The
+  result is **2.7% of scored rounds** and **~7% of decisions** carrying a
+  10-8 anywhere, with 80% of the ones that appear being unanimous. The
+  original rule scored off the points margin and made **68%** of rounds
+  10-8s; the first fix got that to 7.7% of rounds, which still meant one
+  in six decisions had one.
+- **Scorecards survive a finish.** Judges score each round as it ends, so
+  a second-round knockout still has a scored first round — and it's often
+  the interesting part, because the fighter who got stopped was sometimes
+  ahead. The Scorecards tab shows them with a line saying how far the
+  fight got. Only *completed* rounds are scored; a first-round finish has
+  no cards at all.
 - **Submissions match the sport's mix**: rear-naked chokes are 38.5% of
   all taps, guillotines 17.4%, armbars 13.1%, and a calf slicer is a
   rounding error (`submissions.dart`). Each hold carries both its target
@@ -394,6 +407,21 @@ the native mobile app with real persistence.
   weakest is named underneath, so a short bar tells you what to fix
   rather than just that something is wrong. Setting Title Implications
   moves the bar live.
+- **Booked fights can be edited and reordered.** Tapping a bout on the
+  card (or its pencil) reopens the same dialog with everything pre-filled
+  and saves in place, keeping its slot and its main-event flag. Up/down
+  arrows move a bout through the running order — and since the main
+  card/prelim split is positional, moving one into the top five promotes
+  it.
+- **A champion at home is always defending.** Any fight involving the
+  champion of the division it's booked in is forced to a title fight
+  (`TitleFightRules`), with the control locked and a line saying whose
+  belt is on the line. An interim champion forces an interim bout; the
+  two meeting is a unification for the real belt. A champion fighting
+  *up* a division isn't defending anything, so nothing is forced there —
+  the rule keys off the fight's weight class, not the fighter's home one.
+  Enforced again at confirm time, since a fighter can win a belt between
+  a card being built and booked.
 - **Fighters can cross one division.** A fighter may be booked at their
   own weight or one class either side, flagged in the picker with an
   arrow and the weight they're leaving. This is a normal career move in

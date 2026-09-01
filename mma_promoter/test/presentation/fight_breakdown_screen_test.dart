@@ -96,13 +96,13 @@ void main() {
     await tester.tap(find.text('Box Score'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Significant strikes'), findsOneWidget);
+    expect(find.text('Significant strikes (landed/thrown)'), findsOneWidget);
     expect(find.text('Striking accuracy'), findsOneWidget);
-    expect(find.text('Takedowns'), findsOneWidget);
+    expect(find.text('Takedowns (landed/attempted)'), findsOneWidget);
     expect(find.text('Control time'), findsOneWidget);
 
     // Knockdowns sits below the fold on a phone-sized viewport.
-    await tester.drag(find.text('Significant strikes'), const Offset(0, -400));
+    await tester.drag(find.text('Significant strikes (landed/thrown)'), const Offset(0, -400));
     await tester.pumpAndSettle();
     expect(find.text('Knockdowns'), findsOneWidget);
   });

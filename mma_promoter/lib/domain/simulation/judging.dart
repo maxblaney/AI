@@ -32,11 +32,18 @@ class _Judge {
   final double grapplingBias;
   final double noise;
 
+  /// How dominant a round has to be before *this* judge writes a 10-8.
+  /// Drawn per fight, because in the real sport a marginal 10-8 shows up
+  /// on one card and not the other two — judges disagree about them more
+  /// than about anything else. Without this every 10-8 was unanimous.
+  final double tenEightBar;
+
   const _Judge({
     required this.name,
     required this.strikingBias,
     required this.grapplingBias,
     required this.noise,
+    required this.tenEightBar,
   });
 }
 
@@ -63,6 +70,8 @@ class JudgePanel {
           strikingBias: 0.62 + _random.nextDouble() * 0.76,
           grapplingBias: 0.62 + _random.nextDouble() * 0.76,
           noise: 0.88 + _random.nextDouble() * 0.24,
+          tenEightBar: JudgePanel.tenEightBar +
+              _random.nextDouble() * JudgePanel.tenEightBarSpread,
         ),
     ];
   }
@@ -84,10 +93,9 @@ class JudgePanel {
   RoundScore _scoreRound(_Judge judge, int round, RoundTally a, RoundTally b) {
     final scoreA = _impression(judge, a);
     final scoreB = _impression(judge, b);
-    final margin = (scoreA - scoreB).abs();
 
     const winnerPoints = 10;
-    final loserPoints = _isTenEight(a, b, scoreA, scoreB, margin) ? 8 : 9;
+    final loserPoints = _isTenEight(judge, a, b, scoreA, scoreB) ? 8 : 9;
 
     if (scoreA > scoreB) {
       return RoundScore(round: round, fighterAScore: winnerPoints, fighterBScore: loserPoints);
@@ -101,55 +109,82 @@ class JudgePanel {
         : RoundScore(round: round, fighterAScore: 9, fighterBScore: 10);
   }
 
-  /// Whether the round was one-sided enough to be scored 10-8.
+  /// The lowest bar any judge will write a 10-8 on, on the 0-100 scale
+  /// [dominanceOf] produces. Deliberately high: a 10-8 is a round the
+  /// loser survived rather than competed in, and it has to be rare enough
+  /// that seeing one on a card means something.
+  static const double tenEightBar = 84;
+
+  /// How far the strictest judge sits above the most lenient. This is
+  /// what makes a marginal round show up as 10-8 on one card and 10-9 on
+  /// the other two, the way it does in the sport.
+  static const double tenEightBarSpread = 26;
+
+  /// How overwhelming a round was for its winner, roughly 0-100.
   ///
-  /// A 10-8 is not "a clear round" — it's a round the loser barely
-  /// survived, and it has to be rare enough to mean something when it
-  /// appears on a card. The unified rules ask a judge to weigh three
-  /// things: **impact** (did the winner hurt them), **dominance** (was it
-  /// one-way traffic) and **duration** (did it last, or was it one
-  /// flurry). All three have to be there.
+  /// The unified rules ask a judge to weigh impact, dominance and
+  /// duration. Rather than three hard gates — which made the answer
+  /// binary, and identical on all three cards — each contributes points,
+  /// and a judge writes 10-8 once the total clears their own
+  /// [_Judge.tenEightBar].
   ///
-  /// Requiring all three is what keeps the number honest. A round spent
-  /// grinding out control with nothing behind it is a 10-9 however wide
-  /// the points gap looks, and so is a round with one knockdown in it
-  /// where the other man fought back. Scoring on the points margin alone
-  /// — which is what the old rule did — made two thirds of all rounds
-  /// 10-8s; requiring impact alone still left a quarter of them.
+  /// Public so tests can pin the shape of the curve rather than only its
+  /// output.
+  static double dominanceOf(RoundTally winner, RoundTally loser) {
+    // Impact. A knockdown is most of a 10-8 on its own; two is all of it.
+    var score = winner.knockdowns * 32.0;
+    score += winner.nearFinishes * 15.0;
+
+    // Damage, but only the part that was one-way — trading heavily and
+    // coming out ahead is a 10-9.
+    final damageEdge = winner.damage - loser.damage;
+    score += (damageEdge - 12).clamp(0.0, 55.0) * 0.55;
+
+    // Dominance: what the loser managed in reply. Silence is what turns a
+    // clear round into a one-sided one.
+    final loserOutput = loser.significantStrikes +
+        loser.takedowns * 3 +
+        loser.controlValue * 0.05 +
+        loser.knockdowns * 12 +
+        loser.submissionAttempts * 3;
+    score += (12 - loserOutput).clamp(0.0, 12.0) * 1.5;
+
+    // Duration: it has to have lasted. Capped low, because a long round
+    // of control with nothing behind it must never reach the bar on its
+    // own — see the impact floor in [_isTenEight].
+    score += (winner.controlValue / 300 * 10).clamp(0.0, 10.0);
+    score += (winner.significantStrikes - 22).clamp(0.0, 28.0) * 0.35;
+
+    return score;
+  }
+
+  /// Whether [judge] scores this round 10-8.
+  ///
+  /// Two knockdowns is a 10-8 on every card, always. Otherwise the round
+  /// needs real impact — a knockdown, a near finish, or a beating that
+  /// was overwhelmingly one-way — *and* has to clear this judge's bar. A
+  /// round won purely on control is a 10-9 however wide the points gap,
+  /// because the impact floor is never met.
   bool _isTenEight(
+    _Judge judge,
     RoundTally a,
     RoundTally b,
     double scoreA,
     double scoreB,
-    double margin,
   ) {
     if (scoreA == scoreB) return false;
     final winner = scoreA > scoreB ? a : b;
     final loser = scoreA > scoreB ? b : a;
 
-    // Two knockdowns is a 10-8 on its own, every time.
     if (winner.knockdowns >= 2) return true;
 
-    // Impact: they were dropped, nearly finished, or took a beating that
-    // was overwhelmingly one-way.
     final damageEdge = winner.damage - loser.damage;
-    final impact = winner.knockdowns >= 1 ||
+    final hasImpact = winner.knockdowns >= 1 ||
         winner.nearFinishes >= 1 ||
-        (damageEdge > 20 && loser.damage < damageEdge * 0.3);
-    if (!impact) return false;
+        (damageEdge > 24 && loser.damage < damageEdge * 0.25);
+    if (!hasImpact) return false;
 
-    // Dominance: the loser gave almost nothing back.
-    final loserOutput = loser.significantStrikes +
-        loser.takedowns * 3 +
-        loser.controlValue * 0.05 +
-        loser.knockdowns * 10 +
-        loser.submissionAttempts * 3;
-    final dominance = loserOutput < 4 && margin > 30;
-
-    // Duration: it went on, rather than being one good exchange.
-    final duration = winner.controlValue > 230 || winner.significantStrikes > 34;
-
-    return dominance && duration;
+    return dominanceOf(winner, loser) >= judge.tenEightBar;
   }
 
   /// Damage is weighted heaviest, then volume, then grappling — roughly

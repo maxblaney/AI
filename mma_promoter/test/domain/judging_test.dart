@@ -149,12 +149,92 @@ void main() {
 
       expect(rounds, greaterThan(1000));
       final rate = tenEights / rounds;
-      // Real MMA scores roughly 3-6% of rounds 10-8. This used to be 68%,
-      // which made the score meaningless.
-      expect(rate, lessThan(0.09),
+      // Real MMA scores a low single-digit percentage of rounds 10-8.
+      // This started at 68%, which made the score meaningless.
+      expect(rate, lessThan(0.045),
           reason: 'a 10-8 has to mean something when it shows up');
       expect(rate, greaterThan(0.005),
           reason: 'they should still happen — a shut-out round exists');
     });
+  });
+
+  group('the dominance curve', () {
+    test('a knockdown is most of a 10-8 but not all of it on its own', () {
+      final oneDrop = JudgePanel.dominanceOf(
+        _tally(knockdowns: 1, damage: 20, significantStrikes: 12),
+        _tally(damage: 10, significantStrikes: 10),
+      );
+      expect(oneDrop, lessThan(JudgePanel.tenEightBar),
+          reason: 'a knockdown in a competitive round is a 10-9');
+
+      final twoDrops = JudgePanel.dominanceOf(
+        _tally(knockdowns: 2, damage: 40, significantStrikes: 20),
+        _tally(damage: 3),
+      );
+      expect(twoDrops, greaterThan(JudgePanel.tenEightBar));
+    });
+
+    test('control alone never gets near the bar', () {
+      final grind = JudgePanel.dominanceOf(
+        _tally(controlValue: 300, takedowns: 4, damage: 6),
+        _tally(),
+      );
+      expect(grind, lessThan(JudgePanel.tenEightBar));
+    });
+
+    test('trading heavily and winning scores lower than a one-way beating',
+        () {
+      final shootout = JudgePanel.dominanceOf(
+        _tally(damage: 55, significantStrikes: 40, knockdowns: 1),
+        _tally(damage: 35, significantStrikes: 30),
+      );
+      final beating = JudgePanel.dominanceOf(
+        _tally(damage: 55, significantStrikes: 40, knockdowns: 1),
+        _tally(damage: 3, significantStrikes: 2),
+      );
+      expect(shootout, lessThan(beating));
+    });
+  });
+
+  test('judges disagree about marginal 10-8s but not obvious ones', () {
+    // Two knockdowns and nothing coming back is unanimous.
+    final obvious = _tenEights(
+      _tally(knockdowns: 2, damage: 60, significantStrikes: 30,
+          controlValue: 200, nearFinishes: 2),
+      _tally(damage: 1),
+    );
+    expect(obvious, 3);
+
+    // A round scoring between the most lenient and the strictest bar is
+    // marginal by construction — some judges should write it 10-8 and
+    // some 10-9. Sweep damage to find such rounds rather than hard-coding
+    // a tally whose score would drift with the curve.
+    var split = 0;
+    var marginalRoundsTried = 0;
+    for (var damage = 30; damage <= 70; damage += 2) {
+      final winner = _tally(
+        damage: damage.toDouble(),
+        significantStrikes: 30,
+        knockdowns: 1,
+        controlValue: 140,
+        nearFinishes: 1,
+      );
+      final loser = _tally(damage: 4, significantStrikes: 3);
+      final score = JudgePanel.dominanceOf(winner, loser);
+      if (score < JudgePanel.tenEightBar ||
+          score > JudgePanel.tenEightBar + JudgePanel.tenEightBarSpread) {
+        continue;
+      }
+      marginalRoundsTried++;
+      for (var seed = 0; seed < 25; seed++) {
+        final n = _tenEights(winner, loser, seed: seed);
+        if (n > 0 && n < 3) split++;
+      }
+    }
+
+    expect(marginalRoundsTried, greaterThan(0),
+        reason: 'the sweep should have produced some borderline rounds');
+    expect(split, greaterThan(0),
+        reason: 'a marginal 10-8 should land on some cards and not others');
   });
 }

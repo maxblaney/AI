@@ -1300,6 +1300,13 @@ class FightResolver {
       detail = finish.detail;
       round = finish.round;
       timeSeconds = finish.timeSeconds;
+      // A finish doesn't erase the rounds that came before it. Judges
+      // score every completed round as it ends, so a second-round KO
+      // still has a scored first round — worth showing, because it's how
+      // you find out the man who got stopped was up on the cards.
+      if (_roundTallies.isNotEmpty) {
+        scorecards = JudgePanel(random: _random).score(_roundTallies);
+      }
     } else {
       final panel = JudgePanel(random: _random);
       final cards = panel.score(_roundTallies);

@@ -1,5 +1,6 @@
 import '../../../domain/betting/fight_odds.dart';
 import '../../../domain/booking/fight_hype.dart';
+import '../../../domain/booking/title_fight_rules.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -59,6 +60,26 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
             f.weightClass.canFightAt(weightClass) &&
             !_usedFighterIds.contains(f.id))
         .toList();
+  }
+
+  /// Which division a new fight should open on: the first one that has
+  /// two fighters who actually *fight* there. Allowing a fighter to cross
+  /// one division makes the neighbouring weights bookable too, so without
+  /// this the dialog could open on a class nobody on the card belongs to
+  /// — two lightweights defaulting into a featherweight bout, with a
+  /// lightweight champion no longer defending anything.
+  WeightClass _defaultWeightClass(
+    List<Fighter> roster,
+    List<WeightClass> classes,
+  ) {
+    for (final weightClass in classes) {
+      final athome = roster
+          .where((f) =>
+              f.weightClass == weightClass && !_usedFighterIds.contains(f.id))
+          .length;
+      if (athome >= 2) return weightClass;
+    }
+    return classes.first;
   }
 
   /// Weight classes with at least 2 available fighters — the only ones a
@@ -166,7 +187,7 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
                 icon: const Icon(Icons.add),
                 label: const Text('Add Fight'),
                 onPressed: bookableClasses.isNotEmpty
-                    ? () => _addFight(roster, bookableClasses)
+                    ? () => _showFightDialog(roster, bookableClasses)
                     : null,
               ),
             ],
@@ -189,11 +210,15 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
             ),
           if (mainCard.isNotEmpty) ...[
             const _SectionLabel('Main Card'),
-            for (final fight in mainCard) _buildFightTile(controller, fight, isMainCardEligible: true),
+            for (final fight in mainCard)
+              _buildFightTile(controller, roster, bookableClasses, fight,
+                  isMainCardEligible: true),
           ],
           if (prelims.isNotEmpty) ...[
             const _SectionLabel('Prelims'),
-            for (final fight in prelims) _buildFightTile(controller, fight, isMainCardEligible: false),
+            for (final fight in prelims)
+              _buildFightTile(controller, roster, bookableClasses, fight,
+                  isMainCardEligible: false),
           ],
           const SizedBox(height: 24),
           FilledButton(
@@ -211,11 +236,27 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
     );
   }
 
+  /// Moves [fight] [delta] places up (-1) or down (+1) the card. The
+  /// main-card/prelim split is positional, so moving a bout into the top
+  /// five promotes it without any extra bookkeeping.
+  void _move(Fight fight, int delta) {
+    final from = _card.indexOf(fight);
+    final to = from + delta;
+    if (from < 0 || to < 0 || to >= _card.length) return;
+    setState(() {
+      _card.removeAt(from);
+      _card.insert(to, fight);
+    });
+  }
+
   Widget _buildFightTile(
     GameController controller,
+    List<Fighter> roster,
+    List<WeightClass> bookableClasses,
     Fight fight, {
     required bool isMainCardEligible,
   }) {
+    final index = _card.indexOf(fight);
     return _FightTile(
       fight: fight,
       fighterA: controller.fighterById(fight.fighterAId),
@@ -223,6 +264,11 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
       isMainEvent: fight.id == _mainEventFightId,
       isCoMainEvent: fight.id == _coMainEventFightId,
       showMainEventControls: isMainCardEligible,
+      canMoveUp: index > 0,
+      canMoveDown: index >= 0 && index < _card.length - 1,
+      onMoveUp: () => _move(fight, -1),
+      onMoveDown: () => _move(fight, 1),
+      onEdit: () => _showFightDialog(roster, bookableClasses, existing: fight),
       onSetMainEvent: () => setState(() {
         _mainEventFightId = fight.id;
         if (_coMainEventFightId == fight.id) _coMainEventFightId = null;
@@ -239,21 +285,74 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
     );
   }
 
-  void _addFight(List<Fighter> roster, List<WeightClass> bookableClasses) {
-    WeightClass weightClass = bookableClasses.first;
-    String? fighterAId;
-    String? fighterBId;
-    int rounds = 3;
-    TitleFightType titleFightType = TitleFightType.none;
+  /// Adds a fight, or edits [existing] in place — same dialog either
+  /// way, because a booked matchup is exactly the thing you most want to
+  /// change your mind about.
+  void _showFightDialog(
+    List<Fighter> roster,
+    List<WeightClass> bookableClasses, {
+    Fight? existing,
+  }) {
+    final editing = existing != null;
+    // When editing, the fight's own two corners aren't "used" as far as
+    // this dialog is concerned — otherwise you couldn't keep either of
+    // them.
+    final blocked = {..._usedFighterIds};
+    if (editing) {
+      blocked.remove(existing.fighterAId);
+      blocked.remove(existing.fighterBId);
+    }
+
+    // An edited fight's own division stays offered even if it wouldn't
+    // qualify with both corners taken out of the pool.
+    final classes = <WeightClass>{
+      ...bookableClasses,
+      if (editing) existing.weightClass,
+    }.toList()
+      ..sort((a, b) => a.index.compareTo(b.index));
+
+    WeightClass weightClass =
+        editing ? existing.weightClass : _defaultWeightClass(roster, classes);
+    String? fighterAId = editing ? existing.fighterAId : null;
+    String? fighterBId = editing ? existing.fighterBId : null;
+    int rounds = editing ? existing.rounds : 3;
+    TitleFightType titleFightType =
+        editing ? existing.titleFightType : TitleFightType.none;
 
     showDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setState) {
-          final available = _eligibleAt(roster, weightClass);
+          final available = roster
+              .where((f) =>
+                  f.weightClass.canFightAt(weightClass) &&
+                  !blocked.contains(f.id))
+              .toList();
+
+          Fighter? cornerOf(String? id) {
+            if (id == null) return null;
+            for (final f in available) {
+              if (f.id == id) return f;
+            }
+            return null;
+          }
+
+          // A champion in his own division is defending, whatever the
+          // matchmaker picked — so the control locks and says why.
+          final forcedTitle = TitleFightRules.forcedType(
+            a: cornerOf(fighterAId),
+            b: cornerOf(fighterBId),
+            division: weightClass,
+          );
+          final titleReason = TitleFightRules.explain(
+            a: cornerOf(fighterAId),
+            b: cornerOf(fighterBId),
+            division: weightClass,
+          );
+          final effectiveTitle = forcedTitle ?? titleFightType;
 
           return AlertDialog(
-            title: const Text('Add Fight'),
+            title: Text(editing ? 'Edit Fight' : 'Add Fight'),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -262,7 +361,7 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
                   DropdownButtonFormField<WeightClass>(
                     value: weightClass,
                     decoration: const InputDecoration(labelText: 'Weight Class'),
-                    items: bookableClasses
+                    items: classes
                         .map((w) => DropdownMenuItem(value: w, child: Text(w.labelWithLimit)))
                         .toList(),
                     onChanged: (v) => setState(() {
@@ -306,7 +405,7 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
                     _MatchupPreview(
                       a: available.firstWhere((f) => f.id == fighterAId),
                       b: available.firstWhere((f) => f.id == fighterBId),
-                      titleFightType: titleFightType,
+                      titleFightType: effectiveTitle,
                     ),
                   const SizedBox(height: 12),
                   const Text('Rounds'),
@@ -320,12 +419,20 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<TitleFightType>(
-                    value: titleFightType,
-                    decoration: const InputDecoration(labelText: 'Title Implications'),
+                    value: effectiveTitle,
+                    decoration: InputDecoration(
+                      labelText: 'Title Implications',
+                      helperText: titleReason,
+                      helperMaxLines: 3,
+                    ),
                     items: TitleFightType.values
                         .map((t) => DropdownMenuItem(value: t, child: Text(t.label)))
                         .toList(),
-                    onChanged: (v) => setState(() => titleFightType = v ?? titleFightType),
+                    // Locked when a belt is already in the room.
+                    onChanged: forcedTitle != null
+                        ? null
+                        : (v) =>
+                            setState(() => titleFightType = v ?? titleFightType),
                   ),
                 ],
               ),
@@ -339,21 +446,30 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
                 onPressed: fighterAId != null && fighterBId != null
                     ? () {
                         this.setState(() {
-                          _card.add(Fight(
-                            id: newId(),
+                          final updated = Fight(
+                            id: editing ? existing.id : newId(),
                             eventId: '',
                             fighterAId: fighterAId!,
                             fighterBId: fighterBId!,
                             weightClass: weightClass,
                             rounds: rounds,
-                            titleFightType: titleFightType,
-                            cardOrder: _card.length,
-                          ));
+                            titleFightType: effectiveTitle,
+                            cardOrder: editing
+                                ? existing.cardOrder
+                                : _card.length,
+                          );
+                          if (editing) {
+                            // Replace in place so the bout keeps its slot
+                            // on the card, and its main-event flag with it.
+                            _card[_card.indexOf(existing)] = updated;
+                          } else {
+                            _card.add(updated);
+                          }
                         });
                         Navigator.of(dialogContext).pop();
                       }
                     : null,
-                child: const Text('Add'),
+                child: Text(editing ? 'Save' : 'Add'),
               ),
             ],
           );
@@ -383,16 +499,26 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
     }
 
     setState(() => _submitting = true);
+    final controller = context.read<GameController>();
+
     final card = [
       for (var i = 0; i < _card.length; i++)
         _card[i].copyWith(
           isMainEvent: _card[i].id == _mainEventFightId,
           isCoMainEvent: _card[i].id == _coMainEventFightId,
           cardOrder: i,
+          // Belt-checked once more on the way out. The dialog already
+          // locks it, but a fighter can win a title between this card
+          // being built and confirmed, and a champion's home fight is a
+          // title fight whether or not anyone remembered to say so.
+          titleFightType: TitleFightRules.resolve(
+            a: controller.fighterById(_card[i].fighterAId),
+            b: controller.fighterById(_card[i].fighterBId),
+            division: _card[i].weightClass,
+            chosen: _card[i].titleFightType,
+          ),
         ),
     ];
-
-    final controller = context.read<GameController>();
     final currentWeek = controller.organization?.currentWeek ?? 1;
     final error = await controller.bookEvent(
       name: _nameController.text.trim().isEmpty
@@ -439,8 +565,13 @@ class _FightTile extends StatelessWidget {
   final bool isMainEvent;
   final bool isCoMainEvent;
   final bool showMainEventControls;
+  final bool canMoveUp;
+  final bool canMoveDown;
   final VoidCallback onSetMainEvent;
   final VoidCallback onSetCoMainEvent;
+  final VoidCallback onMoveUp;
+  final VoidCallback onMoveDown;
+  final VoidCallback onEdit;
   final VoidCallback onRemove;
 
   const _FightTile({
@@ -450,8 +581,13 @@ class _FightTile extends StatelessWidget {
     required this.isMainEvent,
     required this.isCoMainEvent,
     required this.showMainEventControls,
+    required this.canMoveUp,
+    required this.canMoveDown,
     required this.onSetMainEvent,
     required this.onSetCoMainEvent,
+    required this.onMoveUp,
+    required this.onMoveDown,
+    required this.onEdit,
     required this.onRemove,
   });
 
@@ -471,30 +607,64 @@ class _FightTile extends StatelessWidget {
           : isCoMainEvent
               ? Theme.of(context).colorScheme.secondaryContainer
               : null,
-      child: ListTile(
-        title: Text('${fighterA?.name ?? '?'} vs ${fighterB?.name ?? '?'}'),
-        subtitle: Text(tags.join(' · ')),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (showMainEventControls) ...[
-              IconButton(
-                icon: Icon(isMainEvent ? Icons.star : Icons.star_border),
-                tooltip: 'Set as main event',
-                onPressed: onSetMainEvent,
-              ),
-              IconButton(
-                icon: Icon(isCoMainEvent ? Icons.star_half : Icons.star_outline),
-                tooltip: 'Set as co-main event',
-                onPressed: onSetCoMainEvent,
-              ),
-            ],
-            IconButton(
-              icon: const Icon(Icons.delete_outline),
-              onPressed: onRemove,
+      child: Column(
+        children: [
+          ListTile(
+            title: Text('${fighterA?.name ?? '?'} vs ${fighterB?.name ?? '?'}'),
+            subtitle: Text(tags.join(' · ')),
+            // Tapping the bout opens it for editing — the same reflex as
+            // tapping anything else in a list.
+            onTap: onEdit,
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Position on the card *is* the running order, so moving a
+                // bout up past the fifth slot promotes it to the main card.
+                IconButton(
+                  icon: const Icon(Icons.keyboard_arrow_up),
+                  tooltip: 'Move up the card',
+                  onPressed: canMoveUp ? onMoveUp : null,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.keyboard_arrow_down),
+                  tooltip: 'Move down the card',
+                  onPressed: canMoveDown ? onMoveDown : null,
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(right: 4, bottom: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (showMainEventControls) ...[
+                  IconButton(
+                    icon: Icon(isMainEvent ? Icons.star : Icons.star_border),
+                    tooltip: 'Set as main event',
+                    onPressed: onSetMainEvent,
+                  ),
+                  IconButton(
+                    icon: Icon(
+                        isCoMainEvent ? Icons.star_half : Icons.star_outline),
+                    tooltip: 'Set as co-main event',
+                    onPressed: onSetCoMainEvent,
+                  ),
+                ],
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined),
+                  tooltip: 'Edit this fight',
+                  onPressed: onEdit,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline),
+                  tooltip: 'Remove from the card',
+                  onPressed: onRemove,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -311,10 +311,19 @@ class FighterProfileScreen extends StatelessWidget {
                   fightsInDeal: fightsInDeal,
                 );
                 if (dialogContext.mounted) Navigator.of(dialogContext).pop();
-                if (error != null && context.mounted) {
+                if (!context.mounted) return;
+                if (error != null) {
                   ScaffoldMessenger.of(context)
                       .showSnackBar(SnackBar(content: Text(error)));
+                  return;
                 }
+                // Signing is the reason you opened this profile, so close
+                // it too — you land back on the talent pool ready to sign
+                // the next one, instead of on a page you're done with.
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('${fighter.name} signed.')),
+                );
               },
               child: const Text('Sign'),
             ),
