@@ -12,7 +12,15 @@ import '../../state/game_controller.dart';
 import '../../theme/app_theme.dart';
 
 class EventBookingScreen extends StatefulWidget {
-  const EventBookingScreen({super.key});
+  /// The scheduled event this screen is editing, or null to book a new
+  /// one. A card booked weeks out is a plan rather than a commitment —
+  /// fighters get hurt and better matchups turn up — so the same screen
+  /// that builds a card reopens it.
+  final String? eventId;
+
+  const EventBookingScreen({super.key, this.eventId});
+
+  bool get isEditing => eventId != null;
 
   @override
   State<EventBookingScreen> createState() => _EventBookingScreenState();
@@ -33,12 +41,54 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
   String? _coMainEventFightId;
   bool _submitting = false;
 
+  /// True while an existing event's card is being read back. Without it
+  /// the screen would flash an empty card before the real one arrives.
+  bool _loading = false;
+
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: 'Fight Night');
     _ticketPriceController =
         TextEditingController(text: '${_venue.suggestedTicketPrice}');
+    if (widget.isEditing) {
+      _loading = true;
+      // After the first frame so the controller can be read from context.
+      WidgetsBinding.instance.addPostFrameCallback((_) => _loadExisting());
+    }
+  }
+
+  /// Fills the form from the event being edited: its name, venue, price,
+  /// how far out it sits, and the card exactly as booked — running order,
+  /// main event and co-main included.
+  Future<void> _loadExisting() async {
+    final controller = context.read<GameController>();
+    final event = await controller.getEventById(widget.eventId!);
+    if (event == null) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      _showError('That event no longer exists.');
+      return;
+    }
+    final card = await controller.getEventCard(event.id);
+    if (!mounted) return;
+    final currentWeek = controller.organization?.currentWeek ?? 1;
+    setState(() {
+      _nameController.text = event.name;
+      _venue = event.venue;
+      _ticketPriceController.text = '${event.ticketPrice}';
+      // Editing an existing price is an edit, whoever made it — don't
+      // overwrite it the next time the venue changes.
+      _ticketPriceEdited = true;
+      _weeksFromNow =
+          (GameCalendar.weekNumberFor(event.date) - currentWeek).clamp(1, 26);
+      _card
+        ..clear()
+        ..addAll(card..sort((a, b) => a.cardOrder.compareTo(b.cardOrder)));
+      _mainEventFightId = _idOfFirst(card, (f) => f.isMainEvent);
+      _coMainEventFightId = _idOfFirst(card, (f) => f.isCoMainEvent);
+      _loading = false;
+    });
   }
 
   @override
@@ -46,6 +96,14 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
     _nameController.dispose();
     _ticketPriceController.dispose();
     super.dispose();
+  }
+
+  /// The id of the first fight matching [test], or null if none does.
+  static String? _idOfFirst(List<Fight> card, bool Function(Fight) test) {
+    for (final fight in card) {
+      if (test(fight)) return fight.id;
+    }
+    return null;
   }
 
   Set<String> get _usedFighterIds =>
@@ -103,14 +161,17 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
     final bookableClasses = _bookableWeightClasses(roster);
     final bookedWeek = currentWeek + _weeksFromNow;
 
-    final mainCard = <Fight>[];
-    final prelims = <Fight>[];
-    for (var i = 0; i < _card.length; i++) {
-      (i < Fight.mainCardSize ? mainCard : prelims).add(_card[i]);
+    if (_loading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Edit Card')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Book Event')),
+      appBar: AppBar(
+        title: Text(widget.isEditing ? 'Edit Card' : 'Book Event'),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -214,18 +275,39 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
               padding: EdgeInsets.symmetric(vertical: 8),
               child: Text('No fights added yet.'),
             ),
-          if (mainCard.isNotEmpty) ...[
-            const _SectionLabel('Main Card'),
-            for (final fight in mainCard)
-              _buildFightTile(controller, roster, bookableClasses, fight,
-                  isMainCardEligible: true),
-          ],
-          if (prelims.isNotEmpty) ...[
-            const _SectionLabel('Prelims'),
-            for (final fight in prelims)
-              _buildFightTile(controller, roster, bookableClasses, fight,
-                  isMainCardEligible: false),
-          ],
+          // One list for the whole card, dragged by the handle on each
+          // bout. The main-card/prelim split is positional, so a single
+          // list is the only shape that lets a prelim be promoted by
+          // being dragged into the top five — two lists couldn't hand a
+          // fight across. The section labels ride on the bouts that open
+          // each section, which is why they move with the running order
+          // instead of being fixed rows of their own.
+          if (_card.isNotEmpty)
+            ReorderableListView(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              buildDefaultDragHandles: false,
+              onReorder: _reorder,
+              children: [
+                for (var i = 0; i < _card.length; i++)
+                  Column(
+                    key: ValueKey(_card[i].id),
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (i == 0) const _SectionLabel('Main Card'),
+                      if (i == Fight.mainCardSize) const _SectionLabel('Prelims'),
+                      _buildFightTile(
+                        controller,
+                        roster,
+                        bookableClasses,
+                        _card[i],
+                        index: i,
+                        isMainCardEligible: i < Fight.mainCardSize,
+                      ),
+                    ],
+                  ),
+              ],
+            ),
           const SizedBox(height: 24),
           FilledButton(
             onPressed: _submitting ? null : _confirm,
@@ -235,23 +317,22 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
                     width: 16,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Confirm Card'),
+                : Text(widget.isEditing ? 'Save Card' : 'Confirm Card'),
           ),
         ],
       ),
     );
   }
 
-  /// Moves [fight] [delta] places up (-1) or down (+1) the card. The
-  /// main-card/prelim split is positional, so moving a bout into the top
-  /// five promotes it without any extra bookkeeping.
-  void _move(Fight fight, int delta) {
-    final from = _card.indexOf(fight);
-    final to = from + delta;
-    if (from < 0 || to < 0 || to >= _card.length) return;
+  /// Drops the bout dragged from [oldIndex] at [newIndex]. The
+  /// main-card/prelim split is positional, so dragging a bout into the
+  /// top five promotes it with no extra bookkeeping.
+  void _reorder(int oldIndex, int newIndex) {
     setState(() {
-      _card.removeAt(from);
-      _card.insert(to, fight);
+      // The framework reports the target index as it was *before* the
+      // dragged item was lifted out, so dragging downward is off by one.
+      if (newIndex > oldIndex) newIndex -= 1;
+      _card.insert(newIndex, _card.removeAt(oldIndex));
     });
   }
 
@@ -260,26 +341,35 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
     List<Fighter> roster,
     List<WeightClass> bookableClasses,
     Fight fight, {
+    required int index,
     required bool isMainCardEligible,
   }) {
-    final index = _card.indexOf(fight);
     return _FightTile(
       fight: fight,
+      index: index,
       fighterA: controller.fighterById(fight.fighterAId),
       fighterB: controller.fighterById(fight.fighterBId),
       isMainEvent: fight.id == _mainEventFightId,
       isCoMainEvent: fight.id == _coMainEventFightId,
       showMainEventControls: isMainCardEligible,
-      canMoveUp: index > 0,
-      canMoveDown: index >= 0 && index < _card.length - 1,
-      onMoveUp: () => _move(fight, -1),
-      onMoveDown: () => _move(fight, 1),
       onEdit: () => _showFightDialog(roster, bookableClasses, existing: fight),
+      // Tapping the star a second time clears it. Picking the wrong bout
+      // for the main event shouldn't be a one-way door — before this the
+      // only way out was to keep tapping until it landed somewhere you
+      // could live with.
       onSetMainEvent: () => setState(() {
+        if (_mainEventFightId == fight.id) {
+          _mainEventFightId = null;
+          return;
+        }
         _mainEventFightId = fight.id;
         if (_coMainEventFightId == fight.id) _coMainEventFightId = null;
       }),
       onSetCoMainEvent: () => setState(() {
+        if (_coMainEventFightId == fight.id) {
+          _coMainEventFightId = null;
+          return;
+        }
         _coMainEventFightId = fight.id;
         if (_mainEventFightId == fight.id) _mainEventFightId = null;
       }),
@@ -557,15 +647,26 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
         ),
     ];
     final currentWeek = controller.organization?.currentWeek ?? 1;
-    final error = await controller.bookEvent(
-      name: _nameController.text.trim().isEmpty
-          ? 'Fight Night'
-          : _nameController.text.trim(),
-      date: GameCalendar.dateForWeek(currentWeek + _weeksFromNow),
-      venue: _venue,
-      ticketPrice: ticketPrice,
-      card: card,
-    );
+    final name = _nameController.text.trim().isEmpty
+        ? 'Fight Night'
+        : _nameController.text.trim();
+    final date = GameCalendar.dateForWeek(currentWeek + _weeksFromNow);
+    final error = widget.isEditing
+        ? await controller.updateEvent(
+            eventId: widget.eventId!,
+            name: name,
+            date: date,
+            venue: _venue,
+            ticketPrice: ticketPrice,
+            card: card,
+          )
+        : await controller.bookEvent(
+            name: name,
+            date: date,
+            venue: _venue,
+            ticketPrice: ticketPrice,
+            card: card,
+          );
 
     if (!mounted) return;
     setState(() => _submitting = false);
@@ -597,33 +698,30 @@ class _SectionLabel extends StatelessWidget {
 
 class _FightTile extends StatelessWidget {
   final Fight fight;
+
+  /// Position on the card — the drag handle needs it to tell the
+  /// reorderable list which row it is starting a drag for.
+  final int index;
   final Fighter? fighterA;
   final Fighter? fighterB;
   final bool isMainEvent;
   final bool isCoMainEvent;
   final bool showMainEventControls;
-  final bool canMoveUp;
-  final bool canMoveDown;
   final VoidCallback onSetMainEvent;
   final VoidCallback onSetCoMainEvent;
-  final VoidCallback onMoveUp;
-  final VoidCallback onMoveDown;
   final VoidCallback onEdit;
   final VoidCallback onRemove;
 
   const _FightTile({
     required this.fight,
+    required this.index,
     required this.fighterA,
     required this.fighterB,
     required this.isMainEvent,
     required this.isCoMainEvent,
     required this.showMainEventControls,
-    required this.canMoveUp,
-    required this.canMoveDown,
     required this.onSetMainEvent,
     required this.onSetCoMainEvent,
-    required this.onMoveUp,
-    required this.onMoveDown,
     required this.onEdit,
     required this.onRemove,
   });
@@ -638,6 +736,20 @@ class _FightTile extends StatelessWidget {
       if (isCoMainEvent) 'Co-Main Event',
     ];
 
+    // The same reading the booking dialog gives, carried onto the card
+    // itself: whether this show has a fight worth turning up for is a
+    // question about the card as a whole, and answering it one dialog at
+    // a time meant reopening every bout to compare them.
+    final a = fighterA;
+    final b = fighterB;
+    final hype = a == null || b == null
+        ? null
+        : HypeCalculator.forFight(
+            a: a,
+            b: b,
+            titleFightType: fight.titleFightType,
+          );
+
     return Card(
       color: isMainEvent
           ? Theme.of(context).colorScheme.primaryContainer
@@ -647,27 +759,28 @@ class _FightTile extends StatelessWidget {
       child: Column(
         children: [
           ListTile(
-            title: Text('${fighterA?.name ?? '?'} vs ${fighterB?.name ?? '?'}'),
-            subtitle: Text(tags.join(' · ')),
+            title: Text('${a?.name ?? '?'} vs ${b?.name ?? '?'}'),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (hype != null) _TileHype(hype: hype),
+                Text(tags.join(' · ')),
+              ],
+            ),
             // Tapping the bout opens it for editing — the same reflex as
             // tapping anything else in a list.
             onTap: onEdit,
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Position on the card *is* the running order, so moving a
-                // bout up past the fifth slot promotes it to the main card.
-                IconButton(
-                  icon: const Icon(Icons.keyboard_arrow_up),
-                  tooltip: 'Move up the card',
-                  onPressed: canMoveUp ? onMoveUp : null,
+            // Position on the card *is* the running order, so dragging a
+            // bout above the fifth slot promotes it to the main card.
+            trailing: ReorderableDragStartListener(
+              index: index,
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+                child: Tooltip(
+                  message: 'Drag to reorder the card',
+                  child: Icon(Icons.drag_handle),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.keyboard_arrow_down),
-                  tooltip: 'Move down the card',
-                  onPressed: canMoveDown ? onMoveDown : null,
-                ),
-              ],
+              ),
             ),
           ),
           Padding(
@@ -678,13 +791,17 @@ class _FightTile extends StatelessWidget {
                 if (showMainEventControls) ...[
                   IconButton(
                     icon: Icon(isMainEvent ? Icons.star : Icons.star_border),
-                    tooltip: 'Set as main event',
+                    tooltip: isMainEvent
+                        ? 'Not the main event after all'
+                        : 'Set as main event',
                     onPressed: onSetMainEvent,
                   ),
                   IconButton(
                     icon: Icon(
                         isCoMainEvent ? Icons.star_half : Icons.star_outline),
-                    tooltip: 'Set as co-main event',
+                    tooltip: isCoMainEvent
+                        ? 'Not the co-main event after all'
+                        : 'Set as co-main event',
                     onPressed: onSetCoMainEvent,
                   ),
                 ],
@@ -699,6 +816,54 @@ class _FightTile extends StatelessWidget {
                   onPressed: onRemove,
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The hype reading on a card tile: a short bar, the score, and the band
+/// it falls in. Compact on purpose — the full breakdown of what is
+/// driving it lives in the booking dialog; this is here to be scanned
+/// down a card.
+class _TileHype extends StatelessWidget {
+  final FightHype hype;
+
+  const _TileHype({required this.hype});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _hypeColor(hype.score);
+    return Padding(
+      padding: const EdgeInsets.only(top: 2, bottom: 2),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 48,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(2),
+              child: LinearProgressIndicator(
+                value: hype.score / 100,
+                minHeight: 5,
+                backgroundColor: Theme.of(context)
+                    .colorScheme
+                    .onSurfaceVariant
+                    .withOpacity(0.18),
+                valueColor: AlwaysStoppedAnimation<Color>(color),
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              'Hype ${hype.score} · ${hype.label}',
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
           ),
         ],

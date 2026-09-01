@@ -556,7 +556,67 @@ class GameController extends ChangeNotifier {
     final fightsWithEventId =
         card.map((f) => f.copyWith(eventId: event.id)).toList();
     await _eventRepo.saveCard(fightsWithEventId);
+    // The events stream fires on saveEvent above, which is before the
+    // card exists — so the booking map it rebuilds is empty. Rebuild it
+    // once the fights are actually on disk, or the roster shows nobody
+    // as booked until some later save happens to refresh it.
+    await _refreshBookings();
     await _maybeTriggerRandomEvent();
+    return null;
+  }
+
+  /// Rewrites a scheduled event and its card in place.
+  ///
+  /// A card booked six weeks out is a plan, not a commitment — a fighter
+  /// gets hurt, a better matchup appears, the player changes their mind
+  /// about the running order. Everything [bookEvent] validates is
+  /// validated again here, plus the two rules that only apply to an event
+  /// that already exists: it has to still be scheduled, and it can't be
+  /// moved into a week that has already been played.
+  ///
+  /// Bouts the player took off the card are deleted rather than left
+  /// orphaned, so they stop holding their fighters hostage in
+  /// [bookingsByFighterId].
+  Future<String?> updateEvent({
+    required String eventId,
+    required String name,
+    required DateTime date,
+    required Venue venue,
+    required int ticketPrice,
+    required List<Fight> card,
+  }) async {
+    if (card.isEmpty) return 'Add at least one fight to the card.';
+    if (!card.any((f) => f.isMainEvent)) return 'Pick a main event.';
+
+    final org = organization;
+    if (org == null) return 'No active organization.';
+
+    final existing = await _eventRepo.getById(eventId);
+    if (existing == null) return 'That event no longer exists.';
+    if (existing.isCompleted) return 'That event has already run.';
+    if (GameCalendar.weekNumberFor(date) <= org.currentWeek) {
+      return 'Event date must be in a future week.';
+    }
+
+    await _eventRepo.saveEvent(existing.copyWith(
+      name: name,
+      date: date,
+      venue: venue,
+      ticketPrice: ticketPrice,
+    ));
+
+    // Whatever is no longer on the card comes off the books entirely.
+    final keptIds = {for (final fight in card) fight.id};
+    for (final fight in await _eventRepo.getCard(eventId)) {
+      if (!keptIds.contains(fight.id)) {
+        await _eventRepo.deleteFight(fight.id);
+      }
+    }
+    await _eventRepo.saveCard(
+      [for (final fight in card) fight.copyWith(eventId: eventId)],
+    );
+    await _refreshBookings();
+    notifyListeners();
     return null;
   }
 

@@ -245,7 +245,8 @@ void main() {
     controller.dispose();
   });
 
-  testWidgets('fights can be moved up and down the card', (tester) async {
+  testWidgets('fights can be dragged into a new running order',
+      (tester) async {
     final controller = await controllerWith([
       for (final id in ['a', 'b', 'c', 'd'])
         _signed(id, 'Fighter ${id.toUpperCase()}', WeightClass.lightweight),
@@ -265,20 +266,66 @@ void main() {
 
     expect(order(), ['Fighter A vs Fighter B', 'Fighter C vs Fighter D']);
 
-    // The second bout's "up" arrow promotes it.
-    await tester.tap(find.byIcon(Icons.keyboard_arrow_up).last);
+    // Drag the second bout's handle up past the first.
+    final handles = find.byIcon(Icons.drag_handle);
+    expect(handles, findsNWidgets(2));
+    final from = tester.getCenter(handles.last);
+    final to = tester.getCenter(handles.first);
+    final gesture = await tester.startGesture(from);
+    await tester.pump(const Duration(milliseconds: 100));
+    await gesture.moveTo(Offset(to.dx, to.dy - 20));
+    await tester.pump(const Duration(milliseconds: 100));
+    await gesture.up();
     await tester.pumpAndSettle();
-    expect(order(), ['Fighter C vs Fighter D', 'Fighter A vs Fighter B']);
 
-    // And back down again.
-    await tester.tap(find.byIcon(Icons.keyboard_arrow_down).first);
-    await tester.pumpAndSettle();
-    expect(order(), ['Fighter A vs Fighter B', 'Fighter C vs Fighter D']);
+    expect(order(), ['Fighter C vs Fighter D', 'Fighter A vs Fighter B']);
 
     controller.dispose();
   });
 
-  testWidgets('the ends of the card cannot be moved past', (tester) async {
+  testWidgets('the main and co-main stars can be tapped back off',
+      (tester) async {
+    final controller = await controllerWith([
+      for (final id in ['a', 'b', 'c', 'd'])
+        _signed(id, 'Fighter ${id.toUpperCase()}', WeightClass.lightweight),
+    ]);
+    await tester.pumpWidget(wrap(controller));
+    await tester.pumpAndSettle();
+
+    await addFight(tester, 'Fighter A', 'Fighter B');
+    await addFight(tester, 'Fighter C', 'Fighter D');
+
+    // The flags live in each bout's tag line, so match the tag rather
+    // than a standalone label — and mind that 'Co-Main Event' contains
+    // 'Main Event', which is why both finders include the separator.
+    final mainTag = find.textContaining('· Main Event');
+    final coMainTag = find.textContaining('· Co-Main Event');
+
+    expect(mainTag, findsNothing);
+
+    await tester.tap(find.byIcon(Icons.star_border).first);
+    await tester.pumpAndSettle();
+    expect(mainTag, findsOneWidget);
+
+    // Tapping the filled star again clears it, rather than leaving the
+    // player stuck with a choice they made by accident.
+    await tester.tap(find.byIcon(Icons.star));
+    await tester.pumpAndSettle();
+    expect(mainTag, findsNothing);
+
+    // Same for the co-main.
+    await tester.tap(find.byIcon(Icons.star_outline).first);
+    await tester.pumpAndSettle();
+    expect(coMainTag, findsOneWidget);
+    await tester.tap(find.byIcon(Icons.star_half));
+    await tester.pumpAndSettle();
+    expect(coMainTag, findsNothing);
+
+    controller.dispose();
+  });
+
+  testWidgets('each booked bout carries its hype score on the card',
+      (tester) async {
     final controller = await controllerWith([
       _signed('a', 'Fighter A', WeightClass.lightweight),
       _signed('b', 'Fighter B', WeightClass.lightweight),
@@ -287,16 +334,9 @@ void main() {
     await tester.pumpAndSettle();
     await addFight(tester, 'Fighter A', 'Fighter B');
 
-    // A lone bout is both first and last, so neither arrow does anything.
-    IconButton buttonFor(IconData icon) => tester.widget<IconButton>(
-          find.ancestor(
-            of: find.byIcon(icon),
-            matching: find.byType(IconButton),
-          ),
-        );
-
-    expect(buttonFor(Icons.keyboard_arrow_up).onPressed, isNull);
-    expect(buttonFor(Icons.keyboard_arrow_down).onPressed, isNull);
+    // The same reading the booking dialog gives, so the card can be
+    // scanned without reopening every bout.
+    expect(find.textContaining(RegExp(r'^Hype \d+ · ')), findsOneWidget);
 
     controller.dispose();
   });

@@ -59,6 +59,11 @@ abstract class EventRepositoryContract {
   Future<void> saveFight(Fight fight);
   Future<void> saveCard(List<Fight> fights);
 
+  /// Drops a single bout. Needed because a booked card can be reopened
+  /// and edited: a fight the player takes off it has to leave the
+  /// database, not just the screen.
+  Future<void> deleteFight(String fightId);
+
   /// All resolved fights involving [fighterId], most recent first.
   Future<List<Fight>> getFightsForFighter(String fighterId);
 

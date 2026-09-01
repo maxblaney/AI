@@ -41,6 +41,9 @@ class EventRepository implements EventRepositoryContract {
   }
 
   @override
+  Future<void> deleteFight(String fightId) => _db.deleteFightById(fightId);
+
+  @override
   Future<void> saveCard(List<Fight> fights) async {
     for (final fight in fights) {
       await saveFight(fight);

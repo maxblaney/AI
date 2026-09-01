@@ -111,8 +111,8 @@ Two consequences worth knowing:
   from the single existing organization, so a game already in progress is
   adopted into its own save instead of being orphaned behind an id
   nothing points at. `test/data/migration_test.dart` builds an old
-  database by hand and checks exactly that, for v1 and for the v5 belt
-  backfill. One wrinkle worth knowing: v5 replaced the `is_champion` /
+  database by hand and checks exactly that, for v1, for the v5 belt
+  backfill, and for v6's light-heavyweight reweigh. One wrinkle worth knowing: v5 replaced the `is_champion` /
   `is_interim_champion` flags with a set of belts, so the v3 migration
   step creates those two columns with raw SQL rather than
   `m.addColumn` — the Dart schema no longer has them to reference. On an
@@ -462,6 +462,35 @@ the native mobile app with real persistence.
   weakest is named underneath, so a short bar tells you what to fix
   rather than just that something is wrong. Setting Title Implications
   moves the bar live.
+- **The card is dragged into order** (`ReorderableListView`). Every bout
+  carries a drag handle; the main-card/prelim split is positional, so
+  dragging a prelim above the fifth slot promotes it. One list rather
+  than two, because two couldn't hand a fight across the boundary — the
+  section labels ride on the bouts that open each section, so they move
+  with the running order. The old up/down arrows are gone. One
+  limitation: the card list doesn't scroll on its own while you're
+  dragging, so on a long card a fight moves in hops rather than one
+  sweep from the bottom to the top.
+- **Main and co-main can be tapped back off.** Tapping a filled star
+  clears the flag instead of doing nothing, so picking the wrong bout
+  isn't a one-way door.
+- **Hype on every card tile.** The same reading the booking dialog gives
+  — a short bar, the score, and the band — sits under the fighters'
+  names on each booked bout, so a card can be scanned for a weak spot
+  without reopening every fight.
+- **A booked card can be reopened and rewritten** (`updateEvent`). The
+  scheduled event's page carries an edit action that reopens the booking
+  screen filled in — name, venue, ticket price, how far out it sits, the
+  running order, main event and co-main — and saving rewrites the event
+  in place rather than making a second one. Bouts taken off the card are
+  deleted, not orphaned, so their fighters stop showing as booked. Every
+  rule that guards booking guards editing, plus two that only apply to
+  an event that already exists: it has to still be scheduled, and it
+  can't be dragged into a week that has already been played.
+- **Booking an event now refreshes the booked-fighter map.** The events
+  stream fires on saving the event, which happens before its card
+  exists, so the map it rebuilt was empty — fighters showed as free
+  until some later save happened to refresh it.
 - **The division you picked is listed first.** Fighters come back in the
   order they were generated — division by division — so choosing
   Lightweight opened the corner dropdowns on a run of featherweights with
@@ -470,7 +499,9 @@ the native mobile app with real persistence.
   inside each group. Crossing someone over is still one scroll away, but
   it takes the scroll.
 - **Light Heavyweight is 205 lbs**, not 200. Generated fighting weights
-  are derived from the limit, so the whole division moved with it.
+  are derived from the limit, so the whole division moved with it, and
+  schema v6 shifts light heavyweights in existing saves by the same five
+  pounds — keeping how far over the limit each fighter walks around.
 - **Rank and recent form in the matchup preview** (`DivisionRankings`,
   `RecentForm`): above the odds line the preview names where each man
   stands in the division he's being booked in — `C · Lightweight` in gold

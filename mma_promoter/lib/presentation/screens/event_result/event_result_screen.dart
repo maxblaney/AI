@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../../data/models/models.dart';
 import '../../state/game_controller.dart';
+import '../event_booking/event_booking_screen.dart';
 import 'fight_breakdown_screen.dart';
 
 /// Shows a booked card before it runs (with a "Run Event" action that
@@ -51,7 +52,28 @@ class _EventResultScreenState extends State<EventResultScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(event.name)),
+      appBar: AppBar(
+        title: Text(event.name),
+        actions: [
+          // A card booked weeks out can still be changed — reopen it in
+          // the same screen that built it. Gone once the event has run,
+          // because by then it is a result rather than a plan.
+          if (!event.isCompleted)
+            IconButton(
+              icon: const Icon(Icons.edit_calendar_outlined),
+              tooltip: 'Edit this card',
+              onPressed: () async {
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => EventBookingScreen(eventId: event.id),
+                  ),
+                );
+                // The card may have changed under us while it was open.
+                if (mounted) await _loadCard();
+              },
+            ),
+        ],
+      ),
       body: event.isCompleted
           ? _ResultsView(
               event: event,

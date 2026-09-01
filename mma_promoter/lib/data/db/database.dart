@@ -24,7 +24,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   /// Games persist on every platform now (web included), so a schema
   /// change without a matching migration step here would silently break
@@ -113,6 +113,20 @@ class AppDatabase extends _$AppDatabase {
             await customStatement(
               "UPDATE fighters SET interim_belts_json = "
               "'[\"' || weight_class || '\"]' WHERE is_interim_champion = 1",
+            );
+          }
+          if (from < 6) {
+            // Light Heavyweight's limit was wrong: 200 lbs rather than
+            // the real 205. Fighting weights are generated as the limit
+            // plus a few pounds, so every light heavyweight already on
+            // disk was generated three to fifteen pounds over 200 and now
+            // reads under the division's own limit. Shift them by the
+            // five pounds the limit moved, which preserves how far over
+            // each fighter walks around and puts the whole division back
+            // where it belongs relative to the cap.
+            await customStatement(
+              'UPDATE fighters SET weight_lbs = weight_lbs + 5 '
+              "WHERE weight_class = 'lightHeavyweight'",
             );
           }
         },
@@ -255,6 +269,9 @@ class AppDatabase extends _$AppDatabase {
             ..where((f) => f.eventId.equals(eventId))
             ..orderBy([(f) => OrderingTerm.asc(f.cardOrder)]))
           .get();
+
+  Future<void> deleteFightById(String id) =>
+      (delete(fights)..where((f) => f.id.equals(id))).go();
 
   Future<void> upsertFight(FightsCompanion entry) =>
       into(fights).insertOnConflictUpdate(entry);
