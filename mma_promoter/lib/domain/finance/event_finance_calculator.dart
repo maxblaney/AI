@@ -44,6 +44,71 @@ class EventFinanceCalculator {
   /// more bouts before the card stops feeling thin.
   static const double _depthScale = 3.2;
 
+  /// The ticket price demand is measured against, market-wide.
+  ///
+  /// This used to be the venue's *own* suggested price, which meant
+  /// charging a venue's suggested price was always demand-neutral — so a
+  /// bigger building's higher suggestion was pure profit and moving up
+  /// venues was free money. Pricing against one reference means $70 costs
+  /// you customers whether you charge it in a regional hall or an arena;
+  /// what the bigger arena actually buys you is [Venue.marketDraw].
+  static const double referenceTicketPrice = 40;
+
+  /// How sharply turnout falls as the price climbs.
+  static const double priceElasticity = 1.6;
+
+  /// How much bigger the crowd gets if tickets were nearly free — the
+  /// ceiling on turnout, as a multiple of the crowd at the reference
+  /// price.
+  ///
+  /// This is what gives ticket pricing a real answer. A plain elasticity
+  /// exponent has no interior optimum: below 1 the best move is always to
+  /// charge more, above 1 it's always to charge less. A finite audience
+  /// fixes that — cutting the price stops buying you bodies once everyone
+  /// who might come already is, so revenue peaks somewhere sensible and
+  /// falls away on both sides.
+  static const double priceCeilingBonus = 1.2;
+
+  /// The price a given market bears: the reference, nudged by the venue's
+  /// [Venue.priceLevel]. Mild on purpose — the gain from moving up is the
+  /// seats, not the number on the stub.
+  static double referencePriceFor(Venue venue) =>
+      referenceTicketPrice * venue.priceLevel;
+
+  /// What share of the reference-price crowd turns out at [ticketPrice].
+  /// 1.0 at the market's reference price, rising toward
+  /// `1 + priceCeilingBonus` as the price approaches free and falling
+  /// away as it climbs.
+  static double turnoutAt({required int ticketPrice, required Venue venue}) {
+    if (ticketPrice <= 0) return 1 + priceCeilingBonus;
+    final x = ticketPrice / referencePriceFor(venue);
+    return (1 + priceCeilingBonus) /
+        (1 + priceCeilingBonus * pow(x, priceElasticity));
+  }
+
+  /// How many venue sizes bigger than it needed a show was staged in.
+  ///
+  /// Judging an empty house on raw fill rate punished being small: a
+  /// promotion drawing 600 into the smallest hall in the game got the
+  /// same "look at all those empty seats" hit as one drawing 600 into an
+  /// arena, and there was nowhere smaller for it to go. What actually
+  /// deserves punishing is *over-reaching* — booking a room when a
+  /// cheaper, smaller one would have held the crowd, which is a decision
+  /// rather than a circumstance.
+  static int venueOvershoot({required Venue venue, required int attendance}) {
+    final bySize = [...Venue.values]
+      ..sort((a, b) => a.capacity.compareTo(b.capacity));
+    final used = bySize.indexOf(venue);
+    for (var i = 0; i < bySize.length; i++) {
+      // The smallest room that would still have held them, with a little
+      // headroom so a near-sellout isn't called an overshoot.
+      if (bySize[i].capacity >= attendance * 1.15) {
+        return (used - i).clamp(0, bySize.length);
+      }
+    }
+    return 0;
+  }
+
   /// How much of a full night's demand a card of [bouts] fights earns.
   /// Rises from [_shortCardFloor] at one bout toward 1.0, effectively
   /// saturating around a real 10-12 fight card:
@@ -112,19 +177,20 @@ class EventFinanceCalculator {
             (mainEventPopularity * 9) +
             (cardDraw * 1.6) +
             promoEffect) *
-        depth;
+            depth +
+        // Locals who come because there's a fight on, whoever is on it.
+        // Additive: the room does not multiply your following.
+        venue.localWalkUp;
 
-    // Price elasticity: pricing above the venue's suggested price softens
-    // demand, pricing below it boosts demand, with diminishing effect at
-    // the extremes (exponent < 1) so it never swings wildly.
-    final priceRatio = ticketPrice <= 0
-        ? 1.0
-        : venue.suggestedTicketPrice / ticketPrice;
-    final demandScore = baseDemand * pow(priceRatio, 0.6);
+    // Price response, against what this market bears rather than against
+    // whatever number the venue happens to suggest.
+    final demandScore =
+        baseDemand * turnoutAt(ticketPrice: ticketPrice, venue: venue);
 
     final noise = 0.85 + _random.nextDouble() * 0.3; // +/-15%
     final rawAttendance = (demandScore * noise).round();
     final attendance = rawAttendance.clamp(0, venue.capacity);
+    final fillRate = venue.capacity == 0 ? 1.0 : attendance / venue.capacity;
 
     final ticketRevenue = attendance * ticketPrice;
 
@@ -163,6 +229,8 @@ class EventFinanceCalculator {
       card: card,
       netProfit: revenue - expenses,
       mainEventPopularity: mainEventPopularity,
+      fillRate: fillRate,
+      overshoot: venueOvershoot(venue: venue, attendance: attendance),
     );
 
     return EventFinanceResult(
@@ -201,10 +269,22 @@ class EventFinanceCalculator {
     required List<Fight> card,
     required int netProfit,
     required double mainEventPopularity,
+    required double fillRate,
+    required int overshoot,
   }) {
     var change = 0;
     change += netProfit > 0 ? 1 : -1;
     if (mainEventPopularity >= 60) change += 1;
+
+    // A packed small hall is better for you than a third-full arena.
+    // Rented a room two sizes bigger than the crowd needed and it shows
+    // on camera; sold the place out and it does too.
+    if (overshoot >= 2) {
+      change -= 2;
+    } else if (overshoot == 1) {
+      change -= 1;
+    }
+    if (fillRate >= 0.9) change += 1;
 
     final resolvedRatings = card
         .map((f) => f.result)

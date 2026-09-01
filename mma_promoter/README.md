@@ -470,6 +470,42 @@ the native mobile app with real persistence.
   60/30/10 palette on purpose, alongside the win/loss greens and reds:
   the accent red was doing double duty as "danger" and "champion", which
   made neither read.
+- **Venue choice is about seats, not price.** A venue changes three
+  things: how many people it holds, a flat few hundred [local
+  walk-ups](lib/data/models/enums.dart) who come because there's a fight
+  on in their city, and the rent. What it deliberately does *not* do is
+  multiply your following — the people who follow your promotion are the
+  same people wherever you stage it.
+
+  This replaces two successive bugs. Originally venues differed only by
+  their *suggested ticket price*, and demand was measured against that
+  suggestion — so charging a big arena's suggested price was
+  demand-neutral and renting one was free money: the same crowd paid
+  double for nothing. Making the market a demand *multiplier* was worse,
+  conjuring 60% more customers out of a bigger room. Now demand is priced
+  against one market-wide reference nudged by a mild
+  [`Venue.priceLevel`](lib/data/models/enums.dart), the extra seats only
+  matter once you outgrow the small hall, and staging a show in a room
+  two sizes bigger than the crowd needed costs reputation
+  (`venueOvershoot` — judged on over-reaching rather than raw fill rate,
+  so the smallest room in the game is never punished for being small).
+- **Ticket pricing has an answer.** Turnout follows a saturating curve:
+  1.0 at the market's reference price, rising toward a ceiling as the
+  price approaches free, falling away as it climbs. A plain elasticity
+  exponent can't do this — below 1 the best move is always "charge more",
+  above 1 always "charge less". A finite audience puts the optimum in the
+  middle, and each venue's suggested price now sits on it, so the
+  suggestion is real advice rather than a number to beat.
+- **Fighter pay has no cliffs.** `PayScale` interpolates between its
+  anchors **geometrically**, not linearly. Pay spans three orders of
+  magnitude, and a straight line between distant anchors makes the slope
+  jump at every control point — the old table went up 2x from 55 to 56
+  overall, 1.6x from 65 to 66 and 4.2x from 75 to 76, so a single point
+  of overall could cost more than the ten before it. A regional promotion
+  ran a profitable card of 55s and lost $22,000 on the same card of 65s
+  for no reason it could see. In log space each stretch grows by a
+  constant ratio per point instead; the steepest is 75-85 at about +27%,
+  which is the climb into real star money and is smooth all the way up.
 - **Betting odds**: every fight is priced as American moneylines
   (`OddsCalculator`), shown on the booked card, on the event page beside
   each bout, and in the booking dialog's matchup preview. A logistic
@@ -766,9 +802,5 @@ split along (e.g. a dedicated `RosterController`).
   has slots for these). Drug tests, DUIs, backstage scraps and freak
   injuries are covered by `RosterIncidentEngine` instead, since they
   don't ask the player to decide anything.
-- **Prelims don't pay for themselves at the regional tier.** Card depth
-  now drives revenue properly, but a mid-card bout's purse still runs
-  slightly ahead of the gate it generates at $35 a ticket, so a deep card
-  earns more and profits a little less. The lever is `PayScale`'s low
-  end, which is priced well above what regional MMA actually pays; that's
-  a separate rebalance.
+- ~~Prelims don't pay for themselves at the regional tier.~~ Fixed by the
+  pay-curve and venue rebalance below.

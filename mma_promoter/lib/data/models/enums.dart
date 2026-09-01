@@ -284,24 +284,83 @@ extension VenueInfo on Venue {
     }
   }
 
-  /// A reasonable default ticket price to pre-fill the booking form with;
-  /// the player can override it there.
-  int get suggestedTicketPrice {
+  /// Locals who turn up because there's a fight on in their city,
+  /// whoever is fighting — a flat few hundred, not a multiplier.
+  ///
+  /// Deliberately *additive*. What a promotion buys by moving up is
+  /// [capacity]: seats it physically could not sell in a smaller hall.
+  /// A bigger room does not multiply your fanbase — the people who follow
+  /// your promotion are the people who follow your promotion, wherever
+  /// you stage it. Making this a multiplier (which it briefly was) meant
+  /// renting an arena magicked up 60% more customers out of nothing, and
+  /// booking the biggest room you could afford was always right.
+  int get localWalkUp {
     switch (this) {
       case Venue.regionalUsa:
-        return 35;
-      case Venue.hartfordCt:
-        return 55;
-      case Venue.atlantaGa:
-        return 70;
-      case Venue.bostonMa:
         return 90;
+      case Venue.hartfordCt:
+        return 220;
+      case Venue.atlantaGa:
+        return 300;
+      case Venue.bostonMa:
+        return 380;
       case Venue.lasVegasNv:
-        return 120;
-      case Venue.newYorkNy:
-        return 175;
+        return 460;
       case Venue.manchesterUk:
-        return 140;
+        return 430;
+      case Venue.newYorkNy:
+        return 540;
+    }
+  }
+
+  /// How much more a ticket costs in this market, as a multiple of the
+  /// smallest. Kept mild — a big-city crowd pays somewhat more, not
+  /// several times more, and the rent takes most of it back.
+  double get priceLevel {
+    switch (this) {
+      case Venue.regionalUsa:
+        return 1.0;
+      case Venue.hartfordCt:
+        return 1.06;
+      case Venue.atlantaGa:
+        return 1.11;
+      case Venue.bostonMa:
+        return 1.16;
+      case Venue.lasVegasNv:
+        return 1.22;
+      case Venue.manchesterUk:
+        return 1.2;
+      case Venue.newYorkNy:
+        return 1.28;
+    }
+  }
+
+  /// A reasonable default ticket price to pre-fill the booking form with;
+  /// the player can override it there. Note this is a *starting point*,
+  /// not a free ride: demand is priced against a single market-wide
+  /// reference (see `EventFinanceCalculator.referenceTicketPrice`), so
+  /// charging more costs you customers wherever you are.
+  int get suggestedTicketPrice {
+    // Set near what actually maximises the gate in each market, so the
+    // suggestion is real advice rather than a number to beat. Demand is
+    // priced against one market-wide reference scaled by [marketDraw],
+    // which is why these cluster far more tightly than they used to — a
+    // bigger city bears a somewhat higher ticket, not a five-times one.
+    switch (this) {
+      case Venue.regionalUsa:
+        return 55;
+      case Venue.hartfordCt:
+        return 58;
+      case Venue.atlantaGa:
+        return 61;
+      case Venue.bostonMa:
+        return 64;
+      case Venue.lasVegasNv:
+        return 67;
+      case Venue.newYorkNy:
+        return 70;
+      case Venue.manchesterUk:
+        return 66;
     }
   }
 }

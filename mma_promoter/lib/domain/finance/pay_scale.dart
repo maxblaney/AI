@@ -1,3 +1,5 @@
+import 'dart:math';
+
 /// Suggested contract terms for a fighter: guaranteed show money plus a
 /// win bonus only paid out if they win the fight. `total` is what they
 /// actually earn on a win (show + winBonus); a loss or draw pays only
@@ -25,23 +27,40 @@ class PayScale {
   PayScale._();
 
   /// (overall, base pay at 0 popularity) control points, strictly
-  /// increasing in both fields. Roughly: 25-55 -> ~$1,000, 56-65 ->
-  /// $2,500-5,000, 65-75 -> ~$12,000, 75-85 -> $50,000-100,000, and
-  /// climbing well past $100,000 for the rare 90+ legend tier.
+  /// increasing in both fields.
+  ///
+  /// The curve climbs geometrically — roughly a third more per five
+  /// points of overall through the middle, then far steeper past 75 where
+  /// genuine stars live. What it deliberately no longer has is a **cliff**
+  /// at a single point of overall: the old table jumped 55 -> 56 by
+  /// double, 65 -> 66 by 60%, and 75 -> 76 by more than four times, which
+  /// made one point of overall worth more than the ten before it and put
+  /// a wall between a regional promotion and the fighters just above its
+  /// budget. A 60-overall card used to lose money that a 55-overall card
+  /// made, for no reason a player could see.
   static const List<(double, double)> _anchors = [
-    (25, 1000),
-    (55, 1200),
-    (56, 2500),
-    (65, 5000),
-    (66, 8000),
-    (75, 12000),
-    (76, 50000),
+    (25, 800),
+    (45, 1100),
+    (55, 1600),
+    (65, 3200),
+    (75, 9000),
     (85, 100000),
     (90, 180000),
     (95, 300000),
     (99, 450000),
   ];
 
+  /// Interpolates between anchors **geometrically**, not linearly.
+  ///
+  /// Fighter pay spans three orders of magnitude, and a straight line
+  /// between two anchors that far apart has a slope that jumps at every
+  /// anchor — so a single point of overall could cost more than the ten
+  /// before it, purely as an artefact of where a control point happened
+  /// to sit. In log space each segment grows by a constant *ratio* per
+  /// point instead, which is how pay actually scales and leaves no cliffs
+  /// anywhere on the curve. The steepest stretch is 75-85, at about
+  /// +27% per point — that's the climb into genuine star money, and it's
+  /// smooth all the way up.
   static double _basePay(double overall) {
     final ovr = overall.clamp(_anchors.first.$1, _anchors.last.$1);
     for (var i = 0; i < _anchors.length - 1; i++) {
@@ -50,7 +69,7 @@ class PayScale {
       if (ovr <= highOvr) {
         if (highOvr == lowOvr) return lowPay;
         final t = (ovr - lowOvr) / (highOvr - lowOvr);
-        return lowPay + (highPay - lowPay) * t;
+        return lowPay * pow(highPay / lowPay, t);
       }
     }
     return _anchors.last.$2;

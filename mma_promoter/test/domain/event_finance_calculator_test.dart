@@ -66,6 +66,7 @@ Fight _mainEventFight(String aId, String bId) {
 
 void main() {
   _cardSizeAndPopularityTests();
+  _venueAndPricingTests();
 
   group('EventFinanceCalculator', () {
     test('attendance never exceeds venue capacity', () {
@@ -355,6 +356,166 @@ void _cardSizeAndPopularityTests() {
       final stars = run(buildCard('s', 85), lookup);
 
       expect(stars.revenue, greaterThan(unknowns.revenue));
+    });
+  });
+
+}
+
+void _venueAndPricingTests() {
+  Fight bout(int i, Map<String, Fighter> lookup, int popularity) {
+    lookup['a$i'] = _fighter('a$i', popularity: popularity);
+    lookup['b$i'] = _fighter('b$i', popularity: popularity);
+    return Fight(
+      id: 'f$i',
+      eventId: 'e',
+      fighterAId: 'a$i',
+      fighterBId: 'b$i',
+      weightClass: WeightClass.lightweight,
+      cardOrder: i,
+      isMainEvent: i == 0,
+      result: const FightResult(
+        winnerId: 'a0',
+        method: FightMethod.decision,
+        round: 3,
+        winnerPerformanceRating: 70,
+        loserPerformanceRating: 60,
+      ),
+    );
+  }
+
+  EventFinanceResult run({
+    required Venue venue,
+    required int fanbase,
+    int bouts = 8,
+    int? ticketPrice,
+  }) {
+    final lookup = <String, Fighter>{};
+    final card = [
+      for (var i = 0; i < bouts; i++) bout(i, lookup, i == 0 ? 45 : 12),
+    ];
+    return EventFinanceCalculator(random: Random(7)).calculate(
+      venue: venue,
+      ticketPrice: ticketPrice ?? venue.suggestedTicketPrice,
+      organization: _organization(fanbaseSize: fanbase),
+      card: card,
+      fighterLookup: lookup,
+      promotionBudgetSpent: 0,
+    );
+  }
+
+  group('venue choice', () {
+    test('a bigger room does not conjure up a bigger crowd', () {
+      // The bug this replaces: venues differed only by their suggested
+      // ticket price, which demand was measured against — so renting an
+      // arena doubled the gate off the same fanbase, for free.
+      final small = run(venue: Venue.regionalUsa, fanbase: 8000);
+      final huge = run(venue: Venue.bostonMa, fanbase: 8000);
+
+      // A few hundred local walk-ups, not a multiple.
+      expect(huge.attendance - small.attendance, lessThan(400));
+      expect(huge.netProfit, lessThan(small.netProfit),
+          reason: 'the rent on a room you cannot fill has to bite');
+    });
+
+    test('over-reaching costs reputation, filling the place earns it', () {
+      final rightSized = run(venue: Venue.regionalUsa, fanbase: 8000);
+      final tooBig = run(venue: Venue.atlantaGa, fanbase: 8000);
+
+      expect(tooBig.reputationChange, lessThan(rightSized.reputationChange));
+    });
+
+    test('the smallest room in the game is never punished for being small',
+        () {
+      // There is nowhere smaller to go, so a thin crowd in it is a
+      // circumstance, not a decision.
+      expect(
+        EventFinanceCalculator.venueOvershoot(
+            venue: Venue.regionalUsa, attendance: 50),
+        0,
+      );
+      expect(
+        EventFinanceCalculator.venueOvershoot(
+            venue: Venue.newYorkNy, attendance: 50),
+        greaterThan(1),
+      );
+    });
+
+    test('moving up pays once the small room caps you', () {
+      // A promotion whose demand exceeds 3,500 is leaving money on the
+      // floor; that, and only that, is what a bigger venue is for.
+      final capped = run(venue: Venue.regionalUsa, fanbase: 600000, bouts: 11);
+      final roomy = run(venue: Venue.hartfordCt, fanbase: 600000, bouts: 11);
+
+      expect(capped.attendance, Venue.regionalUsa.capacity);
+      expect(roomy.attendance, greaterThan(capped.attendance));
+      expect(roomy.netProfit, greaterThan(capped.netProfit));
+    });
+  });
+
+  group('ticket pricing', () {
+    test('has a real optimum rather than a direction', () {
+      // Both failure modes are wrong: with a weak exponent the answer was
+      // always "charge more", with a strong one always "charge less". A
+      // finite audience puts the best price in the middle.
+      const venue = Venue.hartfordCt;
+      const prices = [15, 25, 35, 45, 55, 70, 90, 120, 160];
+      final revenues = [
+        for (final price in prices)
+          run(venue: venue, fanbase: 25000, ticketPrice: price).revenue,
+      ];
+
+      final best = revenues.reduce((a, b) => a > b ? a : b);
+      final bestIndex = revenues.indexOf(best);
+      expect(bestIndex, greaterThan(0),
+          reason: 'giving tickets away should not be the best play');
+      expect(bestIndex, lessThan(prices.length - 1),
+          reason: 'nor should charging whatever you like');
+    });
+
+    test("the venue's suggested price is honest advice", () {
+      for (final venue in [
+        Venue.regionalUsa,
+        Venue.hartfordCt,
+        Venue.newYorkNy,
+      ]) {
+        final suggested = venue.suggestedTicketPrice;
+        final atSuggested =
+            run(venue: venue, fanbase: 60000, ticketPrice: suggested).revenue;
+        final wayUnder =
+            run(venue: venue, fanbase: 60000, ticketPrice: suggested ~/ 3)
+                .revenue;
+        final wayOver =
+            run(venue: venue, fanbase: 60000, ticketPrice: suggested * 3)
+                .revenue;
+
+        expect(atSuggested, greaterThan(wayUnder));
+        expect(atSuggested, greaterThan(wayOver));
+      }
+    });
+
+    test('turnout falls as the price climbs, from a ceiling', () {
+      const venue = Venue.regionalUsa;
+      final reference =
+          EventFinanceCalculator.referencePriceFor(venue).round();
+
+      expect(
+        EventFinanceCalculator.turnoutAt(ticketPrice: reference, venue: venue),
+        closeTo(1.0, 0.02),
+        reason: 'the reference price is the baseline by definition',
+      );
+      expect(
+        EventFinanceCalculator.turnoutAt(ticketPrice: 1, venue: venue),
+        lessThanOrEqualTo(1 + EventFinanceCalculator.priceCeilingBonus),
+        reason: 'a free ticket still only reaches a finite audience',
+      );
+
+      var previous = double.infinity;
+      for (var price = 5; price <= 200; price += 5) {
+        final turnout =
+            EventFinanceCalculator.turnoutAt(ticketPrice: price, venue: venue);
+        expect(turnout, lessThan(previous));
+        previous = turnout;
+      }
     });
   });
 }
