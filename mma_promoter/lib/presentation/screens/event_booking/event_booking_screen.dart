@@ -150,12 +150,17 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
           const SizedBox(height: 16),
           DropdownButtonFormField<Venue>(
             value: _venue,
+            // Venue lines are long — name, capacity and rent — and on a
+            // phone they ran off the side of the field. Expanded plus an
+            // ellipsis keeps the whole row inside the screen.
+            isExpanded: true,
             decoration: const InputDecoration(labelText: 'Venue'),
             items: Venue.values
                 .map((v) => DropdownMenuItem(
                       value: v,
                       child: Text(
                         '${v.label} (cap. ${v.capacity}, \$${v.baseCost})',
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ))
                 .toList(),
@@ -365,9 +370,13 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
                 children: [
                   DropdownButtonFormField<WeightClass>(
                     value: weightClass,
+                    isExpanded: true,
                     decoration: const InputDecoration(labelText: 'Weight Class'),
                     items: classes
-                        .map((w) => DropdownMenuItem(value: w, child: Text(w.labelWithLimit)))
+                        .map((w) => DropdownMenuItem(
+                            value: w,
+                            child: Text(w.labelWithLimit,
+                                overflow: TextOverflow.ellipsis)))
                         .toList(),
                     onChanged: (v) => setState(() {
                       weightClass = v ?? weightClass;
@@ -426,6 +435,7 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
                   const SizedBox(height: 12),
                   DropdownButtonFormField<TitleFightType>(
                     value: effectiveTitle,
+                    isExpanded: true,
                     decoration: InputDecoration(
                       labelText: 'Title Implications',
                       helperText: titleReason,
@@ -1085,12 +1095,17 @@ class _HypeMeter extends StatelessWidget {
           children: [
             Text('HYPE', style: Theme.of(context).textTheme.bodySmall),
             const Spacer(),
-            Text(
-              hype.label,
-              style: Theme.of(context)
-                  .textTheme
-                  .labelLarge
-                  ?.copyWith(color: color, fontWeight: FontWeight.bold),
+            // "Decent Scrap" is the longest band, and inside a dialog on
+            // a narrow phone it was pushing the score off the row.
+            Flexible(
+              child: Text(
+                hype.label,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context)
+                    .textTheme
+                    .labelLarge
+                    ?.copyWith(color: color, fontWeight: FontWeight.bold),
+              ),
             ),
             const SizedBox(width: 6),
             Text('${hype.score}',

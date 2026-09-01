@@ -478,6 +478,12 @@ the native mobile app with real persistence.
   on the ladder. The form query is fired once per pair of corners and
   held, so the dialog's rebuilds — every dropdown, every toggle — don't
   re-hit the database.
+- **The booking screen fits a phone.** The venue, weight class and title
+  dropdowns rendered their options at natural width, so on a 360px screen
+  a line like "Regional Arena (cap. 6000, $28000)" ran 277px off the side
+  of the field as striped overflow; the hype meter's band label pushed
+  its score off the row the same way. The dropdowns now expand to the
+  field and ellipsise, and the band label flexes.
 - **Booked fights can be edited and reordered.** Tapping a bout on the
   card (or its pencil) reopens the same dialog with everything pre-filled
   and saves in place, keeping its slot and its main-event flag. Up/down
