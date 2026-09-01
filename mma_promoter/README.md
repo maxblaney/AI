@@ -146,7 +146,9 @@ mobile build:
   tests via `GameController.inMemory()`.)
 
 ```bash
-flutter build web --release --web-renderer html --no-web-resources-cdn
+flutter build web --release --web-renderer html --no-web-resources-cdn \
+  --pwa-strategy=none
+cp tool/service_worker_tombstone.js build/web/flutter_service_worker.js
 cd build/web && python3 -m http.server 8765
 # open http://localhost:8765 in a browser
 ```
@@ -155,6 +157,30 @@ cd build/web && python3 -m http.server 8765
 CanvasKit/font assets, so the built app has no external dependency at
 all — useful offline and behind restrictive networks, and used for the
 GitHub Pages deploy too.
+
+**`--pwa-strategy=none` and the tombstone worker are not optional for the
+deploy.** Flutter's default web build ships a caching service worker, and
+once it is registered in someone's browser it keeps serving what it
+cached. That is bad enough on its own, but the failure mode is worse than
+it sounds: Chrome caches the *service worker script itself* for up to 24
+hours, so the browser never re-fetches it, never notices a new build, and
+serves a weeks-old app indefinitely. This actually happened — a fix
+shipped, deployed and verified was invisible to the person who asked for
+it, and reported as not done.
+
+`--pwa-strategy=none` stops the app caching anything, but still generates
+and registers an empty worker at `flutter_service_worker.js`. Copying
+`tool/service_worker_tombstone.js` over that empty file is what cleans up
+after the old one: it deletes every cache the previous worker built and
+reloads any open tab, once. It deliberately does not call
+`unregister()` — the page re-registers on every load, so that would
+install-unregister-reload forever.
+
+A browser already stuck on the old worker needs **one hard reload**
+(Ctrl/Cmd+Shift+R) to break out, because only that bypasses the HTTP
+cache pinning the stale script; after that it heals and stays healed.
+Left alone it recovers on its own once Chrome's 24-hour script cache
+expires.
 
 This is a preview path, not a target platform — the real deliverable is
 the native mobile app with real persistence.
