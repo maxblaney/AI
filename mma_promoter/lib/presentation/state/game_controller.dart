@@ -308,7 +308,18 @@ class GameController extends ChangeNotifier {
     await _orgRepo.save(org);
     await _orgRepo.touch(org.id, DateTime.now());
 
-    // Everyone starts as a free agent — nobody's signed to "My Roster" yet.
+    // A promotion opens as a going concern: a full roster already under
+    // contract, twenty to a division, plus a pool of free agents to sign
+    // from. The starting contracts cost nothing up front — signing one
+    // normally charges its show money as a bonus, and 160 of those would
+    // bankrupt the save before week one.
+    final openingWeek = GameCalendar.dateForWeek(org.currentWeek);
+    for (final fighter in generateSignedRoster(
+      signedOn: openingWeek,
+      random: _rng,
+    )) {
+      await _fighterRepo.save(fighter);
+    }
     for (final fighter in generateStartingRoster(random: _rng)) {
       await _fighterRepo.save(fighter);
     }

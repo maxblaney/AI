@@ -2,6 +2,7 @@ import 'dart:math';
 
 import '../../core/utils/id_generator.dart';
 import '../../domain/cosmetics/fighter_headshots.dart';
+import '../../domain/finance/pay_scale.dart';
 import '../models/models.dart';
 
 class _NamePool {
@@ -510,6 +511,84 @@ List<Fighter> generateStartingRoster({
   ];
 }
 
+/// The overall band every fighter a promotion starts with under contract
+/// falls inside. A starting roster is meant to be a going concern — no
+/// journeymen making up the numbers — so the floor is well above the
+/// talent pool's average.
+const int signedRosterMinOverall = 70;
+const int signedRosterMaxOverall = 95;
+
+/// Stat centre for a fighter already on the books. Unlike the talent
+/// pool this has no journeyman tier at all: the spread runs from solid
+/// roster fighter up to the odd genuine superstar, weighted so most of a
+/// division is the former.
+int _rollSignedStatCenter(Random rng) {
+  final roll = rng.nextDouble();
+  if (roll < 0.03) return 92 + rng.nextInt(4); // 92-95: a real draw
+  if (roll < 0.15) return 86 + rng.nextInt(6); // 86-91: title picture
+  if (roll < 0.45) return 79 + rng.nextInt(7); // 79-85: contenders
+  return 72 + rng.nextInt(7); //                  72-78: the bulk of it
+}
+
+/// Generates a promotion's starting *signed* roster — fighters already
+/// under contract when the save begins, [fightersPerWeightClass] to a
+/// division, every one of them between [signedRosterMinOverall] and
+/// [signedRosterMaxOverall].
+///
+/// [signedOn] dates the contracts; pass the save's opening week.
+List<Fighter> generateSignedRoster({
+  int fightersPerWeightClass = 20,
+  required DateTime signedOn,
+  Random? random,
+}) {
+  final rng = random ?? Random();
+  return [
+    for (final weightClass in WeightClass.values)
+      for (var i = 0; i < fightersPerWeightClass; i++)
+        _signedFighter(weightClass, rng, signedOn),
+  ];
+}
+
+/// One contracted fighter inside the overall band.
+///
+/// Stats jitter around their centre, so a centre inside the band can
+/// still land an overall just outside it — hence the retry rather than
+/// trusting the centre alone. The loop is bounded so a future change to
+/// the stat curve can never hang a new game; if it ever ran out of
+/// attempts the fighter would still be signed, just fractionally outside
+/// the band, which is a far better failure than an infinite loop.
+Fighter _signedFighter(WeightClass weightClass, Random rng, DateTime signedOn) {
+  Fighter fighter;
+  var attempts = 0;
+  do {
+    fighter = _generateFighter(
+      weightClass,
+      rng,
+      centerOverride: _rollSignedStatCenter(rng),
+    );
+    attempts++;
+  } while ((fighter.overall < signedRosterMinOverall ||
+          fighter.overall > signedRosterMaxOverall) &&
+      attempts < 40);
+
+  final pay = PayScale.suggest(
+    overall: fighter.overall,
+    popularity: fighter.popularity,
+  );
+  return fighter.copyWith(
+    contract: Contract(
+      id: newId(),
+      fighterId: fighter.id,
+      // Staggered so the whole roster doesn't come up for renewal at once.
+      fightsRemaining: 2 + rng.nextInt(4),
+      showMoney: pay.showMoney,
+      winBonus: pay.winBonus,
+      exclusive: true,
+      signedOn: signedOn,
+    ),
+  );
+}
+
 /// Generates roughly [count] brand-new free agents spread randomly across
 /// weight classes, for the monthly talent-pool refresh — keeps the pool
 /// from going stale as the player signs fighters out of it over time.
@@ -631,7 +710,14 @@ double _expectedWinRate(int center) {
   return (wins, fights - wins);
 }
 
-Fighter _generateFighter(WeightClass weightClass, Random rng) {
+Fighter _generateFighter(
+  WeightClass weightClass,
+  Random rng, {
+  /// Forces the talent tier instead of rolling one — used by the signed
+  /// starting roster, which draws from a narrower, higher band than the
+  /// free-agent pool does.
+  int? centerOverride,
+}) {
   final int experienceFights = _rollFightCount(rng);
 
   // Every fighter has a talent-tier "center" their stats cluster around.
@@ -640,7 +726,7 @@ Fighter _generateFighter(WeightClass weightClass, Random rng) {
   // shifts the *average*, only how much a given stat can stray from it.
   // Rolled before the record, which is derived from it: the stats are
   // what the record is supposed to be evidence of.
-  final int center = _rollStatCenter(rng);
+  final int center = centerOverride ?? _rollStatCenter(rng);
 
   final (wins, losses) = _rollRecord(experienceFights, center, rng);
   // Age should be plausible for how many pro fights this fighter has —

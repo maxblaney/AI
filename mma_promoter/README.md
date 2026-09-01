@@ -187,6 +187,25 @@ the native mobile app with real persistence.
 
 ## Game systems
 
+- **A save opens as a going concern.** A new promotion starts with **20
+  fighters already under contract in every division** (160 in all), each
+  between 70 and 95 overall, alongside the usual pool of ~400 free
+  agents. `generateSignedRoster` draws from a higher, narrower band than
+  the talent pool — no journeymen making up the numbers — weighted so
+  most of a division is a solid roster fighter (72-78), with contenders
+  (79-85), a title picture (86-91) and the odd genuine draw (92-95).
+  Contract terms are staggered 2-5 fights so the whole roster doesn't come
+  up for renewal at once, and the opening contracts cost nothing up front
+  — signing normally charges the show money as a bonus, and 160 of those
+  would bankrupt the save before week one.
+
+  **This roster only fits the bigger starting tiers.** Purses scale hard
+  with overall, and a floor of 70 means the cheapest 8-bout card you can
+  assemble costs about $100,000 in purses. Measured, cheapest-16 card at
+  each tier: Local **-$70,760**, Regional **-$67,295**, National
+  **+$37,604**, International **+$686,045**. Local and Regional are in
+  debt after one show. Start National or above, or lower the roster's
+  overall floor.
 - **Weight classes**: `WeightClass` has the real 8 divisions (Flyweight
   125 → Heavyweight 265). The starting roster spreads fighters across all
   of them, and fights can only be booked between fighters in the same

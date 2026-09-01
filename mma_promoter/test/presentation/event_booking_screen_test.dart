@@ -32,12 +32,22 @@ Fighter _signed(String id, String name, WeightClass division,
 }
 
 void main() {
+  /// Builds a controller whose signed roster is exactly [roster].
+  ///
+  /// A new save now opens with 160 fighters already under contract, which
+  /// is right for playing but useless here — these tests are about which
+  /// fighters the booking screen offers, so they need to own the roster
+  /// outright. The seeded contracts are released rather than the seeding
+  /// being skipped, so the tests still run against a real new save.
   Future<GameController> controllerWith(List<Fighter> roster) async {
     final controller = GameController.inMemory(random: Random(11));
     await controller.startNewGame(
       orgName: 'Booking FC',
       tier: ReputationTier.regional,
     );
+    for (final signed in [...controller.signedRoster]) {
+      await controller.releaseFighter(signed.id);
+    }
     for (final fighter in roster) {
       await controller.saveFighter(fighter);
     }
