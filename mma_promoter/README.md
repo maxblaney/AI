@@ -462,6 +462,22 @@ the native mobile app with real persistence.
   weakest is named underneath, so a short bar tells you what to fix
   rather than just that something is wrong. Setting Title Implications
   moves the bar live.
+- **Rank and recent form in the matchup preview** (`DivisionRankings`,
+  `RecentForm`): above the odds line the preview names where each man
+  stands in the division he's being booked in — `C · Lightweight` in gold
+  for a champion, `iC` for an interim one, `#4 Lightweight` for a
+  contender, "Unranked" for someone who hasn't fought for the promotion
+  yet — and shows his last five results as W/L/D chips, newest first,
+  each holding a tooltip with how it ended ("KO R2", "SUB R1", "DEC").
+  A record hides a slide: 12-4 on a four-fight run and 12-4 having lost
+  three straight read identically until you can see the order. The
+  ranking rule (champion above contenders whatever his Elo, belt holders
+  taking a letter rather than a number, a visiting champion appearing in
+  the division he holds) lives in `DivisionRankings` and is shared with
+  the Rankings screen, so the number in the booking dialog is the number
+  on the ladder. The form query is fired once per pair of corners and
+  held, so the dialog's rebuilds — every dropdown, every toggle — don't
+  re-hit the database.
 - **Booked fights can be edited and reordered.** Tapping a bout on the
   card (or its pencil) reopens the same dialog with everything pre-filled
   and saves in place, keeping its slot and its main-event flag. Up/down

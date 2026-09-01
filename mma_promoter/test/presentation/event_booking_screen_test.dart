@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 import 'package:mma_promoter/data/models/models.dart';
+import 'package:mma_promoter/domain/calendar/game_calendar.dart';
 import 'package:mma_promoter/presentation/screens/event_booking/event_booking_screen.dart';
 import 'package:mma_promoter/presentation/state/game_controller.dart';
 
@@ -330,6 +331,94 @@ void main() {
     await tester.pumpAndSettle();
     await scrollToCard(tester);
     expect(find.textContaining('Championship'), findsOneWidget);
+
+    controller.dispose();
+  });
+
+  testWidgets('a fighter with no history reads as unranked with no form',
+      (tester) async {
+    final controller = await controllerWith([
+      _signed('a', 'Ace Onstreak', WeightClass.lightweight),
+      _signed('b', 'Bob Onskid', WeightClass.lightweight),
+    ]);
+    await tester.pumpWidget(wrap(controller));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Add Fight'));
+    await tester.pumpAndSettle();
+    await pickCorner(tester, 0, 'Ace Onstreak');
+    await pickCorner(tester, 1, 'Bob Onskid');
+
+    expect(find.text('RANK'), findsOneWidget);
+    expect(find.text('LAST 5'), findsOneWidget);
+    // Neither man has fought for the promotion, so there is nothing to
+    // rank them on and nothing to show — and the rows say so rather than
+    // sitting blank.
+    expect(find.text('Unranked'), findsNWidgets(2));
+    expect(find.text('No fights here yet'), findsNWidgets(2));
+    expect(tester.takeException(), isNull);
+
+    controller.dispose();
+  });
+
+  testWidgets('the preview shows divisional rank and the last five results',
+      (tester) async {
+    final controller = await controllerWith([
+      _signed('a', 'Ace Onstreak', WeightClass.lightweight),
+      _signed('b', 'Bob Onskid', WeightClass.lightweight),
+    ]);
+
+    // Run a real title fight between them so one comes out a champion
+    // with a win on his form line and the other a loss — the preview is
+    // reading the same fight history the rest of the game does.
+    final org = controller.organization!;
+    final error = await controller.bookEvent(
+      name: 'Fight Night',
+      date: GameCalendar.dateForWeek(org.currentWeek + 1),
+      venue: Venue.regionalUsa,
+      ticketPrice: Venue.regionalUsa.suggestedTicketPrice,
+      card: [
+        const Fight(
+          id: 'f1',
+          eventId: '',
+          fighterAId: 'a',
+          fighterBId: 'b',
+          weightClass: WeightClass.lightweight,
+          cardOrder: 0,
+          isMainEvent: true,
+          rounds: 5,
+          titleFightType: TitleFightType.championship,
+        ),
+      ],
+    );
+    expect(error, isNull, reason: 'booking should succeed');
+    await controller.advanceWeek();
+    final event = controller.scheduledEvents.single;
+    final summary =
+        await controller.simulateEvent(event.id, promotionBudgetSpent: 0);
+    expect(summary, isNotNull, reason: 'the event should have run');
+
+    await tester.pumpWidget(wrap(controller));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Add Fight'));
+    await tester.pumpAndSettle();
+    await pickCorner(tester, 0, 'Ace Onstreak');
+    await pickCorner(tester, 1, 'Bob Onskid');
+    // The form line is loaded from the database, so give it a frame.
+    await tester.pumpAndSettle();
+
+    // One of them left with the belt; the other is the only contender.
+    expect(find.text('C \u00b7 Lightweight'), findsOneWidget);
+    expect(find.text('#1 Lightweight'), findsOneWidget);
+
+    // And both carry exactly one result on the form line.
+    expect(find.text('No fights here yet'), findsNothing);
+    final chips = find.text('W').evaluate().length +
+        find.text('L').evaluate().length +
+        find.text('D').evaluate().length;
+    expect(chips, 2, reason: 'one fight each, on two form lines');
+    expect(tester.takeException(), isNull);
 
     controller.dispose();
   });

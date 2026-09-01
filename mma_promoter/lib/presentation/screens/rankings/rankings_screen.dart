@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/models/models.dart';
+import '../../../domain/rankings/division_rankings.dart';
 import '../../../domain/rankings/pound_for_pound.dart';
 import '../../state/game_controller.dart';
 import '../../theme/app_theme.dart';
@@ -32,44 +33,23 @@ class _RankingsScreenState extends State<RankingsScreen> {
     // down) and took the belt — a champion has to appear in the ranking
     // of the division he's champion of, even when it isn't his home
     // weight.
-    final pool = controller.rankedFighters
-        .where((f) =>
-            isP4P ||
-            f.weightClass == _weightClass ||
-            f.holdsAnyBeltIn(_weightClass!))
-        .toList();
-
     // In a division the champion sits above the contenders regardless of
-    // Elo — that's what holding the belt means. Pound-for-pound spans
+    // Elo — that's what holding the belt means; [DivisionRankings] owns
+    // that rule, shared with the booking screen. Pound-for-pound spans
     // every division and can't put all eight champions on top, so there
     // a belt is worth just enough to lift its holder past his own
     // contenders and no further — see [PoundForPound].
     final List<Fighter> ranked;
+    final List<String> labels;
     if (isP4P) {
-      ranked = PoundForPound.rank(pool);
+      ranked = PoundForPound.rank(controller.rankedFighters);
+      labels = [for (var i = 0; i < ranked.length; i++) '${i + 1}.'];
     } else {
-      ranked = pool
-        ..sort((a, b) {
-          int rank(Fighter f) => f.championOf(_weightClass!)
-              ? 0
-              : (f.interimChampionOf(_weightClass!) ? 1 : 2);
-          final byBelt = rank(a).compareTo(rank(b));
-          return byBelt != 0 ? byBelt : b.eloRating.compareTo(a.eloRating);
-        });
-    }
-
-    // Contenders number from 1; belt holders are labelled instead.
-    final labels = <String>[];
-    var contender = 0;
-    for (final f in ranked) {
-      if (!isP4P && f.championOf(_weightClass!)) {
-        labels.add('C');
-      } else if (!isP4P && f.interimChampionOf(_weightClass!)) {
-        labels.add('iC');
-      } else {
-        contender++;
-        labels.add('$contender.');
-      }
+      ranked = DivisionRankings.order(controller.rankedFighters, _weightClass!);
+      labels = [
+        for (final label in DivisionRankings.labels(ranked, _weightClass!))
+          label == 'C' || label == 'iC' ? label : '$label.',
+      ];
     }
 
     return Scaffold(

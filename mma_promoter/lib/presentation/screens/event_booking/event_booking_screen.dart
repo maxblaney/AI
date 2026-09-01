@@ -1,6 +1,7 @@
 import '../../../domain/betting/fight_odds.dart';
 import '../../../domain/booking/fight_hype.dart';
 import '../../../domain/booking/title_fight_rules.dart';
+import '../../../domain/history/recent_form.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -294,6 +295,10 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
     Fight? existing,
   }) {
     final editing = existing != null;
+    // Grabbed from the screen's own context: the dialog route sits
+    // beside this subtree, not under it, so the preview can't look the
+    // controller up for itself once it's open.
+    final controller = context.read<GameController>();
     // When editing, the fight's own two corners aren't "used" as far as
     // this dialog is concerned — otherwise you couldn't keep either of
     // them.
@@ -403,6 +408,7 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
                   // signing off on the matchup.
                   if (fighterAId != null && fighterBId != null)
                     _MatchupPreview(
+                      controller: controller,
                       a: available.firstWhere((f) => f.id == fighterAId),
                       b: available.firstWhere((f) => f.id == fighterBId),
                       titleFightType: effectiveTitle,
@@ -720,7 +726,10 @@ Widget _fighterOption(
 /// Side-by-side comparison of the two booked corners, with the opening
 /// line so the player can see at a glance whether they've made a
 /// competitive fight or a squash.
-class _MatchupPreview extends StatelessWidget {
+class _MatchupPreview extends StatefulWidget {
+  /// Passed in rather than read from context — this widget lives inside
+  /// a dialog route, which is not a descendant of the screen's provider.
+  final GameController controller;
   final Fighter a;
   final Fighter b;
 
@@ -729,13 +738,52 @@ class _MatchupPreview extends StatelessWidget {
   final TitleFightType titleFightType;
 
   const _MatchupPreview({
+    required this.controller,
     required this.a,
     required this.b,
     this.titleFightType = TitleFightType.none,
   });
 
   @override
+  State<_MatchupPreview> createState() => _MatchupPreviewState();
+}
+
+class _MatchupPreviewState extends State<_MatchupPreview> {
+  /// Recent form comes from the database, and the dialog rebuilds on
+  /// every control the player touches — so the query is fired once per
+  /// pair of corners and held, rather than on each rebuild.
+  Future<List<List<FormEntry>>>? _form;
+  String? _loadedFor;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadForm();
+  }
+
+  @override
+  void didUpdateWidget(_MatchupPreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _loadForm();
+  }
+
+  void _loadForm() {
+    final key = '${widget.a.id}|${widget.b.id}';
+    if (key == _loadedFor) return;
+    _loadedFor = key;
+    final controller = widget.controller;
+    _form = Future.wait([
+      controller.getRecentForm(widget.a.id),
+      controller.getRecentForm(widget.b.id),
+    ]);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final a = widget.a;
+    final b = widget.b;
+    final titleFightType = widget.titleFightType;
+    final controller = widget.controller;
     final odds = OddsCalculator.forFight(a: a, b: b);
     final hype = HypeCalculator.forFight(
       a: a,
@@ -769,6 +817,45 @@ class _MatchupPreview extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+            // Where each man stands in his own division — a #2 against a
+            // #9 is a very different fight from the records alone.
+            Row(
+              children: [
+                Expanded(
+                  child: _RankBadge(
+                    label: controller.divisionRankOf(a),
+                    division: a.weightClass,
+                  ),
+                ),
+                Text('RANK', style: Theme.of(context).textTheme.bodySmall),
+                Expanded(
+                  child: _RankBadge(
+                    label: controller.divisionRankOf(b),
+                    division: b.weightClass,
+                    alignEnd: true,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            // Last five, newest first. A record hides a slide; this
+            // doesn't.
+            FutureBuilder<List<List<FormEntry>>>(
+              future: _form,
+              builder: (context, snapshot) {
+                final forms = snapshot.data;
+                return Row(
+                  children: [
+                    Expanded(child: _FormLine(entries: forms?[0])),
+                    Text('LAST 5',
+                        style: Theme.of(context).textTheme.bodySmall),
+                    Expanded(
+                      child: _FormLine(entries: forms?[1], alignEnd: true),
+                    ),
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 6),
             Row(
@@ -843,6 +930,139 @@ class _MatchupPreview extends StatelessWidget {
     );
   }
 }
+
+/// A fighter's standing in his own division: 'C' for the champion, 'iC'
+/// for an interim one, '#4' for a contender, or "Unranked" for someone
+/// who hasn't fought for the promotion yet.
+class _RankBadge extends StatelessWidget {
+  final String? label;
+  final WeightClass division;
+  final bool alignEnd;
+
+  const _RankBadge({
+    required this.label,
+    required this.division,
+    this.alignEnd = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final small = Theme.of(context).textTheme.bodySmall;
+    final rank = label;
+
+    if (rank == null) {
+      return Text(
+        'Unranked',
+        textAlign: alignEnd ? TextAlign.end : TextAlign.start,
+        style: small?.copyWith(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+      );
+    }
+
+    final isBelt = rank == 'C' || rank == 'iC';
+    return Text(
+      isBelt
+          ? '$rank · ${division.label}'
+          : '#$rank ${division.label}',
+      textAlign: alignEnd ? TextAlign.end : TextAlign.start,
+      style: small?.copyWith(
+        color: isBelt
+            ? (rank == 'C' ? AppColors.belt : AppColors.beltInterim)
+            : Theme.of(context).colorScheme.onSurface,
+        fontWeight: isBelt ? FontWeight.bold : FontWeight.normal,
+      ),
+    );
+  }
+}
+
+/// The last five results as W/L/D chips, newest first, with the span's
+/// own record beside them.
+///
+/// Newest first because that is the question being asked — not "what has
+/// this man done", which the record already answers, but "what has he
+/// done *lately*".
+class _FormLine extends StatelessWidget {
+  final List<FormEntry>? entries;
+  final bool alignEnd;
+
+  const _FormLine({required this.entries, this.alignEnd = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final form = entries;
+    final small = Theme.of(context).textTheme.bodySmall;
+
+    if (form == null) {
+      // Still loading — hold the row's height so the dialog doesn't jump.
+      return const SizedBox(height: 18);
+    }
+    if (form.isEmpty) {
+      return SizedBox(
+        height: 18,
+        child: Align(
+          alignment: alignEnd ? Alignment.centerRight : Alignment.centerLeft,
+          child: Text(
+            'No fights here yet',
+            style: small?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      );
+    }
+
+    final chips = [
+      for (final entry in form)
+        Tooltip(
+          message: entry.methodLabel,
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 1),
+            width: 15,
+            height: 15,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: _formColor(entry.result).withOpacity(0.22),
+              borderRadius: BorderRadius.circular(3),
+            ),
+            child: Text(
+              entry.result.letter,
+              style: TextStyle(
+                fontSize: 10,
+                height: 1.1,
+                fontWeight: FontWeight.bold,
+                color: _formColor(entry.result),
+              ),
+            ),
+          ),
+        ),
+    ];
+
+    return Row(
+      mainAxisAlignment:
+          alignEnd ? MainAxisAlignment.end : MainAxisAlignment.start,
+      children: alignEnd
+          ? [
+              Text(RecentForm.summarise(form), style: small),
+              const SizedBox(width: 4),
+              // Newest first still reads right-to-left on this side, so
+              // the most recent fight sits nearest the fighter's name.
+              ...chips.reversed,
+            ]
+          : [
+              ...chips,
+              const SizedBox(width: 4),
+              Text(RecentForm.summarise(form), style: small),
+            ],
+    );
+  }
+}
+
+Color _formColor(FormResult result) => switch (result) {
+      FormResult.win => Colors.green,
+      FormResult.loss => Colors.redAccent,
+      FormResult.draw => Colors.blueGrey,
+    };
 
 /// How big a fight this is, as a bar. Booking on stats alone tells you
 /// who wins; this tells you whether anyone wants to watch — which is the

@@ -21,7 +21,9 @@ import '../../domain/condition/fighter_condition.dart';
 import '../../domain/career/career_progression_engine.dart';
 import '../../domain/events/random_event_engine.dart';
 import '../../domain/finance/event_finance_calculator.dart';
+import '../../domain/history/recent_form.dart';
 import '../../domain/history/record_book.dart';
+import '../../domain/rankings/division_rankings.dart';
 import '../../domain/incidents/roster_incidents.dart';
 import '../../domain/simulation/fight_resolver.dart';
 
@@ -394,6 +396,30 @@ class GameController extends ChangeNotifier {
     }
     return result;
   }
+  /// [fighterId]'s last few results, newest first — the form line the
+  /// booking screen shows next to a fighter. A record alone hides
+  /// whether a 12-4 fighter is on a run or has lost three straight.
+  Future<List<FormEntry>> getRecentForm(
+    String fighterId, {
+    int limit = RecentForm.defaultLength,
+  }) async {
+    return RecentForm.from(
+      fights: await _eventRepo.getFightsForFighter(fighterId),
+      fighterId: fighterId,
+      limit: limit,
+    );
+  }
+
+  /// Where [fighter] sits on their own division's ladder — 'C', 'iC' or a
+  /// contender number — or null if they have not fought here yet.
+  String? divisionRankOf(Fighter fighter, {WeightClass? division}) {
+    return DivisionRankings.labelFor(
+      fighter,
+      rankedFighters,
+      division ?? fighter.weightClass,
+    );
+  }
+
   Future<List<Fight>> getEventCard(String id) => _eventRepo.getCard(id);
 
   /// How many weeks of camp a fighter got for their upcoming bout — the
