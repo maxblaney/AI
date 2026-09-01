@@ -5,6 +5,7 @@ import '../../data/models/models.dart';
 import '../../domain/calendar/game_calendar.dart';
 import '../../domain/condition/fighter_condition.dart';
 import '../state/game_controller.dart';
+import '../theme/app_theme.dart';
 import 'fighter_avatar.dart';
 
 class FighterListTile extends StatelessWidget {
@@ -37,10 +38,14 @@ class FighterListTile extends StatelessWidget {
       title: Row(
         children: [
           Expanded(child: Text(fighter.name)),
+          // One belt, one trophy — a double champ shows two.
           if (fighter.isChampion)
-            Icon(Icons.emoji_events, size: 15, color: scheme.primary),
+            const Icon(Icons.emoji_events, size: 15, color: AppColors.belt),
           if (fighter.isDoubleChampion)
-            Icon(Icons.emoji_events, size: 15, color: scheme.primary),
+            const Icon(Icons.emoji_events, size: 15, color: AppColors.belt),
+          if (!fighter.isChampion && fighter.isInterimChampion)
+            const Icon(Icons.emoji_events,
+                size: 15, color: AppColors.beltInterim),
         ],
       ),
       subtitle: Column(

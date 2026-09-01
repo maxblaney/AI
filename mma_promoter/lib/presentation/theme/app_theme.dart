@@ -42,6 +42,17 @@ class AppColors {
   /// list rows.
   static const avatarBackdropTop = Color(0xFF62728C);
   static const avatarBackdropBottom = Color(0xFF333D4D);
+
+  /// Championship gold. Like the win/loss greens and reds this sits
+  /// outside the 60/30/10 system on purpose: a belt is a belt, and the
+  /// accent red was doing double duty as "danger" and "champion", which
+  /// made neither read. Warm enough to be unmistakably gold on the
+  /// near-black list rows without glowing.
+  static const belt = Color(0xFFE8B93B);
+
+  /// An interim belt — the same gold, muted, because it isn't the real
+  /// title and shouldn't look like it.
+  static const beltInterim = Color(0xFF9C8341);
 }
 
 class AppTheme {

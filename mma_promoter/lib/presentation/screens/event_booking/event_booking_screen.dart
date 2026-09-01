@@ -7,6 +7,7 @@ import '../../../core/utils/id_generator.dart';
 import '../../../data/models/models.dart';
 import '../../../domain/calendar/game_calendar.dart';
 import '../../state/game_controller.dart';
+import '../../theme/app_theme.dart';
 
 class EventBookingScreen extends StatefulWidget {
   const EventBookingScreen({super.key});
@@ -516,7 +517,7 @@ Widget _fighterOption(
       if (fighter.isChampion)
         const Padding(
           padding: EdgeInsets.only(right: 4),
-          child: Icon(Icons.emoji_events, size: 14),
+          child: Icon(Icons.emoji_events, size: 14, color: AppColors.belt),
         ),
       Expanded(child: Text(fighter.name, overflow: TextOverflow.ellipsis)),
       if (movement != null) ...[

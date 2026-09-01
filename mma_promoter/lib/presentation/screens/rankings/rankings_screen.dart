@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/models/models.dart';
+import '../../../domain/rankings/pound_for_pound.dart';
 import '../../state/game_controller.dart';
+import '../../theme/app_theme.dart';
 import '../../widgets/fighter_avatar.dart';
 import '../roster/fighter_profile_screen.dart';
 
@@ -30,26 +32,30 @@ class _RankingsScreenState extends State<RankingsScreen> {
     // down) and took the belt — a champion has to appear in the ranking
     // of the division he's champion of, even when it isn't his home
     // weight.
-    final ranked = controller.rankedFighters
+    final pool = controller.rankedFighters
         .where((f) =>
             isP4P ||
             f.weightClass == _weightClass ||
             f.holdsAnyBeltIn(_weightClass!))
-        .toList()
-      ..sort((a, b) => b.eloRating.compareTo(a.eloRating));
+        .toList();
 
     // In a division the champion sits above the contenders regardless of
     // Elo — that's what holding the belt means. Pound-for-pound spans
-    // every division and so has many champions in it; there it stays a
-    // straight Elo list, with the belt shown as a badge instead.
-    if (!isP4P) {
-      ranked.sort((a, b) {
-        int rank(Fighter f) => f.championOf(_weightClass!)
-            ? 0
-            : (f.interimChampionOf(_weightClass!) ? 1 : 2);
-        final byBelt = rank(a).compareTo(rank(b));
-        return byBelt != 0 ? byBelt : b.eloRating.compareTo(a.eloRating);
-      });
+    // every division and can't put all eight champions on top, so there
+    // a belt is worth just enough to lift its holder past his own
+    // contenders and no further — see [PoundForPound].
+    final List<Fighter> ranked;
+    if (isP4P) {
+      ranked = PoundForPound.rank(pool);
+    } else {
+      ranked = pool
+        ..sort((a, b) {
+          int rank(Fighter f) => f.championOf(_weightClass!)
+              ? 0
+              : (f.interimChampionOf(_weightClass!) ? 1 : 2);
+          final byBelt = rank(a).compareTo(rank(b));
+          return byBelt != 0 ? byBelt : b.eloRating.compareTo(a.eloRating);
+        });
     }
 
     // Contenders number from 1; belt holders are labelled instead.
@@ -120,38 +126,28 @@ class _RankingsScreenState extends State<RankingsScreen> {
                                 style: TextStyle(
                                   fontWeight:
                                       isBelt ? FontWeight.bold : FontWeight.normal,
-                                  color: isBelt
-                                      ? Theme.of(context).colorScheme.primary
-                                      : null,
+                                  color: label == 'C'
+                                      ? AppColors.belt
+                                      : (label == 'iC'
+                                          ? AppColors.beltInterim
+                                          : null),
                                 ),
                               ),
                             ),
                             Expanded(child: Text(fighter.name)),
-                            if (fighter.isDoubleChampion)
-                              Padding(
-                                padding: const EdgeInsets.only(right: 4),
-                                child: Text(
-                                  'DOUBLE CHAMP',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .labelSmall
-                                      ?.copyWith(
-                                        color: Colors.amber,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                ),
-                              ),
-                            if (isP4P && fighter.isChampion)
-                              Icon(
-                                Icons.emoji_events,
-                                size: 16,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
+                            // Pound-for-pound numbers everyone 1..n, so
+                            // without this you can't tell a champion from
+                            // a contender at a glance.
+                            if (isP4P) _BeltBadge(fighter: fighter),
                           ],
                         ),
                         subtitle: Text(
                           isP4P
-                              ? '${fighter.weightClass.label} · ${fighter.record.display} · ${fighter.style.label}'
+                              ? [
+                                  _p4pDivisionLine(fighter),
+                                  fighter.record.display,
+                                  fighter.style.label,
+                                ].join(' · ')
                               // A visiting champion's home division is
                               // worth saying, or he looks like he was
                               // always ranked here.
@@ -178,6 +174,60 @@ class _RankingsScreenState extends State<RankingsScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// What division a fighter belongs to in the P4P list — naming the belts
+/// they hold rather than just where they weigh in, since that's the thing
+/// that puts them on this list high.
+String _p4pDivisionLine(Fighter fighter) {
+  final belts = [
+    for (final division in WeightClass.values)
+      if (fighter.championOf(division)) division.label,
+  ];
+  if (belts.isEmpty) {
+    final interim = [
+      for (final division in WeightClass.values)
+        if (fighter.interimChampionOf(division)) division.label,
+    ];
+    if (interim.isNotEmpty) return '${interim.join(' & ')} interim champ';
+    return fighter.weightClass.label;
+  }
+  return '${belts.join(' & ')} champion';
+}
+
+/// The gold belt marker on a pound-for-pound row. Undisputed belts read
+/// as gold, interim as the muted version, so the two are never confused.
+class _BeltBadge extends StatelessWidget {
+  final Fighter fighter;
+
+  const _BeltBadge({required this.fighter});
+
+  @override
+  Widget build(BuildContext context) {
+    if (!fighter.isChampion && !fighter.isInterimChampion) {
+      return const SizedBox.shrink();
+    }
+    final undisputed = fighter.isChampion;
+    final color = undisputed ? AppColors.belt : AppColors.beltInterim;
+    final label = fighter.isDoubleChampion
+        ? 'DOUBLE CHAMP'
+        : (undisputed ? 'CHAMP' : 'INTERIM');
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.emoji_events, size: 15, color: color),
+        const SizedBox(width: 3),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: color,
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+      ],
     );
   }
 }

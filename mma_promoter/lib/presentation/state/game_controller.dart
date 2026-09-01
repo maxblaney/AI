@@ -890,8 +890,15 @@ class GameController extends ChangeNotifier {
     final wasFinished = result.method != FightMethod.decision && !result.isDraw;
 
     final scoreA = result.isDraw ? 0.5 : (result.winnerId == a.id ? 1.0 : 0.0);
-    final (newEloA, newEloB) =
-        _careerEngine.updateElo(a.eloRating, b.eloRating, scoreA);
+    final (newEloA, newEloB) = _careerEngine.updateElo(
+      a.eloRating,
+      b.eloRating,
+      scoreA,
+      // Who they beat, not just that they won: overall feeds the expected
+      // result, so taking out a 90 is worth far more than a 60.
+      overallA: a.overall,
+      overallB: b.overall,
+    );
 
     if (result.isDraw) {
       final updatedA = await _applyPostFight(

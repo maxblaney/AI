@@ -416,6 +416,18 @@ the native mobile app with real persistence.
   recovered afterwards), **Double Champs**, **Most PPV Buys in One
   Event** and **Highest Revenue in One Event**. The last two name a show
   rather than a fighter, so their rows don't open a profile.
+- **Pound-for-pound respects the belt.** P4P spans every division, so
+  it can't just put the eight champions on top — but a champion ranked
+  below someone he holds the belt over reads as broken, because if the
+  contender were really better he'd have the belt. So a belt is worth
+  exactly what it needs to be: `PoundForPound` lifts a champion just past
+  the best contender in the division he holds and no further, capped at
+  150 Elo (60 for an interim belt). His position against *other*
+  divisions is still earned on Elo, and a contender more than the cap
+  clear of his own champion stays above him — the extreme case. Champions
+  are marked on the P4P list with a gold belt icon, a CHAMP / DOUBLE
+  CHAMP / INTERIM tag, and a subtitle naming the title rather than just
+  the weight.
 - **Championships**: belts are held **per division**, as a set on the
   fighter rather than a single flag — which is what makes a double champ
   reachable. Winning a championship fight takes that division's belt off
@@ -425,8 +437,11 @@ the native mobile app with real persistence.
   who wins a second division's title appears in both divisions'
   rankings, labelled with his home weight in the one he visited. In a divisional ranking the champion sits above the
   contenders as **C** (interim as **iC**) with the rest numbering from 1;
-  pound-for-pound stays a straight Elo list with a belt icon, since it
-  spans every division and so has many champions in it.
+  pound-for-pound applies the credit rule above instead. Belt gold
+  (`AppColors.belt`, with a muted variant for interim) sits outside the
+  60/30/10 palette on purpose, alongside the win/loss greens and reds:
+  the accent red was doing double duty as "danger" and "champion", which
+  made neither read.
 - **Betting odds**: every fight is priced as American moneylines
   (`OddsCalculator`), shown on the booked card, on the event page beside
   each bout, and in the booking dialog's matchup preview. A logistic
@@ -448,8 +463,18 @@ the native mobile app with real persistence.
   profile. Long win streaks (3+) nudge it up, long losing streaks (3+)
   nudge it down, and it never falls below the fighter's current overall
   (`CareerProgressionEngine.adjustPotential`).
-- **Elo rankings**: every resolved fight updates both fighters' Elo rating
-  (`CareerProgressionEngine.updateElo`, standard formula, K=32). A fighter
+- **Elo rankings**: every resolved fight updates both fighters' Elo
+  (`CareerProgressionEngine.updateElo`, K=32). The expected result is
+  computed from an **effective rating** — Elo shifted by how far a
+  fighter's overall sits from the divisional average, at 10 Elo per
+  overall point — rather than raw Elo. Textbook Elo only knows results,
+  and every fighter arrives at 1500, so beating a 90-overall debutant
+  paid exactly what beating a 60 did. Skill is information the ladder
+  already has: a 90 now sits 300 effective points above a 60, so from
+  1500 beating the 90 is worth **+24** and beating the 60 **+11**, and
+  losing to the 60 costs the same way round. The points still land on the
+  stored Elo, which stays a record of results — a 95-overall who has
+  never fought is on 1500 until they do. A fighter
   becomes "ranked" — and shows up on the **Rankings** tab — after their
   first fight in a division; the tab lists the top fighters per weight
   class by Elo, plus a **Pound-for-Pound** ladder (the default view) that

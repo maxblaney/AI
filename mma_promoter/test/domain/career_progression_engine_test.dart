@@ -52,6 +52,68 @@ void main() {
 
       expect(upsetWinner - 1300, greaterThan(expectedWinner - 1700));
     });
+
+    test('beating a 90 is worth far more than beating a 60', () {
+      // The whole point: everyone starts at 1500, so without skill in the
+      // expectation these two wins paid identically.
+      final engine = CareerProgressionEngine();
+      final (afterBeatingElite, _) =
+          engine.updateElo(1500, 1500, 1.0, overallA: 72, overallB: 90);
+      final (afterBeatingJourneyman, _) =
+          engine.updateElo(1500, 1500, 1.0, overallA: 72, overallB: 60);
+
+      final eliteGain = afterBeatingElite - 1500;
+      final journeymanGain = afterBeatingJourneyman - 1500;
+
+      expect(eliteGain, 24);
+      expect(journeymanGain, 11);
+      expect(eliteGain, greaterThanOrEqualTo(journeymanGain * 2),
+          reason: 'taking out an elite should not pay like a tune-up');
+    });
+
+    test('losing to someone far worse costs more than losing to an elite',
+        () {
+      final engine = CareerProgressionEngine();
+      final (afterLosingToJourneyman, _) =
+          engine.updateElo(1500, 1500, 0.0, overallA: 90, overallB: 60);
+      final (afterLosingToElite, _) =
+          engine.updateElo(1500, 1500, 0.0, overallA: 90, overallB: 95);
+
+      expect(afterLosingToJourneyman, lessThan(afterLosingToElite));
+    });
+
+    test('the loser gives up what the winner takes', () {
+      final engine = CareerProgressionEngine();
+      final (winner, loser) =
+          engine.updateElo(1500, 1500, 1.0, overallA: 60, overallB: 90);
+
+      expect(winner - 1500, -(loser - 1500),
+          reason: 'Elo is zero-sum however the expectation was set');
+    });
+
+    test('two average fighters behave like textbook Elo', () {
+      final engine = CareerProgressionEngine();
+      final withSkill = engine.updateElo(1500, 1500, 1.0,
+          overallA: CareerProgressionEngine.baselineOverall,
+          overallB: CareerProgressionEngine.baselineOverall);
+      final withoutSkill = engine.updateElo(1500, 1500, 1.0);
+
+      expect(withSkill, withoutSkill);
+    });
+
+    test('skill shifts the expectation, not the fighter\'s stored rating',
+        () {
+      // A 95-overall who has never fought is still on 1500 until they do.
+      expect(
+        CareerProgressionEngine.effectiveRating(
+            1500, CareerProgressionEngine.baselineOverall),
+        1500,
+      );
+      expect(CareerProgressionEngine.effectiveRating(1500, 90),
+          greaterThan(1500));
+      expect(CareerProgressionEngine.effectiveRating(1500, 50),
+          lessThan(1500));
+    });
   });
 
   group('CareerProgressionEngine.adjustPotential', () {
