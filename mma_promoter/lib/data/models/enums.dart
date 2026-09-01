@@ -66,7 +66,7 @@ extension WeightClassLabel on WeightClass {
       case WeightClass.middleweight:
         return 185;
       case WeightClass.lightHeavyweight:
-        return 200;
+        return 205;
       case WeightClass.heavyweight:
         return 265;
     }

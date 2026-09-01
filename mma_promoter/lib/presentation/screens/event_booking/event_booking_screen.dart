@@ -333,11 +333,32 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setState) {
+          // Home division first, then the neighbours a fighter can move
+          // to. The roster comes back in the order fighters were
+          // generated — division by division — so picking Lightweight
+          // used to open on a list of featherweights, with the actual
+          // lightweights somewhere below the fold. Whoever is *in* the
+          // division being booked is the answer to the question being
+          // asked; crossing someone over is a second thought, and it
+          // should take a deliberate scroll.
           final available = roster
               .where((f) =>
                   f.weightClass.canFightAt(weightClass) &&
                   !blocked.contains(f.id))
-              .toList();
+              .toList()
+            ..sort((a, b) {
+              final homeA = a.weightClass == weightClass ? 0 : 1;
+              final homeB = b.weightClass == weightClass ? 0 : 1;
+              if (homeA != homeB) return homeA.compareTo(homeB);
+              // Then lighter neighbours before heavier ones, so the two
+              // visiting groups stay in a fixed order rather than
+              // interleaving.
+              final byClass = a.weightClass.index.compareTo(b.weightClass.index);
+              if (byClass != 0) return byClass;
+              // And alphabetical inside a group, because at this point
+              // the player is looking for a name.
+              return a.name.compareTo(b.name);
+            });
 
           Fighter? cornerOf(String? id) {
             if (id == null) return null;

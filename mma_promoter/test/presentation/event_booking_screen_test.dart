@@ -422,4 +422,52 @@ void main() {
 
     controller.dispose();
   });
+
+  testWidgets('the division being booked is listed before the crossovers',
+      (tester) async {
+    // Deliberately out of order: the roster comes back in generation
+    // order, and a featherweight generated first used to head the list
+    // when a lightweight fight was being made.
+    final controller = await controllerWith([
+      _signed('fw1', 'Aaron Featherweight', WeightClass.featherweight),
+      _signed('ww1', 'Adam Welterweight', WeightClass.welterweight),
+      _signed('lw2', 'Zeke Lightweight', WeightClass.lightweight),
+      _signed('lw1', 'Mark Lightweight', WeightClass.lightweight),
+    ]);
+    await tester.pumpWidget(wrap(controller));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Add Fight'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(DropdownButtonFormField<String>).first);
+    await tester.pumpAndSettle();
+
+    // Read the menu top to bottom by vertical position.
+    final names = [
+      'Mark Lightweight',
+      'Zeke Lightweight',
+      'Aaron Featherweight',
+      'Adam Welterweight',
+    ];
+    final offsets = {
+      for (final name in names)
+        name: tester.getTopLeft(find.text(name).last).dy,
+    };
+
+    // Both lightweights sit above both crossovers...
+    for (final home in ['Mark Lightweight', 'Zeke Lightweight']) {
+      for (final visitor in ['Aaron Featherweight', 'Adam Welterweight']) {
+        expect(offsets[home]!, lessThan(offsets[visitor]!),
+            reason: '$home should be listed before $visitor');
+      }
+    }
+    // ...alphabetically among themselves, and the lighter crossover
+    // group comes before the heavier one.
+    expect(offsets['Mark Lightweight']!,
+        lessThan(offsets['Zeke Lightweight']!));
+    expect(offsets['Aaron Featherweight']!,
+        lessThan(offsets['Adam Welterweight']!));
+
+    controller.dispose();
+  });
 }

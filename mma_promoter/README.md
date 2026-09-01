@@ -462,6 +462,15 @@ the native mobile app with real persistence.
   weakest is named underneath, so a short bar tells you what to fix
   rather than just that something is wrong. Setting Title Implications
   moves the bar live.
+- **The division you picked is listed first.** Fighters come back in the
+  order they were generated — division by division — so choosing
+  Lightweight opened the corner dropdowns on a run of featherweights with
+  the actual lightweights below the fold. Home division now sorts to the
+  top, then the lighter neighbour, then the heavier one, alphabetical
+  inside each group. Crossing someone over is still one scroll away, but
+  it takes the scroll.
+- **Light Heavyweight is 205 lbs**, not 200. Generated fighting weights
+  are derived from the limit, so the whole division moved with it.
 - **Rank and recent form in the matchup preview** (`DivisionRankings`,
   `RecentForm`): above the odds line the preview names where each man
   stands in the division he's being booked in — `C · Lightweight` in gold
