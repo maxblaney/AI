@@ -24,7 +24,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   /// Games persist on every platform now (web included), so a schema
   /// change without a matching migration step here would silently break
@@ -50,9 +50,15 @@ class AppDatabase extends _$AppDatabase {
             // no saveId. Adopt them into the existing organization so an
             // in-progress game survives the upgrade instead of being
             // orphaned behind a save nothing points at.
-            final existing = await select(organizations).get();
+            // Raw SQL, not `select(organizations)`: a drift select maps
+            // every column the *current* Dart schema declares, and at
+            // this point in the upgrade the table only has the columns
+            // v1 shipped. Reading whole rows here breaks the moment a
+            // later version adds a non-nullable column.
+            final existing =
+                await customSelect('SELECT id FROM organizations').get();
             if (existing.length == 1) {
-              final saveId = existing.single.id;
+              final saveId = existing.single.read<String>('id');
               for (final table in ['fighters', 'events', 'random_events',
                 'inbox_items']) {
                 await customStatement(
@@ -128,6 +134,11 @@ class AppDatabase extends _$AppDatabase {
               'UPDATE fighters SET weight_lbs = weight_lbs + 5 '
               "WHERE weight_class = 'lightHeavyweight'",
             );
+          }
+          if (from < 7) {
+            // v7 adds the auto-re-sign setting. Existing saves default to
+            // off, which is how they have been behaving.
+            await m.addColumn(organizations, organizations.autoResignFighters);
           }
         },
       );

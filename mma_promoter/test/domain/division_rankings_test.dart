@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mma_promoter/data/models/models.dart';
 import 'package:mma_promoter/domain/rankings/division_rankings.dart';
+import 'package:mma_promoter/domain/rankings/ladder.dart';
 
 import '../support/fighter_fixtures.dart';
 
@@ -106,6 +107,45 @@ void main() {
         DivisionRankings.labelFor(unranked, [_ranked('a', elo: 1500)], lw),
         isNull,
       );
+    });
+  });
+
+  group('ladder length', () {
+    test('a division ranks only its top fifteen', () {
+      final crowd = [
+        for (var i = 0; i < 30; i++) _ranked('f$i', elo: 2000 - i),
+      ];
+
+      final ordered = DivisionRankings.order(crowd, lw);
+
+      expect(ordered, hasLength(Ladder.size));
+      expect(ordered.first.id, 'f0');
+      expect(ordered.last.id, 'f14');
+    });
+
+    test('a fighter off the bottom of the ladder is unranked', () {
+      final crowd = [
+        for (var i = 0; i < 30; i++) _ranked('f$i', elo: 2000 - i),
+      ];
+
+      // Fifteenth is the last rung; sixteenth has no number at all, and
+      // reads that way in the booking screen too.
+      expect(DivisionRankings.labelFor(crowd[14], crowd, lw), '15');
+      expect(DivisionRankings.labelFor(crowd[15], crowd, lw), isNull);
+    });
+
+    test('the champion takes a rung, so only fourteen are numbered', () {
+      final crowd = [
+        _ranked('champ', elo: 1200, belts: {lw}),
+        for (var i = 0; i < 30; i++) _ranked('f$i', elo: 2000 - i),
+      ];
+
+      final ordered = DivisionRankings.order(crowd, lw);
+      final labels = DivisionRankings.labels(ordered, lw);
+
+      expect(ordered, hasLength(Ladder.size));
+      expect(labels.first, 'C');
+      expect(labels.last, '14');
     });
   });
 }

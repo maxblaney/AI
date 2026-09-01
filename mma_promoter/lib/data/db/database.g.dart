@@ -4262,6 +4262,16 @@ class $OrganizationsTable extends Organizations
       type: DriftSqlType.int,
       requiredDuringInsert: false,
       defaultValue: const Constant(1));
+  static const VerificationMeta _autoResignFightersMeta =
+      const VerificationMeta('autoResignFighters');
+  @override
+  late final GeneratedColumn<bool> autoResignFighters = GeneratedColumn<bool>(
+      'auto_resign_fighters', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("auto_resign_fighters" IN (0, 1))'),
+      defaultValue: const Constant(false));
   static const VerificationMeta _lastPlayedAtMsMeta =
       const VerificationMeta('lastPlayedAtMs');
   @override
@@ -4280,6 +4290,7 @@ class $OrganizationsTable extends Organizations
         promotionBudget,
         lastTalentRefreshWeek,
         currentWeek,
+        autoResignFighters,
         lastPlayedAtMs
       ];
   @override
@@ -4355,6 +4366,12 @@ class $OrganizationsTable extends Organizations
           currentWeek.isAcceptableOrUnknown(
               data['current_week']!, _currentWeekMeta));
     }
+    if (data.containsKey('auto_resign_fighters')) {
+      context.handle(
+          _autoResignFightersMeta,
+          autoResignFighters.isAcceptableOrUnknown(
+              data['auto_resign_fighters']!, _autoResignFightersMeta));
+    }
     if (data.containsKey('last_played_at_ms')) {
       context.handle(
           _lastPlayedAtMsMeta,
@@ -4390,6 +4407,8 @@ class $OrganizationsTable extends Organizations
           data['${effectivePrefix}last_talent_refresh_week'])!,
       currentWeek: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}current_week'])!,
+      autoResignFighters: attachedDatabase.typeMapping.read(
+          DriftSqlType.bool, data['${effectivePrefix}auto_resign_fighters'])!,
       lastPlayedAtMs: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}last_played_at_ms']),
     );
@@ -4413,6 +4432,10 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
   final int lastTalentRefreshWeek;
   final int currentWeek;
 
+  /// Player setting: re-sign a fighter automatically when their contract
+  /// runs out. Off by default.
+  final bool autoResignFighters;
+
   /// When this save was last opened, as epoch milliseconds — orders the
   /// saves list so the game you were most recently playing is on top.
   /// Stored as an int rather than a DateTimeColumn because drift persists
@@ -4430,6 +4453,7 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
       required this.promotionBudget,
       required this.lastTalentRefreshWeek,
       required this.currentWeek,
+      required this.autoResignFighters,
       this.lastPlayedAtMs});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -4444,6 +4468,7 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
     map['promotion_budget'] = Variable<int>(promotionBudget);
     map['last_talent_refresh_week'] = Variable<int>(lastTalentRefreshWeek);
     map['current_week'] = Variable<int>(currentWeek);
+    map['auto_resign_fighters'] = Variable<bool>(autoResignFighters);
     if (!nullToAbsent || lastPlayedAtMs != null) {
       map['last_played_at_ms'] = Variable<int>(lastPlayedAtMs);
     }
@@ -4462,6 +4487,7 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
       promotionBudget: Value(promotionBudget),
       lastTalentRefreshWeek: Value(lastTalentRefreshWeek),
       currentWeek: Value(currentWeek),
+      autoResignFighters: Value(autoResignFighters),
       lastPlayedAtMs: lastPlayedAtMs == null && nullToAbsent
           ? const Value.absent()
           : Value(lastPlayedAtMs),
@@ -4483,6 +4509,7 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
       lastTalentRefreshWeek:
           serializer.fromJson<int>(json['lastTalentRefreshWeek']),
       currentWeek: serializer.fromJson<int>(json['currentWeek']),
+      autoResignFighters: serializer.fromJson<bool>(json['autoResignFighters']),
       lastPlayedAtMs: serializer.fromJson<int?>(json['lastPlayedAtMs']),
     );
   }
@@ -4500,6 +4527,7 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
       'promotionBudget': serializer.toJson<int>(promotionBudget),
       'lastTalentRefreshWeek': serializer.toJson<int>(lastTalentRefreshWeek),
       'currentWeek': serializer.toJson<int>(currentWeek),
+      'autoResignFighters': serializer.toJson<bool>(autoResignFighters),
       'lastPlayedAtMs': serializer.toJson<int?>(lastPlayedAtMs),
     };
   }
@@ -4515,6 +4543,7 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
           int? promotionBudget,
           int? lastTalentRefreshWeek,
           int? currentWeek,
+          bool? autoResignFighters,
           Value<int?> lastPlayedAtMs = const Value.absent()}) =>
       OrganizationRow(
         id: id ?? this.id,
@@ -4528,6 +4557,7 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
         lastTalentRefreshWeek:
             lastTalentRefreshWeek ?? this.lastTalentRefreshWeek,
         currentWeek: currentWeek ?? this.currentWeek,
+        autoResignFighters: autoResignFighters ?? this.autoResignFighters,
         lastPlayedAtMs:
             lastPlayedAtMs.present ? lastPlayedAtMs.value : this.lastPlayedAtMs,
       );
@@ -4555,6 +4585,9 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
           : this.lastTalentRefreshWeek,
       currentWeek:
           data.currentWeek.present ? data.currentWeek.value : this.currentWeek,
+      autoResignFighters: data.autoResignFighters.present
+          ? data.autoResignFighters.value
+          : this.autoResignFighters,
       lastPlayedAtMs: data.lastPlayedAtMs.present
           ? data.lastPlayedAtMs.value
           : this.lastPlayedAtMs,
@@ -4574,6 +4607,7 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
           ..write('promotionBudget: $promotionBudget, ')
           ..write('lastTalentRefreshWeek: $lastTalentRefreshWeek, ')
           ..write('currentWeek: $currentWeek, ')
+          ..write('autoResignFighters: $autoResignFighters, ')
           ..write('lastPlayedAtMs: $lastPlayedAtMs')
           ..write(')'))
         .toString();
@@ -4591,6 +4625,7 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
       promotionBudget,
       lastTalentRefreshWeek,
       currentWeek,
+      autoResignFighters,
       lastPlayedAtMs);
   @override
   bool operator ==(Object other) =>
@@ -4606,6 +4641,7 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
           other.promotionBudget == this.promotionBudget &&
           other.lastTalentRefreshWeek == this.lastTalentRefreshWeek &&
           other.currentWeek == this.currentWeek &&
+          other.autoResignFighters == this.autoResignFighters &&
           other.lastPlayedAtMs == this.lastPlayedAtMs);
 }
 
@@ -4620,6 +4656,7 @@ class OrganizationsCompanion extends UpdateCompanion<OrganizationRow> {
   final Value<int> promotionBudget;
   final Value<int> lastTalentRefreshWeek;
   final Value<int> currentWeek;
+  final Value<bool> autoResignFighters;
   final Value<int?> lastPlayedAtMs;
   final Value<int> rowid;
   const OrganizationsCompanion({
@@ -4633,6 +4670,7 @@ class OrganizationsCompanion extends UpdateCompanion<OrganizationRow> {
     this.promotionBudget = const Value.absent(),
     this.lastTalentRefreshWeek = const Value.absent(),
     this.currentWeek = const Value.absent(),
+    this.autoResignFighters = const Value.absent(),
     this.lastPlayedAtMs = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -4647,6 +4685,7 @@ class OrganizationsCompanion extends UpdateCompanion<OrganizationRow> {
     this.promotionBudget = const Value.absent(),
     this.lastTalentRefreshWeek = const Value.absent(),
     this.currentWeek = const Value.absent(),
+    this.autoResignFighters = const Value.absent(),
     this.lastPlayedAtMs = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
@@ -4664,6 +4703,7 @@ class OrganizationsCompanion extends UpdateCompanion<OrganizationRow> {
     Expression<int>? promotionBudget,
     Expression<int>? lastTalentRefreshWeek,
     Expression<int>? currentWeek,
+    Expression<bool>? autoResignFighters,
     Expression<int>? lastPlayedAtMs,
     Expression<int>? rowid,
   }) {
@@ -4679,6 +4719,8 @@ class OrganizationsCompanion extends UpdateCompanion<OrganizationRow> {
       if (lastTalentRefreshWeek != null)
         'last_talent_refresh_week': lastTalentRefreshWeek,
       if (currentWeek != null) 'current_week': currentWeek,
+      if (autoResignFighters != null)
+        'auto_resign_fighters': autoResignFighters,
       if (lastPlayedAtMs != null) 'last_played_at_ms': lastPlayedAtMs,
       if (rowid != null) 'rowid': rowid,
     });
@@ -4695,6 +4737,7 @@ class OrganizationsCompanion extends UpdateCompanion<OrganizationRow> {
       Value<int>? promotionBudget,
       Value<int>? lastTalentRefreshWeek,
       Value<int>? currentWeek,
+      Value<bool>? autoResignFighters,
       Value<int?>? lastPlayedAtMs,
       Value<int>? rowid}) {
     return OrganizationsCompanion(
@@ -4709,6 +4752,7 @@ class OrganizationsCompanion extends UpdateCompanion<OrganizationRow> {
       lastTalentRefreshWeek:
           lastTalentRefreshWeek ?? this.lastTalentRefreshWeek,
       currentWeek: currentWeek ?? this.currentWeek,
+      autoResignFighters: autoResignFighters ?? this.autoResignFighters,
       lastPlayedAtMs: lastPlayedAtMs ?? this.lastPlayedAtMs,
       rowid: rowid ?? this.rowid,
     );
@@ -4748,6 +4792,9 @@ class OrganizationsCompanion extends UpdateCompanion<OrganizationRow> {
     if (currentWeek.present) {
       map['current_week'] = Variable<int>(currentWeek.value);
     }
+    if (autoResignFighters.present) {
+      map['auto_resign_fighters'] = Variable<bool>(autoResignFighters.value);
+    }
     if (lastPlayedAtMs.present) {
       map['last_played_at_ms'] = Variable<int>(lastPlayedAtMs.value);
     }
@@ -4770,6 +4817,7 @@ class OrganizationsCompanion extends UpdateCompanion<OrganizationRow> {
           ..write('promotionBudget: $promotionBudget, ')
           ..write('lastTalentRefreshWeek: $lastTalentRefreshWeek, ')
           ..write('currentWeek: $currentWeek, ')
+          ..write('autoResignFighters: $autoResignFighters, ')
           ..write('lastPlayedAtMs: $lastPlayedAtMs, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -9336,6 +9384,7 @@ typedef $$OrganizationsTableCreateCompanionBuilder = OrganizationsCompanion
   Value<int> promotionBudget,
   Value<int> lastTalentRefreshWeek,
   Value<int> currentWeek,
+  Value<bool> autoResignFighters,
   Value<int?> lastPlayedAtMs,
   Value<int> rowid,
 });
@@ -9351,6 +9400,7 @@ typedef $$OrganizationsTableUpdateCompanionBuilder = OrganizationsCompanion
   Value<int> promotionBudget,
   Value<int> lastTalentRefreshWeek,
   Value<int> currentWeek,
+  Value<bool> autoResignFighters,
   Value<int?> lastPlayedAtMs,
   Value<int> rowid,
 });
@@ -9397,6 +9447,10 @@ class $$OrganizationsTableFilterComposer
 
   ColumnFilters<int> get currentWeek => $composableBuilder(
       column: $table.currentWeek, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get autoResignFighters => $composableBuilder(
+      column: $table.autoResignFighters,
+      builder: (column) => ColumnFilters(column));
 
   ColumnFilters<int> get lastPlayedAtMs => $composableBuilder(
       column: $table.lastPlayedAtMs,
@@ -9446,6 +9500,10 @@ class $$OrganizationsTableOrderingComposer
   ColumnOrderings<int> get currentWeek => $composableBuilder(
       column: $table.currentWeek, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<bool> get autoResignFighters => $composableBuilder(
+      column: $table.autoResignFighters,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<int> get lastPlayedAtMs => $composableBuilder(
       column: $table.lastPlayedAtMs,
       builder: (column) => ColumnOrderings(column));
@@ -9490,6 +9548,9 @@ class $$OrganizationsTableAnnotationComposer
   GeneratedColumn<int> get currentWeek => $composableBuilder(
       column: $table.currentWeek, builder: (column) => column);
 
+  GeneratedColumn<bool> get autoResignFighters => $composableBuilder(
+      column: $table.autoResignFighters, builder: (column) => column);
+
   GeneratedColumn<int> get lastPlayedAtMs => $composableBuilder(
       column: $table.lastPlayedAtMs, builder: (column) => column);
 }
@@ -9530,6 +9591,7 @@ class $$OrganizationsTableTableManager extends RootTableManager<
             Value<int> promotionBudget = const Value.absent(),
             Value<int> lastTalentRefreshWeek = const Value.absent(),
             Value<int> currentWeek = const Value.absent(),
+            Value<bool> autoResignFighters = const Value.absent(),
             Value<int?> lastPlayedAtMs = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
@@ -9544,6 +9606,7 @@ class $$OrganizationsTableTableManager extends RootTableManager<
             promotionBudget: promotionBudget,
             lastTalentRefreshWeek: lastTalentRefreshWeek,
             currentWeek: currentWeek,
+            autoResignFighters: autoResignFighters,
             lastPlayedAtMs: lastPlayedAtMs,
             rowid: rowid,
           ),
@@ -9558,6 +9621,7 @@ class $$OrganizationsTableTableManager extends RootTableManager<
             Value<int> promotionBudget = const Value.absent(),
             Value<int> lastTalentRefreshWeek = const Value.absent(),
             Value<int> currentWeek = const Value.absent(),
+            Value<bool> autoResignFighters = const Value.absent(),
             Value<int?> lastPlayedAtMs = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
@@ -9572,6 +9636,7 @@ class $$OrganizationsTableTableManager extends RootTableManager<
             promotionBudget: promotionBudget,
             lastTalentRefreshWeek: lastTalentRefreshWeek,
             currentWeek: currentWeek,
+            autoResignFighters: autoResignFighters,
             lastPlayedAtMs: lastPlayedAtMs,
             rowid: rowid,
           ),

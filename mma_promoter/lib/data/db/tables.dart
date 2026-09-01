@@ -173,6 +173,11 @@ class Organizations extends Table {
   IntColumn get lastTalentRefreshWeek => integer().withDefault(const Constant(1))();
   IntColumn get currentWeek => integer().withDefault(const Constant(1))();
 
+  /// Player setting: re-sign a fighter automatically when their contract
+  /// runs out. Off by default.
+  BoolColumn get autoResignFighters =>
+      boolean().withDefault(const Constant(false))();
+
   /// When this save was last opened, as epoch milliseconds — orders the
   /// saves list so the game you were most recently playing is on top.
   /// Stored as an int rather than a DateTimeColumn because drift persists

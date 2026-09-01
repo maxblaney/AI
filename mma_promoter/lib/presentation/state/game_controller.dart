@@ -20,7 +20,9 @@ import '../../domain/calendar/game_calendar.dart';
 import '../../domain/condition/fighter_condition.dart';
 import '../../domain/career/career_progression_engine.dart';
 import '../../domain/events/random_event_engine.dart';
+import '../../domain/simulation/fight_excitement.dart';
 import '../../domain/finance/event_finance_calculator.dart';
+import '../../domain/finance/pay_scale.dart';
 import '../../domain/history/recent_form.dart';
 import '../../domain/history/record_book.dart';
 import '../../domain/rankings/division_rankings.dart';
@@ -180,6 +182,14 @@ class GameController extends ChangeNotifier {
   /// Who each fighter is currently matched against, keyed by fighter id.
   /// Rebuilt whenever the event list changes.
   Map<String, FighterBooking> bookingsByFighterId = {};
+
+  /// Every fighter's last few results, newest first, keyed by id.
+  ///
+  /// Built in one pass over the promotion's resolved fights rather than
+  /// a query per fighter: the roster screen shows a form line on every
+  /// row, and four hundred separate lookups behind a scrolling list is
+  /// not a thing to do.
+  Map<String, List<FormEntry>> recentFormByFighterId = {};
 
   List<Fighter> get signedRoster =>
       allFighters.where((f) => f.isSigned && !f.retired).toList();
@@ -370,6 +380,7 @@ class GameController extends ChangeNotifier {
       // Cards live in a separate table, so the booking map is refreshed
       // off the back of the event list rather than watched directly.
       unawaited(_refreshBookings());
+      unawaited(_refreshRecentForm());
     });
     _randomEventSub = _randomEventRepo.watchUnresolved().listen((e) {
       pendingRandomEvents = e;
@@ -457,6 +468,25 @@ class GameController extends ChangeNotifier {
       }
     }
     bookingsByFighterId = map;
+    notifyListeners();
+  }
+
+  /// Rebuilds [recentFormByFighterId] from every resolved fight in the
+  /// promotion.
+  Future<void> _refreshRecentForm() async {
+    // The repository hands these back oldest first; a form line reads
+    // newest first.
+    final fights = (await _eventRepo.getAllResolvedFights()).reversed.toList();
+    final byFighter = <String, List<Fight>>{};
+    for (final fight in fights) {
+      for (final id in [fight.fighterAId, fight.fighterBId]) {
+        (byFighter[id] ??= []).add(fight);
+      }
+    }
+    recentFormByFighterId = {
+      for (final entry in byFighter.entries)
+        entry.key: RecentForm.from(fights: entry.value, fighterId: entry.key),
+    };
     notifyListeners();
   }
 
@@ -618,6 +648,16 @@ class GameController extends ChangeNotifier {
     await _refreshBookings();
     notifyListeners();
     return null;
+  }
+
+  // ---- Settings -----------------------------------------------------------
+
+  /// Turns automatic contract renewals on or off for the active save.
+  /// See [_handleExpiredContract] for what it actually does.
+  Future<void> setAutoResignFighters(bool enabled) async {
+    final org = organization;
+    if (org == null || org.autoResignFighters == enabled) return;
+    await _orgRepo.save(org.copyWith(autoResignFighters: enabled));
   }
 
   // ---- Event simulation ---------------------------------------------------
@@ -889,6 +929,72 @@ class GameController extends ChangeNotifier {
     }
   }
 
+  /// What happens when the fight just fought was the last one on the
+  /// deal.
+  ///
+  /// With [Organization.autoResignFighters] on, the fighter is put on a
+  /// fresh contract at what they are worth *now* — which after a good
+  /// run is more than they were on — and the mailbox says what it cost.
+  /// With it off nothing changes except a note that the deal is up, so
+  /// the player can negotiate it themselves.
+  ///
+  /// An expired contract does not eject a fighter from the roster on its
+  /// own; this is about keeping the deal current, not about attrition.
+  Future<Fighter> _handleExpiredContract(Fighter fighter) async {
+    final contract = fighter.contract;
+    final org = organization;
+    if (contract == null || !contract.isExpired || org == null) return fighter;
+
+    if (!org.autoResignFighters) {
+      await _inboxRepo.save(_newInboxItem(
+        org,
+        InboxItemType.contract,
+        fighterId: fighter.id,
+        title: "${fighter.name}'s contract is up",
+        body: '${fighter.name} has fought out their deal. They stay on the '
+            'roster for now, but nothing is holding them — re-sign them from '
+            'their profile before someone else does.',
+      ));
+      return fighter;
+    }
+
+    // Market rate, not the old rate: a fighter who went 3-0 on the last
+    // deal has priced himself up, and re-signing him quietly at the old
+    // number would be the setting doing the player a favour it hasn't
+    // earned.
+    final rate = PayScale.suggest(
+      overall: fighter.overall,
+      popularity: fighter.popularity,
+    );
+    final renewed = Contract(
+      id: newId(),
+      fighterId: fighter.id,
+      fightsRemaining: _autoResignFightCount,
+      showMoney: rate.showMoney,
+      winBonus: rate.winBonus,
+      exclusive: contract.exclusive,
+      signedOn: GameCalendar.dateForWeek(org.currentWeek),
+    );
+    await _orgRepo.save(
+      org.copyWith(cashBalance: org.cashBalance - rate.showMoney),
+    );
+    await _inboxRepo.save(_newInboxItem(
+      org,
+      InboxItemType.contract,
+      fighterId: fighter.id,
+      title: '${fighter.name} re-signed',
+      body: '${fighter.name} fought out their deal and has been re-signed '
+          'automatically for $_autoResignFightCount more fights at '
+          '\$${rate.showMoney} to show and \$${rate.winBonus} to win. The '
+          'signing bonus has come out of the bank.',
+    ));
+    return fighter.copyWith(contract: renewed);
+  }
+
+  /// How many fights an automatic renewal is worth. Short enough that the
+  /// player still gets a say every so often.
+  static const int _autoResignFightCount = 4;
+
   /// Rolls the roster's off-camera trouble for the week — failed tests,
   /// DUIs, backstage scraps, and getting hurt doing something stupid.
   /// The consequences are already applied by the time the player reads
@@ -987,6 +1093,14 @@ class GameController extends ChangeNotifier {
     final roundsFought = result.round;
     final wasFinished = result.method != FightMethod.decision && !result.isDraw;
 
+    // What the fight was worth to the people who watched it. Fans follow
+    // fights, not results — a man who loses a war picks up support and a
+    // man who wins a dull one sheds it.
+    final excitement = FightExcitement.rate(
+      result: result,
+      scheduledRounds: fight.rounds,
+    );
+
     final scoreA = result.isDraw ? 0.5 : (result.winnerId == a.id ? 1.0 : 0.0);
     final (newEloA, newEloB) = _careerEngine.updateElo(
       a.eloRating,
@@ -999,10 +1113,16 @@ class GameController extends ChangeNotifier {
     );
 
     if (result.isDraw) {
+      final drawPopularity = FightExcitement.popularityDelta(
+        rating: excitement.rating,
+        won: false,
+        draw: true,
+      );
       final updatedA = await _applyPostFight(
         a,
         record: a.record.addDraw(),
         eloRating: newEloA,
+        popularityDelta: drawPopularity,
         injuryFromFight: result.fighterAInjury,
         roundsFought: roundsFought,
         wasFinished: wasFinished,
@@ -1011,6 +1131,7 @@ class GameController extends ChangeNotifier {
         b,
         record: b.record.addDraw(),
         eloRating: newEloB,
+        popularityDelta: drawPopularity,
         injuryFromFight: result.fighterBInjury,
         roundsFought: roundsFought,
         wasFinished: wasFinished,
@@ -1035,7 +1156,8 @@ class GameController extends ChangeNotifier {
       winStreak: winner.winStreak + 1,
       lossStreak: 0,
       eloRating: winnerNewElo,
-      popularityDelta: 2 + result.winnerPerformanceRating ~/ 20,
+      popularityDelta:
+          FightExcitement.popularityDelta(rating: excitement.rating, won: true),
       moraleDelta: 8,
       injuryFromFight: winnerInjury,
       roundsFought: roundsFought,
@@ -1047,7 +1169,8 @@ class GameController extends ChangeNotifier {
       winStreak: 0,
       lossStreak: loser.lossStreak + 1,
       eloRating: loserNewElo,
-      popularityDelta: 1,
+      popularityDelta:
+          FightExcitement.popularityDelta(rating: excitement.rating, won: false),
       moraleDelta: -10,
       injuryFromFight: loserInjury,
       roundsFought: roundsFought,
@@ -1113,6 +1236,7 @@ class GameController extends ChangeNotifier {
     );
     if (updated.contract != null) {
       updated = updated.copyWith(contract: updated.contract!.afterFight());
+      updated = await _handleExpiredContract(updated);
     }
 
     // A fresh, worse-than-before injury gets a healing countdown and, if

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mma_promoter/data/models/models.dart';
+import 'package:mma_promoter/domain/rankings/ladder.dart';
 import 'package:mma_promoter/domain/rankings/pound_for_pound.dart';
 
 import '../support/fighter_fixtures.dart';
@@ -132,5 +133,18 @@ void main() {
       _f('beta', elo: 1501),
     ]);
     expect(order, ['beta', 'alpha', 'zeta']);
+  });
+
+  test('pound-for-pound is a top fifteen like every other ladder', () {
+    final crowd = [
+      for (var i = 0; i < 40; i++)
+        testFighter('f$i').copyWith(eloRating: 2000 - i, isRanked: true),
+    ];
+
+    final ranked = PoundForPound.rank(crowd);
+
+    expect(ranked, hasLength(Ladder.size));
+    expect(ranked.first.id, 'f0');
+    expect(ranked.last.id, 'f14');
   });
 }

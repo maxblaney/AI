@@ -1,4 +1,5 @@
 import '../../data/models/models.dart';
+import 'ladder.dart';
 
 /// Orders the pound-for-pound list.
 ///
@@ -29,7 +30,7 @@ class PoundForPound {
   /// first, leaving the input untouched.
   static List<Fighter> rank(List<Fighter> fighters) {
     final scores = scoresFor(fighters);
-    return [...fighters]..sort((a, b) {
+    final sorted = [...fighters]..sort((a, b) {
         final byScore = (scores[b.id] ?? b.eloRating)
             .compareTo(scores[a.id] ?? a.eloRating);
         if (byScore != 0) return byScore;
@@ -38,6 +39,8 @@ class PoundForPound {
         final byElo = b.eloRating.compareTo(a.eloRating);
         return byElo != 0 ? byElo : a.name.compareTo(b.name);
       });
+    // A top fifteen, like every other ladder in the game.
+    return Ladder.top(sorted);
   }
 
   /// The P4P score for every fighter in [fighters], keyed by id: their

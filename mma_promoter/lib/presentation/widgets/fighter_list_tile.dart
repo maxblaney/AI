@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../data/models/models.dart';
 import '../../domain/calendar/game_calendar.dart';
 import '../../domain/condition/fighter_condition.dart';
+import '../../domain/history/recent_form.dart';
 import '../state/game_controller.dart';
 import '../theme/app_theme.dart';
 import 'fighter_avatar.dart';
@@ -32,6 +33,8 @@ class FighterListTile extends StatelessWidget {
           : currentWeek - fighter.lastFoughtWeek!,
     );
 
+    final form = controller.recentFormByFighterId[fighter.id] ?? const [];
+
     return ListTile(
       isThreeLine: true,
       leading: FighterAvatar(fighter: fighter),
@@ -54,6 +57,17 @@ class FighterListTile extends StatelessWidget {
           Text(
             '${fighter.weightClass.label} · ${fighter.record.display} · '
             '${fighter.style.label}',
+          ),
+          // Last five results and how big a draw they are, on the row.
+          // A record says what a fighter has done; these say what they
+          // have been doing and whether anyone is watching.
+          const SizedBox(height: 3),
+          Row(
+            children: [
+              _FormChips(entries: form),
+              if (form.isNotEmpty) const SizedBox(width: 8),
+              _StarPower(popularity: fighter.popularity),
+            ],
           ),
           const SizedBox(height: 2),
           Wrap(
@@ -150,6 +164,101 @@ class _Pill extends StatelessWidget {
             .bodySmall
             ?.copyWith(color: color, fontSize: 11),
       ),
+    );
+  }
+}
+
+/// The last five results, oldest of the five on the left, so the row
+/// reads left-to-right like a run of form. Green win, red loss, grey
+/// draw or no contest.
+class _FormChips extends StatelessWidget {
+  final List<FormEntry> entries;
+
+  const _FormChips({required this.entries});
+
+  @override
+  Widget build(BuildContext context) {
+    if (entries.isEmpty) return const SizedBox.shrink();
+    // [entries] arrive newest first; reversed here so the most recent
+    // result sits on the right, where a run of form ends.
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final entry in entries.reversed)
+          Tooltip(
+            message: entry.methodLabel,
+            child: Container(
+              margin: const EdgeInsets.only(right: 2),
+              width: 14,
+              height: 14,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: _formColor(entry.result).withOpacity(0.22),
+                borderRadius: BorderRadius.circular(3),
+              ),
+              child: Text(
+                _formLetter(entry.result),
+                style: TextStyle(
+                  fontSize: 9,
+                  height: 1.1,
+                  fontWeight: FontWeight.bold,
+                  color: _formColor(entry.result),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// A draw shows as T here rather than D: on a coloured chip beside W and
+/// L, "T" for tie is the one people read without thinking about it.
+String _formLetter(FormResult result) => switch (result) {
+      FormResult.win => 'W',
+      FormResult.loss => 'L',
+      FormResult.draw => 'T',
+    };
+
+Color _formColor(FormResult result) => switch (result) {
+      FormResult.win => Colors.green,
+      FormResult.loss => Colors.redAccent,
+      FormResult.draw => Colors.grey,
+    };
+
+/// Popularity as a mark out of ten, which is how the rest of the game
+/// talks about a fight being worth watching. The underlying value is
+/// 0-100; this is that, rounded up so anyone with any following at all
+/// reads as at least a 1.
+class _StarPower extends StatelessWidget {
+  final int popularity;
+
+  const _StarPower({required this.popularity});
+
+  static int outOfTen(int popularity) =>
+      popularity <= 0 ? 0 : ((popularity + 9) ~/ 10).clamp(1, 10);
+
+  @override
+  Widget build(BuildContext context) {
+    final score = outOfTen(popularity);
+    final color = score >= 8
+        ? Colors.amber
+        : score >= 5
+            ? Colors.orangeAccent
+            : Theme.of(context).colorScheme.onSurfaceVariant;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.local_fire_department, size: 13, color: color),
+        const SizedBox(width: 2),
+        Text(
+          '$score/10',
+          style: Theme.of(context)
+              .textTheme
+              .bodySmall
+              ?.copyWith(color: color, fontWeight: FontWeight.bold),
+        ),
+      ],
     );
   }
 }

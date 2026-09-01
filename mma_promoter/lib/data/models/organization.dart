@@ -21,6 +21,13 @@ class Organization {
   /// real wall clock. See [GameCalendar].
   final int currentWeek;
 
+  /// When true, a fighter whose contract runs out after a fight is
+  /// re-signed automatically at whatever they're now worth, rather than
+  /// sitting on an expired deal until the player notices. A convenience
+  /// setting, off by default — managing contracts is part of the game
+  /// for anyone who wants it.
+  final bool autoResignFighters;
+
   const Organization({
     required this.id,
     required this.name,
@@ -32,6 +39,7 @@ class Organization {
     required this.promotionBudget,
     this.lastTalentRefreshWeek = 1,
     this.currentWeek = 1,
+    this.autoResignFighters = false,
   });
 
   Organization copyWith({
@@ -45,6 +53,7 @@ class Organization {
     int? promotionBudget,
     int? lastTalentRefreshWeek,
     int? currentWeek,
+    bool? autoResignFighters,
   }) {
     return Organization(
       id: id ?? this.id,
@@ -57,6 +66,7 @@ class Organization {
       promotionBudget: promotionBudget ?? this.promotionBudget,
       lastTalentRefreshWeek: lastTalentRefreshWeek ?? this.lastTalentRefreshWeek,
       currentWeek: currentWeek ?? this.currentWeek,
+      autoResignFighters: autoResignFighters ?? this.autoResignFighters,
     );
   }
 }

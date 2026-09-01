@@ -112,7 +112,12 @@ Two consequences worth knowing:
   adopted into its own save instead of being orphaned behind an id
   nothing points at. `test/data/migration_test.dart` builds an old
   database by hand and checks exactly that, for v1, for the v5 belt
-  backfill, and for v6's light-heavyweight reweigh. One wrinkle worth knowing: v5 replaced the `is_champion` /
+  backfill, and for v6's light-heavyweight reweigh. One trap this batch
+  walked into and fixed: the v2 step read whole organization rows through
+  `select(organizations)`, which maps every column the *current* Dart
+  schema declares — so the moment v7 added a non-nullable column, an
+  upgrade from v1 crashed on a null before it ever reached the step that
+  adds it. Migrations read with raw SQL for exactly that reason. One wrinkle worth knowing: v5 replaced the `is_champion` /
   `is_interim_champion` flags with a set of belts, so the v3 migration
   step creates those two columns with raw SQL rather than
   `m.addColumn` — the Dart schema no longer has them to reference. On an
@@ -462,6 +467,47 @@ the native mobile app with real persistence.
   weakest is named underneath, so a short bar tells you what to fix
   rather than just that something is wrong. Setting Title Implications
   moves the bar live.
+- **Fights are rated out of ten after they run** (`FightExcitement`).
+  The results page carries a meter on each revealed bout — a bar, the
+  mark, and a band (Forgettable → Flat → Good Scrap → Barnburner →
+  Instant Classic) — and the same number drives both fighters'
+  popularity. Fans follow fights, not results: a man who loses a war
+  picks up support, a man who wins a dull one sheds it. The rating
+  blends how well both men fought (the resolver's own performance
+  ratings, 40%), combined strike output per minute (25%), knockdowns
+  (15%) and how close it was (20%), then adds for a finish — more for a
+  late one, and a little extra for a submission, which collects no
+  knockdowns of its own — and subtracts for a doctor stoppage, a draw,
+  or holding someone down for most of the fight. Control that produced
+  the tap is exempt from that last one: it isn't lay-and-pray if it
+  finished the fight. Calibrated against 1,200 simulated bouts rather
+  than assumed — mapping the raw blend straight onto 1-10 put the
+  average fight at 6.6, so the scale is anchored at 30 and 95 instead,
+  which puts it at 5.6 with KOs averaging 7.1, submissions 5.0 and
+  decisions 4.3. It reads the persisted box score, so a fight loaded
+  back from a save rates the same as one just watched.
+- **Every ladder is a top fifteen** (`Ladder.size`). Divisions hold
+  fifty fighters and numbering them all to #47 made the number mean
+  nothing. The cut happens in `DivisionRankings.order` and
+  `PoundForPound.rank` rather than in the screen, so a fighter off the
+  bottom of the ladder reads as unranked everywhere — including in the
+  booking dialog's rank badge.
+- **Auto re-sign, as a per-save setting** (Saves & Settings). A contract
+  counts down a fight at a time and used to just sit at zero. With the
+  setting on, a fighter who fights out their deal goes straight onto a
+  new four-fight contract at what they are worth *now* — which after a
+  good run is more than they were on — with the signing bonus out of the
+  bank and a mailbox note saying what it cost. With it off, the mailbox
+  says the deal is up and leaves it to the player. Either way an expired
+  contract doesn't eject anyone: this is about keeping deals current,
+  not about attrition. Off by default.
+- **Form and star power on every roster row.** The last five results as
+  green W / red L / grey T chips, oldest of the five on the left so the
+  row reads like a run of form, each with a tooltip for how it ended;
+  and popularity as a mark out of ten beside them. The form map is built
+  in one pass over the promotion's resolved fights and held on the
+  controller — four hundred separate queries behind a scrolling list is
+  not a thing to do.
 - **The card is dragged into order** (`ReorderableListView`). Every bout
   carries a drag handle; the main-card/prelim split is positional, so
   dragging a prelim above the fifth slot promotes it. One list rather

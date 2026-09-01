@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/models/models.dart';
+import '../../../domain/simulation/fight_excitement.dart';
 import '../../state/game_controller.dart';
 import '../event_booking/event_booking_screen.dart';
 import 'fight_breakdown_screen.dart';
@@ -490,7 +491,7 @@ class _FightResultTile extends StatelessWidget {
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 4),
-            if (revealed)
+            if (revealed) ...[
               Text(
                 result.isDraw
                     ? 'Draw / No Contest'
@@ -498,9 +499,25 @@ class _FightResultTile extends StatelessWidget {
                         '${result.methodDisplay} · R${result.round} '
                         '${result.timeDisplay}',
                 style: const TextStyle(fontWeight: FontWeight.bold),
-              )
+              ),
+              const SizedBox(height: 6),
+              // How good it was to watch, which is also what moved both
+              // men's popularity — so the number that explains the swing
+              // is on the same tile as the swing.
+              _ExcitementMeter(
+                excitement: FightExcitement.rate(
+                  result: result,
+                  scheduledRounds: fight.rounds,
+                ),
+              ),
+            ]
             else
-              Row(
+              // Wrap rather than Row: on a narrow phone the two buttons
+              // together were running off the side of the card.
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   if (canWatch)
                     FilledButton.icon(
@@ -519,7 +536,6 @@ class _FightResultTile extends StatelessWidget {
                         onReveal();
                       },
                     ),
-                  const SizedBox(width: 8),
                   TextButton(
                     onPressed: onReveal,
                     child: Text(canWatch ? 'Skip to result' : 'Show result'),
@@ -562,4 +578,62 @@ class _MetricChip extends StatelessWidget {
       ),
     );
   }
+}
+
+/// How exciting a finished fight was, out of ten, with the band beside
+/// it. Deliberately the same shape as the hype bar on the booking side:
+/// hype is what you expected, this is what you got.
+class _ExcitementMeter extends StatelessWidget {
+  final FightExcitement excitement;
+
+  const _ExcitementMeter({required this.excitement});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _excitementColor(excitement.rating);
+    return Row(
+      children: [
+        Text('FIGHT', style: Theme.of(context).textTheme.bodySmall),
+        const SizedBox(width: 8),
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(3),
+            child: LinearProgressIndicator(
+              value: excitement.rating / 10,
+              minHeight: 7,
+              backgroundColor:
+                  Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.18),
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          '${excitement.rating}/10',
+          style: Theme.of(context)
+              .textTheme
+              .labelLarge
+              ?.copyWith(color: color, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            excitement.label,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: color),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Cold grey through hot amber, matching how the booking screen colours
+/// hype so the two read on the same scale.
+Color _excitementColor(int rating) {
+  if (rating >= 9) return Colors.amber;
+  if (rating >= 7) return Colors.orangeAccent;
+  if (rating >= 5) return Colors.lightGreen;
+  if (rating >= 3) return Colors.blueGrey;
+  return Colors.grey;
 }

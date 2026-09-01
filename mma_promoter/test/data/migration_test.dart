@@ -108,6 +108,9 @@ void main() {
         is_interim_champion INTEGER NOT NULL DEFAULT 0
       )''');
     raw.execute('CREATE TABLE fights (id TEXT NOT NULL PRIMARY KEY)');
+    // v7 adds a column to organizations, so the table has to exist even
+    // though this fixture is about fighters.
+    raw.execute('CREATE TABLE organizations (id TEXT NOT NULL PRIMARY KEY)');
 
     raw.execute(
         "INSERT INTO fighters VALUES ('champ', 'lightweight', 155, 1, 0)");
@@ -152,6 +155,9 @@ void main() {
 
     // A light heavyweight generated under the old 200 lb limit walked
     // around at 206; the same fighter generated today would be 211.
+    // v7 adds a column to organizations, so the table has to exist.
+    raw.execute('CREATE TABLE organizations (id TEXT NOT NULL PRIMARY KEY)');
+
     raw.execute("INSERT INTO fighters VALUES ('lhw', 'lightHeavyweight', 206)");
     raw.execute("INSERT INTO fighters VALUES ('mw', 'middleweight', 189)");
     raw.execute("INSERT INTO fighters VALUES ('hw', 'heavyweight', 250)");

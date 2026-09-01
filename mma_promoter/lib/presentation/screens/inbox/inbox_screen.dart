@@ -49,6 +49,8 @@ class _InboxTile extends StatelessWidget {
         return Icons.report_problem;
       case InboxItemType.altercation:
         return Icons.bolt;
+      case InboxItemType.contract:
+        return Icons.description_outlined;
     }
   }
 
@@ -67,6 +69,8 @@ class _InboxTile extends StatelessWidget {
         return Colors.orangeAccent;
       case InboxItemType.altercation:
         return Colors.purpleAccent;
+      case InboxItemType.contract:
+        return Theme.of(context).colorScheme.secondary;
     }
   }
 

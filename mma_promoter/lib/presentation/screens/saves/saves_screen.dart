@@ -42,7 +42,7 @@ class _SavesScreenState extends State<SavesScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Saves'),
+        title: Text(widget.isStartScreen ? 'Saves' : 'Saves & Settings'),
         automaticallyImplyLeading: !widget.isStartScreen,
       ),
       body: FutureBuilder<List<SaveSummary>>(
@@ -88,6 +88,32 @@ class _SavesScreenState extends State<SavesScreen> {
                 label: const Text('New Promotion'),
                 onPressed: _startNew,
               ),
+              // Settings belong to a save rather than to the app, so
+              // they're only here once one is open — and they're below
+              // the saves list because switching promotions is what
+              // people come to this screen for.
+              if (controller.organization != null) ...[
+                const SizedBox(height: 32),
+                Text('Settings',
+                    style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 8),
+                Card(
+                  child: SwitchListTile(
+                    value: controller.organization!.autoResignFighters,
+                    onChanged: (v) =>
+                        controller.setAutoResignFighters(v),
+                    title: const Text('Auto re-sign fighters'),
+                    subtitle: const Text(
+                      'When a fighter finishes the last fight on their '
+                      'deal, put them straight onto a new four-fight '
+                      'contract at what they are now worth. The signing '
+                      'bonus still comes out of the bank, and the mailbox '
+                      'tells you what it cost.',
+                    ),
+                    isThreeLine: true,
+                  ),
+                ),
+              ],
             ],
           );
         },

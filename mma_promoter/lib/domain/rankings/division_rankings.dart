@@ -1,4 +1,5 @@
 import '../../data/models/models.dart';
+import 'ladder.dart';
 
 /// The order a single division's ladder runs in, and what each rung is
 /// called.
@@ -23,9 +24,14 @@ class DivisionRankings {
     ];
   }
 
-  /// [pool], ordered. The champion sits above the contenders whatever his
-  /// Elo — that is what holding the belt means — then the interim
-  /// champion, then everyone else on rating.
+  /// [pool], ordered and cut to [Ladder.size]. The champion sits above
+  /// the contenders whatever his Elo — that is what holding the belt
+  /// means — then the interim champion, then everyone else on rating.
+  ///
+  /// A division has fifty fighters in it and a ranking is a top fifteen;
+  /// numbering everyone to #47 makes the number mean nothing. Cutting
+  /// here rather than in the screen means [labelFor] agrees: a fighter
+  /// off the bottom of the ladder reads as unranked wherever he appears.
   static List<Fighter> order(
     Iterable<Fighter> rankedFighters,
     WeightClass division,
@@ -34,13 +40,14 @@ class DivisionRankings {
         ? 0
         : (f.interimChampionOf(division) ? 1 : 2);
 
-    return pool(rankedFighters, division)
+    final sorted = pool(rankedFighters, division)
       ..sort((a, b) {
         final byBelt = belt(a).compareTo(belt(b));
         if (byBelt != 0) return byBelt;
         final byElo = b.eloRating.compareTo(a.eloRating);
         return byElo != 0 ? byElo : a.name.compareTo(b.name);
       });
+    return Ladder.top(sorted);
   }
 
   /// One label per entry of [ordered]: 'C' for the champion, 'iC' for an

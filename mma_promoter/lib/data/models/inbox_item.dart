@@ -16,6 +16,9 @@ enum InboxItemType {
   /// Backstage beef between two of your own — bad for the peace, good
   /// for business.
   altercation,
+
+  /// A contract ran out: either re-signed for you, or waiting on you.
+  contract,
 }
 
 extension InboxItemTypeLabel on InboxItemType {
@@ -33,6 +36,8 @@ extension InboxItemTypeLabel on InboxItemType {
         return 'Misconduct';
       case InboxItemType.altercation:
         return 'Backstage';
+      case InboxItemType.contract:
+        return 'Contract';
     }
   }
 }
