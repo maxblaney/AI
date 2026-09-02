@@ -483,9 +483,17 @@ the native mobile app with real persistence.
     own; anything in a subfolder (the source sheets in
     `assets/fighters/source/`) is art to cut up rather than art to show,
     and stays out.
-  - **Adding a new set of faces**: cut them to 32×32 PNGs, name them
-    `<set>_01.png`, `<set>_02.png`…, drop them in `assets/fighters/`,
-    rebuild. They're pickable immediately. To have *generated* fighters
+  - **Adding a new set of faces**: drop the sprite sheet in
+    `assets/fighters/source/` and run
+    `python3 tool/slice_headshots.py assets/fighters/source/<sheet>.png`.
+    It reports what it found — cell grid, which cells are blank, and the
+    sampled skin brightness of each face with the tone set it would land
+    in — and writes nothing until you add `--write`. Numbering continues
+    from whatever is already in `assets/fighters/`, so a re-run appends
+    rather than clobbering earlier art, and `--set <name>` overrides the
+    brightness bucketing when a sheet isn't sorted by tone. The first two
+    sheets were cut by hand, twice; this exists so the third one is a
+    command. Portraits are pickable as soon as they're written. To have *generated* fighters
     use them too, add the paths to `_headshotsByTone` in
     `fighter_headshots.dart` under whichever tone they belong to — that
     map is what the nationality weighting draws from, and it is
