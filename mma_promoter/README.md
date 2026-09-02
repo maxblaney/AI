@@ -493,7 +493,17 @@ the native mobile app with real persistence.
     rather than clobbering earlier art, and `--set <name>` overrides the
     brightness bucketing when a sheet isn't sorted by tone. The first two
     sheets were cut by hand, twice; this exists so the third one is a
-    command. Portraits are pickable as soon as they're written. To have *generated* fighters
+    command. Portraits are pickable as soon as they're written; add them
+    to `_headshotsByTone` in `fighter_headshots.dart` as well to have
+    *generated* fighters roll them. 63 portraits across three sheets so
+    far.
+  - **The brightness sample reads both upper cheeks, not the mid-face.**
+    The centre strip is where a beard, a moustache and a shadowed mouth
+    live, and on the third sheet they dragged a tan bearded fighter's
+    reading down far enough to sort him in with the darkest art on it.
+    Cheeks are skin on essentially every portrait, so they measure
+    skin — the cut-offs are calibrated against the art already in the
+    folder, whose buckets were checked by eye. To have *generated* fighters
     use them too, add the paths to `_headshotsByTone` in
     `fighter_headshots.dart` under whichever tone they belong to — that
     map is what the nationality weighting draws from, and it is

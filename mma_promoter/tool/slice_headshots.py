@@ -30,11 +30,13 @@ except ImportError:  # pragma: no cover - the message is the point
 
 
 # Skin brightness cut-offs used to bucket a portrait into a tone set.
-# Sampled rather than guessed: the mid-face pixels of the existing art
-# land either side of these. They are only a starting suggestion — the
+#
+# Calibrated against the art already in `assets/fighters/`, whose buckets
+# were checked by eye: on the cheek sample below, deep sits around 19-37,
+# medium 36-59 and tan 59-81. These are only a starting suggestion — the
 # --set flag overrides them, and art that isn't a skin tone at all (a
 # mask, a helmet) should always be named by hand.
-TONE_CUTOFFS = ((110, "deep"), (150, "medium"), (255, "tan"))
+TONE_CUTOFFS = ((45, "deep"), (72, "medium"), (255, "tan"))
 
 
 def cell_is_empty(cell: Image.Image, alpha_floor: int = 8) -> bool:
@@ -45,24 +47,37 @@ def cell_is_empty(cell: Image.Image, alpha_floor: int = 8) -> bool:
     return alpha.getextrema()[1] < alpha_floor
 
 
-def skin_brightness(cell: Image.Image) -> float:
-    """Rough brightness of the middle of the face.
-
-    Samples the central band rather than the whole tile so hair, gloves
-    and the transparent surround don't drag the reading around.
-    """
+def _patch_brightness(cell: Image.Image, y0: float, y1: float,
+                      x0: float, x1: float) -> float:
+    """Mean luminance of one fractional rectangle of the tile, ignoring
+    anything transparent."""
     rgba = cell.convert("RGBA")
     w, h = rgba.size
     pixels = rgba.load()
     total, count = 0.0, 0
-    for y in range(int(h * 0.40), int(h * 0.70)):
-        for x in range(int(w * 0.30), int(w * 0.70)):
+    for y in range(int(h * y0), int(h * y1)):
+        for x in range(int(w * x0), int(w * x1)):
             r, g, b, a = pixels[x, y]
             if a < 128:
                 continue
             total += 0.299 * r + 0.587 * g + 0.114 * b
             count += 1
     return total / count if count else 0.0
+
+
+def skin_brightness(cell: Image.Image) -> float:
+    """How light this fighter's skin is, read off both upper cheeks.
+
+    Not the middle of the face, which is what this sampled first: the
+    centre strip is where a beard, a moustache and a shadowed mouth live,
+    and on a bearded tan fighter they dragged the reading down far enough
+    to sort him in with the darkest art on the sheet. The cheeks are skin
+    on essentially every portrait, so they measure skin.
+    """
+    left = _patch_brightness(cell, 0.38, 0.52, 0.22, 0.38)
+    right = _patch_brightness(cell, 0.38, 0.52, 0.62, 0.78)
+    samples = [value for value in (left, right) if value > 0]
+    return sum(samples) / len(samples) if samples else 0.0
 
 
 def tone_for(brightness: float) -> str:

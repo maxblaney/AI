@@ -8,8 +8,14 @@ enum SkinTone { deep, medium, tan }
 
 /// Headshot art available for each tone, sliced from the pixel-art
 /// sprite sheets kept in `assets/fighters/source/` and sorted into
-/// buckets by sampled skin brightness. 48 portraits across two sheets so
-/// far.
+/// buckets by sampled skin brightness (see `tool/slice_headshots.py`).
+/// 63 portraits across three sheets so far.
+///
+/// This map is what the nationality weighting below draws from, so it is
+/// what makes new art reach *generated* fighters. The picker in the
+/// fighter editor doesn't read it at all — it lists whatever is in the
+/// folder — so art missing from here is still choosable by hand, just
+/// never rolled.
 const Map<SkinTone, List<String>> _headshotsByTone = {
   SkinTone.deep: [
     'assets/fighters/deep_01.png',
@@ -31,6 +37,7 @@ const Map<SkinTone, List<String>> _headshotsByTone = {
     'assets/fighters/deep_17.png',
     'assets/fighters/deep_18.png',
     'assets/fighters/deep_19.png',
+    'assets/fighters/deep_20.png',
   ],
   SkinTone.medium: [
     'assets/fighters/medium_01.png',
@@ -46,6 +53,11 @@ const Map<SkinTone, List<String>> _headshotsByTone = {
     'assets/fighters/medium_11.png',
     'assets/fighters/medium_12.png',
     'assets/fighters/medium_13.png',
+    'assets/fighters/medium_14.png',
+    'assets/fighters/medium_15.png',
+    'assets/fighters/medium_16.png',
+    'assets/fighters/medium_17.png',
+    'assets/fighters/medium_18.png',
   ],
   SkinTone.tan: [
     'assets/fighters/tan_01.png',
@@ -64,6 +76,15 @@ const Map<SkinTone, List<String>> _headshotsByTone = {
     'assets/fighters/tan_14.png',
     'assets/fighters/tan_15.png',
     'assets/fighters/tan_16.png',
+    'assets/fighters/tan_17.png',
+    'assets/fighters/tan_18.png',
+    'assets/fighters/tan_19.png',
+    'assets/fighters/tan_20.png',
+    'assets/fighters/tan_21.png',
+    'assets/fighters/tan_22.png',
+    'assets/fighters/tan_23.png',
+    'assets/fighters/tan_24.png',
+    'assets/fighters/tan_25.png',
   ],
 };
 
