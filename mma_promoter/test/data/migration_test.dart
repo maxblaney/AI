@@ -177,4 +177,20 @@ void main() {
 
     await db.close();
   });
+
+  test('an upgraded database gets the fighter packs table', () async {
+    final raw = sql.sqlite3.openInMemory();
+    raw.execute('PRAGMA user_version = 7');
+    raw.execute('CREATE TABLE fighters (id TEXT NOT NULL PRIMARY KEY, '
+        "weight_class TEXT NOT NULL DEFAULT 'lightweight', "
+        'weight_lbs INTEGER NOT NULL DEFAULT 155)');
+    raw.execute('CREATE TABLE organizations (id TEXT NOT NULL PRIMARY KEY)');
+
+    final db = AppDatabase.forTesting(NativeDatabase.opened(raw));
+    // Packs live outside any save, so an existing game gaining the
+    // feature means gaining an empty table, not migrating any data.
+    expect(await db.getAllFighterPacks(), isEmpty);
+
+    await db.close();
+  });
 }

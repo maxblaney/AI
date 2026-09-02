@@ -1,4 +1,5 @@
 import '../models/models.dart';
+import '../../domain/packs/fighter_pack.dart';
 
 /// One row in the saves list: the save's organization plus the few
 /// counts and timestamps the picker shows, gathered here so the screen
@@ -81,4 +82,13 @@ abstract class InboxItemRepositoryContract {
   Stream<List<InboxItem>> watchAll();
   Future<void> save(InboxItem item);
   Future<void> markRead(String id);
+}
+
+/// Saved fighter packs. Not save-scoped: a pack is the player's, not a
+/// promotion's, which is what lets it be imported into several.
+abstract class FighterPackRepositoryContract {
+  Future<List<FighterPack>> getAll();
+  Future<FighterPack?> getById(String id);
+  Future<void> save(FighterPack pack);
+  Future<void> delete(String id);
 }

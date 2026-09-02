@@ -14,6 +14,7 @@ part 'database.g.dart';
     Fights,
     RandomEvents,
     InboxItems,
+    FighterPacks,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -24,7 +25,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   /// Games persist on every platform now (web included), so a schema
   /// change without a matching migration step here would silently break
@@ -140,8 +141,28 @@ class AppDatabase extends _$AppDatabase {
             // off, which is how they have been behaving.
             await m.addColumn(organizations, organizations.autoResignFighters);
           }
+          if (from < 8) {
+            // v8 adds fighter packs — shareable groups of fighters that
+            // live outside any single save.
+            await m.createTable(fighterPacks);
+          }
         },
       );
+
+  // ---- Fighter packs ------------------------------------------------
+
+  Future<List<FighterPackRow>> getAllFighterPacks() =>
+      (select(fighterPacks)..orderBy([(p) => OrderingTerm.desc(p.createdAtMs)]))
+          .get();
+
+  Future<FighterPackRow?> getFighterPackById(String id) =>
+      (select(fighterPacks)..where((p) => p.id.equals(id))).getSingleOrNull();
+
+  Future<void> upsertFighterPack(FighterPacksCompanion entry) =>
+      into(fighterPacks).insertOnConflictUpdate(entry);
+
+  Future<void> deleteFighterPackById(String id) =>
+      (delete(fighterPacks)..where((p) => p.id.equals(id))).go();
 
   // ---- Fighters -----------------------------------------------------
 

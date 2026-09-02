@@ -112,7 +112,8 @@ Two consequences worth knowing:
   adopted into its own save instead of being orphaned behind an id
   nothing points at. `test/data/migration_test.dart` builds an old
   database by hand and checks exactly that, for v1, for the v5 belt
-  backfill, and for v6's light-heavyweight reweigh. One trap this batch
+  backfill, for v6's light-heavyweight reweigh, and for v8 creating the
+  fighter-packs table. One trap this batch
   walked into and fixed: the v2 step read whole organization rows through
   `select(organizations)`, which maps every column the *current* Dart
   schema declares — so the moment v7 added a non-nullable column, an
@@ -467,6 +468,42 @@ the native mobile app with real persistence.
   weakest is named underneath, so a short bar tells you what to fix
   rather than just that something is wrong. Setting Title Implications
   moves the bar live.
+- **Fighter packs** (`FighterPack`, `FighterCodec`, Settings → Fighter
+  Packs). A pack is a named group of fighters that lives *outside* any
+  one save — the only table in the database with no `saveId`, which is
+  the whole point: build a roster once, import it into whichever
+  promotions you like, and hand the code to someone else so they can
+  play with the same fighters. Building one picks from everyone in the
+  open save (roster and talent pool alike, with a search box and a
+  "select shown" for doing a division in one tap); importing drops them
+  into the talent pool as free agents with fresh ids, so the same pack
+  can go into several saves, or twice into one.
+  - **What travels, and what doesn't.** A pack describes who someone
+    *is*, not what they did in somebody else's game. Elo, belts,
+    injuries, suspensions, contracts, award counts and condition are all
+    deliberately dropped on import — importing a shared roster should
+    never hand you another player's champion.
+  - **The wire format is built to outlive the schema.** It is not the
+    drift mappers: those describe one database and change whenever a
+    column does, while this describes a string that leaves the app and
+    comes back weeks later into a different build. Every field has a
+    default so a pack made before a stat existed still imports; keys
+    never change meaning; an unrecognised enum falls back rather than
+    throwing, because one odd fighter beats a pack that won't load.
+  - **Stats go over as bytes, not JSON keys.** Every stat is clamped
+    0-100, so all 56 pack into 56 bytes and 76 base64 characters. Keyed
+    JSON ran ~690 characters per fighter (a ten-man pack was nearly
+    7,000); this is ~275, so twenty fighters is 5.5 KB and a seven-man
+    pack fits in a single chat message. The trade is that a stat's
+    *position* is now part of the format — `FighterCodec.statOrder` is
+    append-only, and inserting into the middle would silently rewrite
+    every pack in the wild.
+  - **The clipboard is never in the way.** Writing to it is a browser
+    permission that can simply be refused, so the share dialog opens
+    first and copies for itself, saying whether it worked; the code is
+    selectable either way. Reading the clipboard is stricter still, so
+    the paste button is a convenience over an ordinary paste into the
+    box, and says so when it can't.
 - **Fights are rated out of ten after they run** (`FightExcitement`).
   The results page carries a meter on each revealed bout — a bar, the
   mark, and a band (Forgettable → Flat → Good Scrap → Barnburner →

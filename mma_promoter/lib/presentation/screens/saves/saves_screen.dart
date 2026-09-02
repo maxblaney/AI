@@ -7,6 +7,7 @@ import '../../../data/repositories/repository_contracts.dart';
 import '../../../domain/calendar/game_calendar.dart';
 import '../../state/game_controller.dart';
 import '../new_game/new_game_screen.dart';
+import '../packs/fighter_packs_screen.dart';
 
 /// The saves picker. Doubles as the app's start screen when nothing is
 /// loaded, and is reachable from the dashboard mid-game so a player can
@@ -97,6 +98,22 @@ class _SavesScreenState extends State<SavesScreen> {
                 Text('Settings',
                     style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 8),
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.groups_2_outlined),
+                    title: const Text('Fighter Packs'),
+                    subtitle: const Text(
+                      'Build your own group of fighters, import it into '
+                      'any save, and share it with someone else.',
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const FighterPacksScreen(),
+                      ),
+                    ),
+                  ),
+                ),
                 Card(
                   child: SwitchListTile(
                     value: controller.organization!.autoResignFighters,

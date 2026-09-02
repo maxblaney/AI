@@ -1,11 +1,15 @@
+import 'dart:math';
+
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mma_promoter/data/db/database.dart';
+import 'package:mma_promoter/data/repositories/fighter_pack_repository.dart';
 import 'package:mma_promoter/data/repositories/fighter_repository.dart';
 import 'package:mma_promoter/data/repositories/organization_repository.dart';
 import 'package:mma_promoter/data/repositories/save_scope.dart';
 import 'package:mma_promoter/data/seed/roster_seed.dart';
 import 'package:mma_promoter/data/models/models.dart';
+import 'package:mma_promoter/domain/packs/fighter_pack.dart';
 
 /// Saves are load-bearing on every platform now, so the schema and the
 /// mappers have to agree. These go through a real SQLite database rather
@@ -83,5 +87,55 @@ void main() {
     final loaded = await repo.getAll();
     expect(loaded, hasLength(roster.length));
     expect(loaded.where((f) => f.headshotAsset == null), isEmpty);
+  });
+
+  test('a fighter pack survives a real database round trip', () async {
+    // Packs are the one table with no save scope, and their fighters go
+    // in as a JSON blob rather than as columns — so this is the only
+    // place the pack storage path is exercised against real SQLite.
+    final repo = FighterPackRepository(db);
+    expect(await repo.getAll(), isEmpty);
+
+    final roster = generateStartingRoster(random: Random(17)).take(4).toList();
+    final pack = FighterPack(
+      id: 'pack-1',
+      name: 'The Originals',
+      description: 'Built by hand.',
+      author: 'Max',
+      createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
+      fighters: roster,
+    );
+    await repo.save(pack);
+
+    final loaded = (await repo.getAll()).single;
+    expect(loaded.id, 'pack-1');
+    expect(loaded.name, 'The Originals');
+    expect(loaded.description, 'Built by hand.');
+    expect(loaded.author, 'Max');
+    expect(loaded.createdAt.millisecondsSinceEpoch, 1700000000000);
+    expect(loaded.fighters, hasLength(4));
+    for (var i = 0; i < roster.length; i++) {
+      expect(loaded.fighters[i].name, roster[i].name);
+      expect(loaded.fighters[i].weightClass, roster[i].weightClass);
+      expect(loaded.fighters[i].overall, closeTo(roster[i].overall, 0.001));
+    }
+
+    await repo.delete('pack-1');
+    expect(await repo.getAll(), isEmpty);
+  });
+
+  test('packs are visible from every save', () async {
+    // The scope is deliberately not applied to packs; this is what that
+    // buys, so it is worth a test rather than a comment.
+    final repo = FighterPackRepository(db);
+    await repo.save(FighterPack(
+      id: 'p',
+      name: 'Shared',
+      createdAt: DateTime(2026),
+      fighters: [generateStartingRoster(random: Random(2)).first],
+    ));
+
+    // A repository built for a different save reads the same packs.
+    expect(await FighterPackRepository(db).getAll(), hasLength(1));
   });
 }

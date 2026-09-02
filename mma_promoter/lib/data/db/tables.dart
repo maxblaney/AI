@@ -307,3 +307,30 @@ class InboxItems extends Table {
   @override
   Set<Column> get primaryKey => {id};
 }
+
+/// A saved fighter pack: a named group of fighters that lives outside
+/// any one save.
+///
+/// Deliberately not save-scoped, unlike everything else here. The whole
+/// point of a pack is that you build it once and import it into
+/// whichever promotions you like — scoping it to a save would make it
+/// invisible from the save you wanted to use it in.
+@DataClassName('FighterPackRow')
+class FighterPacks extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  TextColumn get description => text().withDefault(const Constant(''))();
+  TextColumn get author => text().withDefault(const Constant(''))();
+
+  /// Epoch milliseconds, matching [Organizations.lastPlayedAtMs] — whole
+  /// seconds would tie for two packs made in the same second.
+  IntColumn get createdAtMs => integer()();
+
+  /// The pack's fighters, as the share-code JSON. Stored as one blob
+  /// rather than as rows because a pack is a document: it is written and
+  /// read whole, never queried into.
+  TextColumn get fightersJson => text()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}

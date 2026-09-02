@@ -7,6 +7,7 @@ import '../../core/utils/id_generator.dart';
 import '../../data/db/database.dart';
 import '../../data/models/models.dart';
 import '../../data/repositories/event_repository.dart';
+import '../../data/repositories/fighter_pack_repository.dart';
 import '../../data/repositories/fighter_repository.dart';
 import '../../data/repositories/in_memory/in_memory_repositories.dart';
 import '../../data/repositories/inbox_item_repository.dart';
@@ -20,6 +21,7 @@ import '../../domain/calendar/game_calendar.dart';
 import '../../domain/condition/fighter_condition.dart';
 import '../../domain/career/career_progression_engine.dart';
 import '../../domain/events/random_event_engine.dart';
+import '../../domain/packs/fighter_pack.dart';
 import '../../domain/simulation/fight_excitement.dart';
 import '../../domain/finance/event_finance_calculator.dart';
 import '../../domain/finance/pay_scale.dart';
@@ -99,6 +101,7 @@ class GameController extends ChangeNotifier {
   final EventRepositoryContract _eventRepo;
   final RandomEventRepositoryContract _randomEventRepo;
   final InboxItemRepositoryContract _inboxRepo;
+  final FighterPackRepositoryContract _packRepo;
 
   // Every source of chance in the game hangs off one generator, so a
   // test can seed the whole controller and get the same save twice.
@@ -133,6 +136,8 @@ class GameController extends ChangeNotifier {
       eventRepo: EventRepository(db, scope),
       randomEventRepo: RandomEventRepository(db, scope),
       inboxRepo: InboxItemRepository(db, scope),
+      // Not scoped: a pack belongs to the player, not to one promotion.
+      packRepo: FighterPackRepository(db),
       random: random,
     );
   }
@@ -144,6 +149,7 @@ class GameController extends ChangeNotifier {
     required EventRepositoryContract eventRepo,
     required RandomEventRepositoryContract randomEventRepo,
     required InboxItemRepositoryContract inboxRepo,
+    required FighterPackRepositoryContract packRepo,
     Random? random,
   })  : _scope = scope,
         _fighterRepo = fighterRepo,
@@ -151,6 +157,7 @@ class GameController extends ChangeNotifier {
         _eventRepo = eventRepo,
         _randomEventRepo = randomEventRepo,
         _inboxRepo = inboxRepo,
+        _packRepo = packRepo,
         _rng = random ?? Random(),
         _fightResolver = FightResolver(random: random),
         _financeCalculator = EventFinanceCalculator(random: random),
@@ -166,6 +173,7 @@ class GameController extends ChangeNotifier {
         _eventRepo = InMemoryEventRepository(),
         _randomEventRepo = InMemoryRandomEventRepository(),
         _inboxRepo = InMemoryInboxItemRepository(),
+        _packRepo = InMemoryFighterPackRepository(),
         _rng = random ?? Random(),
         _fightResolver = FightResolver(random: random),
         _financeCalculator = EventFinanceCalculator(random: random),
@@ -648,6 +656,84 @@ class GameController extends ChangeNotifier {
     await _refreshBookings();
     notifyListeners();
     return null;
+  }
+
+  // ---- Fighter packs ------------------------------------------------------
+
+  /// Every saved pack, newest first. Packs live outside any one save, so
+  /// this is the same list whichever promotion is open.
+  Future<List<FighterPack>> listPacks() => _packRepo.getAll();
+
+  /// Builds a pack out of [fighters] — typically a hand-picked subset of
+  /// a roster or talent pool — and saves it.
+  ///
+  /// The fighters are copied by value, so the pack is a snapshot: fights
+  /// they have afterwards in this save don't change it, and importing it
+  /// somewhere else doesn't reach back into here.
+  Future<FighterPack> createPack({
+    required String name,
+    required List<Fighter> fighters,
+    String description = '',
+    String author = '',
+  }) async {
+    final pack = FighterPack(
+      id: newId(),
+      name: name.trim().isEmpty ? 'Untitled Pack' : name.trim(),
+      description: description.trim(),
+      author: author.trim(),
+      createdAt: DateTime.now(),
+      fighters: fighters,
+    );
+    await _packRepo.save(pack);
+    notifyListeners();
+    return pack;
+  }
+
+  Future<void> renamePack(FighterPack pack, {
+    required String name,
+    String? description,
+  }) async {
+    await _packRepo.save(pack.copyWith(
+      name: name.trim().isEmpty ? pack.name : name.trim(),
+      description: description?.trim(),
+    ));
+    notifyListeners();
+  }
+
+  Future<void> deletePack(String id) async {
+    await _packRepo.delete(id);
+    notifyListeners();
+  }
+
+  /// The string a player copies out to share a pack.
+  String sharePackCode(FighterPack pack) => FighterPackCodec.encode(pack);
+
+  /// Reads a share code and saves the pack it describes.
+  ///
+  /// Throws [FighterPackFormatException] with something worth showing the
+  /// player when the code isn't one.
+  Future<FighterPack> importPackCode(String code) async {
+    final pack = FighterPackCodec.decode(code, idFor: newId);
+    await _packRepo.save(pack);
+    notifyListeners();
+    return pack;
+  }
+
+  /// Drops [pack]'s fighters into the open save's talent pool, and
+  /// returns how many arrived.
+  ///
+  /// Free agents, always: a pack says who these fighters are, not who
+  /// they fight for. The player signs the ones they want like anyone
+  /// else. Ids are minted fresh here too, so the same pack can be
+  /// imported into several saves — or twice into one, if you want two of
+  /// somebody.
+  Future<int> addPackToSave(FighterPack pack) async {
+    if (organization == null) return 0;
+    for (final fighter in pack.fighters) {
+      await _fighterRepo.save(fighter.copyWith(id: newId(), contract: null));
+    }
+    notifyListeners();
+    return pack.fighters.length;
   }
 
   // ---- Settings -----------------------------------------------------------

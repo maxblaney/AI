@@ -7674,6 +7674,366 @@ class InboxItemsCompanion extends UpdateCompanion<InboxItemRow> {
   }
 }
 
+class $FighterPacksTable extends FighterPacks
+    with TableInfo<$FighterPacksTable, FighterPackRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $FighterPacksTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+      'name', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _descriptionMeta =
+      const VerificationMeta('description');
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+      'description', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(''));
+  static const VerificationMeta _authorMeta = const VerificationMeta('author');
+  @override
+  late final GeneratedColumn<String> author = GeneratedColumn<String>(
+      'author', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(''));
+  static const VerificationMeta _createdAtMsMeta =
+      const VerificationMeta('createdAtMs');
+  @override
+  late final GeneratedColumn<int> createdAtMs = GeneratedColumn<int>(
+      'created_at_ms', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _fightersJsonMeta =
+      const VerificationMeta('fightersJson');
+  @override
+  late final GeneratedColumn<String> fightersJson = GeneratedColumn<String>(
+      'fighters_json', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns =>
+      [id, name, description, author, createdAtMs, fightersJson];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'fighter_packs';
+  @override
+  VerificationContext validateIntegrity(Insertable<FighterPackRow> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+          _descriptionMeta,
+          description.isAcceptableOrUnknown(
+              data['description']!, _descriptionMeta));
+    }
+    if (data.containsKey('author')) {
+      context.handle(_authorMeta,
+          author.isAcceptableOrUnknown(data['author']!, _authorMeta));
+    }
+    if (data.containsKey('created_at_ms')) {
+      context.handle(
+          _createdAtMsMeta,
+          createdAtMs.isAcceptableOrUnknown(
+              data['created_at_ms']!, _createdAtMsMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMsMeta);
+    }
+    if (data.containsKey('fighters_json')) {
+      context.handle(
+          _fightersJsonMeta,
+          fightersJson.isAcceptableOrUnknown(
+              data['fighters_json']!, _fightersJsonMeta));
+    } else if (isInserting) {
+      context.missing(_fightersJsonMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  FighterPackRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return FighterPackRow(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      name: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      description: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}description'])!,
+      author: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}author'])!,
+      createdAtMs: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}created_at_ms'])!,
+      fightersJson: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}fighters_json'])!,
+    );
+  }
+
+  @override
+  $FighterPacksTable createAlias(String alias) {
+    return $FighterPacksTable(attachedDatabase, alias);
+  }
+}
+
+class FighterPackRow extends DataClass implements Insertable<FighterPackRow> {
+  final String id;
+  final String name;
+  final String description;
+  final String author;
+
+  /// Epoch milliseconds, matching [Organizations.lastPlayedAtMs] — whole
+  /// seconds would tie for two packs made in the same second.
+  final int createdAtMs;
+
+  /// The pack's fighters, as the share-code JSON. Stored as one blob
+  /// rather than as rows because a pack is a document: it is written and
+  /// read whole, never queried into.
+  final String fightersJson;
+  const FighterPackRow(
+      {required this.id,
+      required this.name,
+      required this.description,
+      required this.author,
+      required this.createdAtMs,
+      required this.fightersJson});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    map['description'] = Variable<String>(description);
+    map['author'] = Variable<String>(author);
+    map['created_at_ms'] = Variable<int>(createdAtMs);
+    map['fighters_json'] = Variable<String>(fightersJson);
+    return map;
+  }
+
+  FighterPacksCompanion toCompanion(bool nullToAbsent) {
+    return FighterPacksCompanion(
+      id: Value(id),
+      name: Value(name),
+      description: Value(description),
+      author: Value(author),
+      createdAtMs: Value(createdAtMs),
+      fightersJson: Value(fightersJson),
+    );
+  }
+
+  factory FighterPackRow.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return FighterPackRow(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      description: serializer.fromJson<String>(json['description']),
+      author: serializer.fromJson<String>(json['author']),
+      createdAtMs: serializer.fromJson<int>(json['createdAtMs']),
+      fightersJson: serializer.fromJson<String>(json['fightersJson']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'description': serializer.toJson<String>(description),
+      'author': serializer.toJson<String>(author),
+      'createdAtMs': serializer.toJson<int>(createdAtMs),
+      'fightersJson': serializer.toJson<String>(fightersJson),
+    };
+  }
+
+  FighterPackRow copyWith(
+          {String? id,
+          String? name,
+          String? description,
+          String? author,
+          int? createdAtMs,
+          String? fightersJson}) =>
+      FighterPackRow(
+        id: id ?? this.id,
+        name: name ?? this.name,
+        description: description ?? this.description,
+        author: author ?? this.author,
+        createdAtMs: createdAtMs ?? this.createdAtMs,
+        fightersJson: fightersJson ?? this.fightersJson,
+      );
+  FighterPackRow copyWithCompanion(FighterPacksCompanion data) {
+    return FighterPackRow(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      description:
+          data.description.present ? data.description.value : this.description,
+      author: data.author.present ? data.author.value : this.author,
+      createdAtMs:
+          data.createdAtMs.present ? data.createdAtMs.value : this.createdAtMs,
+      fightersJson: data.fightersJson.present
+          ? data.fightersJson.value
+          : this.fightersJson,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FighterPackRow(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('description: $description, ')
+          ..write('author: $author, ')
+          ..write('createdAtMs: $createdAtMs, ')
+          ..write('fightersJson: $fightersJson')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, name, description, author, createdAtMs, fightersJson);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is FighterPackRow &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.description == this.description &&
+          other.author == this.author &&
+          other.createdAtMs == this.createdAtMs &&
+          other.fightersJson == this.fightersJson);
+}
+
+class FighterPacksCompanion extends UpdateCompanion<FighterPackRow> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<String> description;
+  final Value<String> author;
+  final Value<int> createdAtMs;
+  final Value<String> fightersJson;
+  final Value<int> rowid;
+  const FighterPacksCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.description = const Value.absent(),
+    this.author = const Value.absent(),
+    this.createdAtMs = const Value.absent(),
+    this.fightersJson = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  FighterPacksCompanion.insert({
+    required String id,
+    required String name,
+    this.description = const Value.absent(),
+    this.author = const Value.absent(),
+    required int createdAtMs,
+    required String fightersJson,
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        name = Value(name),
+        createdAtMs = Value(createdAtMs),
+        fightersJson = Value(fightersJson);
+  static Insertable<FighterPackRow> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<String>? description,
+    Expression<String>? author,
+    Expression<int>? createdAtMs,
+    Expression<String>? fightersJson,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (description != null) 'description': description,
+      if (author != null) 'author': author,
+      if (createdAtMs != null) 'created_at_ms': createdAtMs,
+      if (fightersJson != null) 'fighters_json': fightersJson,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  FighterPacksCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? name,
+      Value<String>? description,
+      Value<String>? author,
+      Value<int>? createdAtMs,
+      Value<String>? fightersJson,
+      Value<int>? rowid}) {
+    return FighterPacksCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      author: author ?? this.author,
+      createdAtMs: createdAtMs ?? this.createdAtMs,
+      fightersJson: fightersJson ?? this.fightersJson,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (author.present) {
+      map['author'] = Variable<String>(author.value);
+    }
+    if (createdAtMs.present) {
+      map['created_at_ms'] = Variable<int>(createdAtMs.value);
+    }
+    if (fightersJson.present) {
+      map['fighters_json'] = Variable<String>(fightersJson.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FighterPacksCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('description: $description, ')
+          ..write('author: $author, ')
+          ..write('createdAtMs: $createdAtMs, ')
+          ..write('fightersJson: $fightersJson, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -7684,6 +8044,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $FightsTable fights = $FightsTable(this);
   late final $RandomEventsTable randomEvents = $RandomEventsTable(this);
   late final $InboxItemsTable inboxItems = $InboxItemsTable(this);
+  late final $FighterPacksTable fighterPacks = $FighterPacksTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -7695,7 +8056,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         events,
         fights,
         randomEvents,
-        inboxItems
+        inboxItems,
+        fighterPacks
       ];
 }
 
@@ -10917,6 +11279,195 @@ typedef $$InboxItemsTableProcessedTableManager = ProcessedTableManager<
     ),
     InboxItemRow,
     PrefetchHooks Function()>;
+typedef $$FighterPacksTableCreateCompanionBuilder = FighterPacksCompanion
+    Function({
+  required String id,
+  required String name,
+  Value<String> description,
+  Value<String> author,
+  required int createdAtMs,
+  required String fightersJson,
+  Value<int> rowid,
+});
+typedef $$FighterPacksTableUpdateCompanionBuilder = FighterPacksCompanion
+    Function({
+  Value<String> id,
+  Value<String> name,
+  Value<String> description,
+  Value<String> author,
+  Value<int> createdAtMs,
+  Value<String> fightersJson,
+  Value<int> rowid,
+});
+
+class $$FighterPacksTableFilterComposer
+    extends Composer<_$AppDatabase, $FighterPacksTable> {
+  $$FighterPacksTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get description => $composableBuilder(
+      column: $table.description, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get author => $composableBuilder(
+      column: $table.author, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get createdAtMs => $composableBuilder(
+      column: $table.createdAtMs, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get fightersJson => $composableBuilder(
+      column: $table.fightersJson, builder: (column) => ColumnFilters(column));
+}
+
+class $$FighterPacksTableOrderingComposer
+    extends Composer<_$AppDatabase, $FighterPacksTable> {
+  $$FighterPacksTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get description => $composableBuilder(
+      column: $table.description, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get author => $composableBuilder(
+      column: $table.author, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get createdAtMs => $composableBuilder(
+      column: $table.createdAtMs, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get fightersJson => $composableBuilder(
+      column: $table.fightersJson,
+      builder: (column) => ColumnOrderings(column));
+}
+
+class $$FighterPacksTableAnnotationComposer
+    extends Composer<_$AppDatabase, $FighterPacksTable> {
+  $$FighterPacksTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+      column: $table.description, builder: (column) => column);
+
+  GeneratedColumn<String> get author =>
+      $composableBuilder(column: $table.author, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAtMs => $composableBuilder(
+      column: $table.createdAtMs, builder: (column) => column);
+
+  GeneratedColumn<String> get fightersJson => $composableBuilder(
+      column: $table.fightersJson, builder: (column) => column);
+}
+
+class $$FighterPacksTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $FighterPacksTable,
+    FighterPackRow,
+    $$FighterPacksTableFilterComposer,
+    $$FighterPacksTableOrderingComposer,
+    $$FighterPacksTableAnnotationComposer,
+    $$FighterPacksTableCreateCompanionBuilder,
+    $$FighterPacksTableUpdateCompanionBuilder,
+    (
+      FighterPackRow,
+      BaseReferences<_$AppDatabase, $FighterPacksTable, FighterPackRow>
+    ),
+    FighterPackRow,
+    PrefetchHooks Function()> {
+  $$FighterPacksTableTableManager(_$AppDatabase db, $FighterPacksTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$FighterPacksTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$FighterPacksTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$FighterPacksTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> name = const Value.absent(),
+            Value<String> description = const Value.absent(),
+            Value<String> author = const Value.absent(),
+            Value<int> createdAtMs = const Value.absent(),
+            Value<String> fightersJson = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              FighterPacksCompanion(
+            id: id,
+            name: name,
+            description: description,
+            author: author,
+            createdAtMs: createdAtMs,
+            fightersJson: fightersJson,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String name,
+            Value<String> description = const Value.absent(),
+            Value<String> author = const Value.absent(),
+            required int createdAtMs,
+            required String fightersJson,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              FighterPacksCompanion.insert(
+            id: id,
+            name: name,
+            description: description,
+            author: author,
+            createdAtMs: createdAtMs,
+            fightersJson: fightersJson,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$FighterPacksTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $FighterPacksTable,
+    FighterPackRow,
+    $$FighterPacksTableFilterComposer,
+    $$FighterPacksTableOrderingComposer,
+    $$FighterPacksTableAnnotationComposer,
+    $$FighterPacksTableCreateCompanionBuilder,
+    $$FighterPacksTableUpdateCompanionBuilder,
+    (
+      FighterPackRow,
+      BaseReferences<_$AppDatabase, $FighterPacksTable, FighterPackRow>
+    ),
+    FighterPackRow,
+    PrefetchHooks Function()>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -10935,4 +11486,6 @@ class $AppDatabaseManager {
       $$RandomEventsTableTableManager(_db, _db.randomEvents);
   $$InboxItemsTableTableManager get inboxItems =>
       $$InboxItemsTableTableManager(_db, _db.inboxItems);
+  $$FighterPacksTableTableManager get fighterPacks =>
+      $$FighterPacksTableTableManager(_db, _db.fighterPacks);
 }
