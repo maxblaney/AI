@@ -7,7 +7,9 @@ import '../../../core/utils/id_generator.dart';
 import '../../../data/models/models.dart';
 import '../../../data/seed/roster_seed.dart';
 import '../../../domain/cosmetics/fighter_headshots.dart';
+import '../../../domain/cosmetics/headshot_catalog.dart';
 import '../../state/game_controller.dart';
+import '../../theme/app_theme.dart';
 
 const List<(String, String)> _strikingStatFields = [
   ('punching', 'Punching'),
@@ -118,6 +120,22 @@ class _FighterEditorScreenState extends State<FighterEditorScreen>
   late final Map<String, int> _physical;
   late final Map<String, int> _mental;
   late final Map<String, int> _tendencies;
+
+  /// The chosen portrait, or null for "no portrait". Starts as whatever
+  /// the fighter already had; a brand new fighter starts on a face rolled
+  /// for their nationality, which the player can then change.
+  String? _headshotAsset;
+
+  /// True while the portrait is still whatever nationality rolled rather
+  /// than something the player picked — so changing nationality re-rolls
+  /// it, but only until they've made a choice of their own.
+  bool _headshotIsAuto = true;
+
+  /// Every portrait this build ships, read from the asset manifest once
+  /// when the screen opens rather than each time the picker is opened.
+  /// Null until it lands, which is a frame or two.
+  HeadshotCatalog? _catalog;
+
   bool _saving = false;
 
   bool get _isEditing => widget.existingFighter != null;
@@ -130,6 +148,11 @@ class _FighterEditorScreenState extends State<FighterEditorScreen>
     _nameController = TextEditingController(text: f?.name ?? '');
     _age = f?.age ?? 25;
     _nationality = f?.nationality ?? knownNationalities.first;
+    _headshotAsset = f?.headshotAsset ?? rollHeadshot(_nationality, Random());
+    _headshotIsAuto = f == null;
+    HeadshotCatalog.load().then((catalog) {
+      if (mounted) setState(() => _catalog = catalog);
+    });
     _weightClass = f?.weightClass ?? WeightClass.lightweight;
     _style = f?.style ?? FightingStyle.wellRounded;
     _popularity = f?.popularity ?? 20;
@@ -218,9 +241,26 @@ class _FighterEditorScreenState extends State<FighterEditorScreen>
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        _PortraitPicker(
+          asset: _headshotAsset,
+          catalog: _catalog,
+          name: _nameController.text,
+          onChanged: (asset) => setState(() {
+            _headshotAsset = asset;
+            _headshotIsAuto = false;
+          }),
+          onRandom: () => setState(() {
+            _headshotAsset = rollHeadshot(_nationality, Random());
+            _headshotIsAuto = true;
+          }),
+        ),
+        const SizedBox(height: 16),
         TextField(
           controller: _nameController,
           decoration: const InputDecoration(labelText: 'Name'),
+          // The portrait above shows the fighter's initial when there is
+          // no art, so it has to follow what is typed.
+          onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 16),
         Text('Age: $_age'),
@@ -238,7 +278,14 @@ class _FighterEditorScreenState extends State<FighterEditorScreen>
           items: knownNationalities
               .map((n) => DropdownMenuItem(value: n, child: Text(n)))
               .toList(),
-          onChanged: (v) => setState(() => _nationality = v ?? _nationality),
+          onChanged: (v) => setState(() {
+            _nationality = v ?? _nationality;
+            // A rolled face follows the nationality; a chosen one does
+            // not get taken away because a dropdown moved.
+            if (_headshotIsAuto) {
+              _headshotAsset = rollHeadshot(_nationality, Random());
+            }
+          }),
         ),
         const SizedBox(height: 16),
         DropdownButtonFormField<WeightClass>(
@@ -428,7 +475,7 @@ class _FighterEditorScreenState extends State<FighterEditorScreen>
             name: name,
             age: _age,
             nationality: _nationality,
-            headshotAsset: rollHeadshot(_nationality, Random()),
+            headshotAsset: _headshotAsset,
             weightClass: _weightClass,
             heightInches: _heightInches,
             weightLbs: _weightLbs,
@@ -448,6 +495,10 @@ class _FighterEditorScreenState extends State<FighterEditorScreen>
         : existing.copyWith(
             name: name,
             age: _age,
+            // Editing a fighter could not change their face before this
+            // — copyWith simply never touched it.
+            headshotAsset: _headshotAsset,
+            clearHeadshotAsset: _headshotAsset == null,
             nationality: _nationality,
             weightClass: _weightClass,
             heightInches: _heightInches,
@@ -614,6 +665,229 @@ class _StatSlider extends StatelessWidget {
           ),
         ),
         SizedBox(width: 28, child: Text('$value', textAlign: TextAlign.right)),
+      ],
+    );
+  }
+}
+
+/// The fighter's face, with the controls to change it.
+///
+/// Sits at the top of the Bio tab because it is the first thing anyone
+/// decides about a fighter they are making up.
+class _PortraitPicker extends StatelessWidget {
+  final String? asset;
+
+  /// Null until the manifest has been read; the Choose button waits for
+  /// it rather than opening onto an empty grid.
+  final HeadshotCatalog? catalog;
+
+  /// Only used for the fallback initial when there is no portrait.
+  final String name;
+
+  final ValueChanged<String?> onChanged;
+  final VoidCallback onRandom;
+
+  const _PortraitPicker({
+    required this.asset,
+    required this.catalog,
+    required this.name,
+    required this.onChanged,
+    required this.onRandom,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _PortraitThumb(asset: asset, name: name, size: 72),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Portrait', style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: 4),
+              Text(
+                asset == null
+                    ? 'No portrait — shows their initial instead.'
+                    : HeadshotCatalog.labelFor(
+                        HeadshotCatalog.groupKeyOf(asset!)),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 8,
+                children: [
+                  FilledButton.tonal(
+                    onPressed: catalog == null
+                        ? null
+                        : () async {
+                            final picked = await showDialog<_PortraitChoice>(
+                              context: context,
+                              builder: (_) => _PortraitGridDialog(
+                                catalog: catalog!,
+                                selected: asset,
+                              ),
+                            );
+                            if (picked == null) return;
+                            onChanged(picked.asset);
+                          },
+                    child: const Text('Choose'),
+                  ),
+                  TextButton(
+                    onPressed: onRandom,
+                    child: const Text('Random'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// A dialog result, so "picked nothing" and "picked no portrait" stay
+/// different things — the first closes the dialog, the second clears the
+/// face.
+class _PortraitChoice {
+  final String? asset;
+
+  const _PortraitChoice(this.asset);
+}
+
+/// One portrait, drawn the way the game draws them: pixel art on the
+/// studio backdrop, nearest-neighbour so it stays crisp.
+class _PortraitThumb extends StatelessWidget {
+  final String? asset;
+  final String name;
+  final double size;
+  final bool selected;
+
+  const _PortraitThumb({
+    required this.asset,
+    required this.name,
+    required this.size,
+    this.selected = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final initial = name.trim().isEmpty ? '?' : name.trim()[0].toUpperCase();
+
+    return Container(
+      width: size,
+      height: size,
+      clipBehavior: Clip.antiAlias,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            AppColors.avatarBackdropTop,
+            AppColors.avatarBackdropBottom,
+          ],
+        ),
+      ),
+      foregroundDecoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: selected ? scheme.primary : Colors.white.withOpacity(0.14),
+          width: selected ? 3 : 1,
+        ),
+      ),
+      child: asset == null
+          ? Center(
+              child: Text(
+                initial,
+                style: TextStyle(
+                  fontSize: size * 0.45,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            )
+          : Transform.scale(
+              scale: 1.12,
+              child: Image.asset(
+                asset!,
+                filterQuality: FilterQuality.none,
+                fit: BoxFit.contain,
+              ),
+            ),
+    );
+  }
+}
+
+/// Every portrait the build ships, in a grid, grouped by set.
+///
+/// The list comes from the asset manifest rather than from Dart, so a
+/// new set of faces dropped into `assets/fighters/` turns up here with
+/// no code change — see [HeadshotCatalog].
+class _PortraitGridDialog extends StatelessWidget {
+  final HeadshotCatalog catalog;
+  final String? selected;
+
+  const _PortraitGridDialog({required this.catalog, required this.selected});
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Choose a portrait'),
+      content: SizedBox(
+        width: 460,
+        height: 440,
+        child: catalog.isEmpty
+            ? const Center(
+                child: Text('No portrait art is bundled with this build.'),
+              )
+            : ListView(
+                children: [
+                  for (final set in catalog.sets) ...[
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(4, 12, 4, 6),
+                      child: Text(
+                        '${set.label}  ·  ${set.assets.length}',
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                    ),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final asset in set.assets)
+                          InkWell(
+                            customBorder: const CircleBorder(),
+                            onTap: () => Navigator.of(context)
+                                .pop(_PortraitChoice(asset)),
+                            child: _PortraitThumb(
+                              asset: asset,
+                              name: '',
+                              size: 56,
+                              selected: asset == selected,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        // Distinct from cancelling: this is a choice, and it is the only
+        // way back to the plain initial-letter avatar.
+        TextButton(
+          onPressed: () =>
+              Navigator.of(context).pop(const _PortraitChoice(null)),
+          child: const Text('No portrait'),
+        ),
       ],
     );
   }

@@ -468,6 +468,34 @@ the native mobile app with real persistence.
   weakest is named underneath, so a short bar tells you what to fix
   rather than just that something is wrong. Setting Title Implications
   moves the bar live.
+- **Pick a fighter's face** (`HeadshotCatalog`, Roster → Create Fighter →
+  Bio). The portrait sits at the top of the Bio tab with **Choose** (a
+  grid of every portrait the build ships, grouped into sets) and
+  **Random** (re-roll for the nationality). A rolled face follows the
+  nationality dropdown; once you pick one yourself it stays put.
+  - **The grid is read from the asset manifest, not from Dart.** A list
+    in code is the thing that goes stale — art gets drawn, dropped into
+    `assets/fighters/`, and then never shows up because nobody added it
+    to a `const` map. `pubspec.yaml` registers the whole directory, so a
+    new PNG is bundled the moment it's saved, and `HeadshotCatalog`
+    finds it with no code change. Files group by the prefix before the
+    first underscore, so `asian_01.png` opens an "Asian" section on its
+    own; anything in a subfolder (the source sheets in
+    `assets/fighters/source/`) is art to cut up rather than art to show,
+    and stays out.
+  - **Adding a new set of faces**: cut them to 32×32 PNGs, name them
+    `<set>_01.png`, `<set>_02.png`…, drop them in `assets/fighters/`,
+    rebuild. They're pickable immediately. To have *generated* fighters
+    use them too, add the paths to `_headshotsByTone` in
+    `fighter_headshots.dart` under whichever tone they belong to — that
+    map is what the nationality weighting draws from, and it is
+    deliberately still hand-kept, because "which skin tone is this art"
+    is not something a filename scan can answer.
+  - **A fighter's face could not be changed before this.** `copyWith`
+    simply never touched `headshotAsset`, so editing an existing fighter
+    left the old portrait on them. It now takes a `clearHeadshotAsset`
+    flag, matching how the model already handles its other nullables,
+    which is also what makes "No portrait" possible.
 - **Fighter packs** (`FighterPack`, `FighterCodec`, Settings → Fighter
   Packs). A pack is a named group of fighters that lives *outside* any
   one save — the only table in the database with no `saveId`, which is

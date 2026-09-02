@@ -173,6 +173,10 @@ class Fighter {
     int? age,
     String? nationality,
     String? headshotAsset,
+    /// Set to give a fighter no portrait at all. Without it the `??`
+    /// below would read a deliberate null as "leave it alone", and the
+    /// editor could add a face but never take one away.
+    bool clearHeadshotAsset = false,
     WeightClass? weightClass,
     int? heightInches,
     int? weightLbs,
@@ -211,7 +215,8 @@ class Fighter {
       name: name ?? this.name,
       age: age ?? this.age,
       nationality: nationality ?? this.nationality,
-      headshotAsset: headshotAsset ?? this.headshotAsset,
+      headshotAsset:
+          clearHeadshotAsset ? null : (headshotAsset ?? this.headshotAsset),
       weightClass: weightClass ?? this.weightClass,
       heightInches: heightInches ?? this.heightInches,
       weightLbs: weightLbs ?? this.weightLbs,
