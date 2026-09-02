@@ -17,6 +17,13 @@ class NewGameScreen extends StatefulWidget {
 class _NewGameScreenState extends State<NewGameScreen> {
   late final TextEditingController _nameController;
   ReputationTier _tier = ReputationTier.regional;
+
+  /// True to open with a roster already under contract, false to start
+  /// with nobody signed. Defaults to the roster, which is the gentler
+  /// opening — from scratch you have to sign a division before you can
+  /// make a single fight.
+  bool _signRoster = true;
+
   bool _starting = false;
 
   @override
@@ -74,6 +81,34 @@ class _NewGameScreenState extends State<NewGameScreen> {
               ),
             ),
           const SizedBox(height: 24),
+          Text('Starting Roster',
+              style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          for (final signed in [true, false])
+            Card(
+              color: signed == _signRoster
+                  ? Theme.of(context).colorScheme.primaryContainer
+                  : null,
+              child: RadioListTile<bool>(
+                value: signed,
+                groupValue: _signRoster,
+                onChanged: (v) => setState(() => _signRoster = v ?? _signRoster),
+                title: Text(signed
+                    ? 'Established promotion'
+                    : 'Start from scratch'),
+                isThreeLine: true,
+                subtitle: Text(
+                  signed
+                      ? '160 fighters already under contract, twenty to a '
+                          'division. Open the booking screen and make a '
+                          'card on day one.'
+                      : 'Nobody signed. The whole talent pool is free '
+                          'agents — sign a division before you can book a '
+                          'fight, and the roster is entirely yours.',
+                ),
+              ),
+            ),
+          const SizedBox(height: 24),
           FilledButton(
             onPressed: _starting ? null : _start,
             child: _starting
@@ -94,7 +129,11 @@ class _NewGameScreenState extends State<NewGameScreen> {
     final name = _nameController.text.trim().isEmpty
         ? 'Apex Fighting Championship'
         : _nameController.text.trim();
-    await context.read<GameController>().startNewGame(orgName: name, tier: _tier);
+    await context.read<GameController>().startNewGame(
+          orgName: name,
+          tier: _tier,
+          signRoster: _signRoster,
+        );
     if (!mounted) return;
     // Reached as a route from the saves screen, so it has to dismiss
     // itself — the shell swapping to the dashboard underneath would

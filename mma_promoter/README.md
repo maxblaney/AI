@@ -468,6 +468,34 @@ the native mobile app with real persistence.
   weakest is named underneath, so a short bar tells you what to fix
   rather than just that something is wrong. Setting Title Implications
   moves the bar live.
+- **Two ways to open a save** (New Promotion → Starting Roster).
+  *Established promotion* is the old behaviour — 160 fighters already
+  under contract, twenty to a division, so you can book a card on day
+  one. *Start from scratch* signs nobody: the whole talent pool is free
+  agents and the roster is entirely yours to build. The pool is generated
+  either way, because it's the market rather than the roster. Established
+  stays the default, since from scratch you have to sign a division
+  before you can make a single fight.
+- **Popularity is tied to skill, and tops out at 8/10 to start**
+  (`_rollPopularity`). It used to be a flat `10 + rng.nextInt(50)`,
+  rolled with no reference to how good the fighter was — so a 96-overall
+  contender was exactly as likely to be a 2/10 draw as a 48-overall
+  journeyman, and nobody in the game ever started above 6/10. Now the
+  base tracks overall (45 → 8, 95 → 56), plus or minus ten so two
+  fighters of the same standard aren't the same draw, and 6% get a
+  star bump of +12–25 on top: the loud one, the one with the highlight
+  reel. Those are the only fighters who start at 7 or 8. Reaching 9 or 10
+  is something a fighter does by winning fights in your promotion.
+  - **Measured, not assumed.** The free-agent pool's mean popularity is
+    unchanged (34.0 → 35.7) so the economy isn't inflated wholesale;
+    what changed is the shape — 7/10 and 8/10 now exist at ~1.3% and
+    ~0.8%, and the correlation with overall means a tier's roster is as
+    well known as it is good. Opening-card net profit on an eight-bout
+    card from the cheapest half of the roster: Local $8,910 → $5,310,
+    Regional $4,300 → $4,810, National $49,505 → $26,251, International
+    $572,449 → $592,395. Every tier still opens profitable; Local is
+    tighter because a local promotion's fighters are now genuinely
+    unknowns, which is what the tier is supposed to mean.
 - **Pick a fighter's face** (`HeadshotCatalog`, Roster → Create Fighter →
   Bio). The portrait sits at the top of the Bio tab with **Choose** (a
   grid of every portrait the build ships, grouped into sets) and

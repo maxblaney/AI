@@ -861,12 +861,48 @@ Fighter _generateFighter(
     style: style,
     tendencies: tendencies,
     potential: potential,
-    popularity: 10 + rng.nextInt(50),
+    popularity: _rollPopularity(overall, rng),
     morale: 65 + rng.nextInt(25),
     injuryStatus: InjuryStatus.healthy,
     winStreak: rng.nextInt(4),
   );
 }
+
+/// How well known a fighter is when the game starts, 0-100 — which the
+/// roster shows as a mark out of ten, and which drives the gate.
+///
+/// Skill is most of it. This used to be a flat `10 + rng.nextInt(50)`,
+/// rolled with no reference to how good the fighter was, so a
+/// 96-overall contender was as likely to be a 2/10 draw as a 48-overall
+/// journeyman. Nobody sells tickets by accident: the base tracks
+/// overall, so the better fighters are the bigger names.
+///
+/// The exception is deliberate. A few fighters are worth more at the box
+/// office than on the mat — the loud one, the one with the highlight
+/// reel — so a small share get a bump on top. They are the only ones who
+/// start at the very top of the scale, which is what makes an 8/10
+/// starting draw mean something.
+int _rollPopularity(double overall, Random rng) {
+  // 45 overall -> 8, 95 -> 56, straight line between.
+  final base = 8 + (overall.clamp(45, 95) - 45) / 50 * 48;
+  // Plus or minus ten, so two fighters of the same standard aren't
+  // automatically the same draw.
+  final noise = rng.nextInt(21) - 10;
+  final star = rng.nextInt(100) < _starChancePercent
+      ? 12 + rng.nextInt(14)
+      : 0;
+  return (base + noise + star).round().clamp(5, maxStartingPopularity);
+}
+
+/// Share of generated fighters who are a bigger draw than their skill
+/// alone would make them.
+const int _starChancePercent = 6;
+
+/// The most popular a fighter can be at generation — 8/10 on the roster
+/// screen's scale. Deliberately short of the 100 the model allows:
+/// becoming a genuine 9 or 10 is something a fighter does by winning
+/// fights in your promotion, not something they walk in with.
+const int maxStartingPopularity = 80;
 
 _GroundPlan _pickGroundPlan(FightingStyle style, Random rng) {
   final weights = _groundPlanWeights[style] ??

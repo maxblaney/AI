@@ -119,4 +119,75 @@ void main() {
     controller.dispose();
     await db.close();
   });
+
+  group('starting from scratch', () {
+    late AppDatabase db;
+    late GameController controller;
+
+    /// The controller's lists are fed by database streams, so they are a
+    /// hop behind the write that filled them.
+    Future<void> settle() async {
+      for (var i = 0; i < 20; i++) {
+        await Future<void>.delayed(Duration.zero);
+      }
+    }
+
+    setUp(() {
+      db = AppDatabase.forTesting(NativeDatabase.memory());
+      controller = GameController(database: db, random: Random(2));
+    });
+
+    tearDown(() async {
+      controller.dispose();
+      await db.close();
+    });
+
+    test('signs nobody, but the market is still there', () async {
+      await controller.startNewGame(
+        orgName: 'Scratch FC',
+        tier: ReputationTier.regional,
+        signRoster: false,
+      );
+      await settle();
+
+      expect(controller.signedRoster, isEmpty,
+          reason: 'the whole point is that the roster is yours to build');
+      // The talent pool is the market, not the roster — it exists either
+      // way, or there would be nobody to sign.
+      expect(controller.talentPool, hasLength(WeightClass.values.length * 50));
+      for (final division in WeightClass.values) {
+        expect(
+          controller.talentPool.where((f) => f.weightClass == division),
+          isNotEmpty,
+          reason: '${division.label} has nobody to sign',
+        );
+      }
+    });
+
+    test('the org itself is set up the same either way', () async {
+      await controller.startNewGame(
+        orgName: 'Scratch FC',
+        tier: ReputationTier.national,
+        signRoster: false,
+      );
+      await settle();
+
+      final org = controller.organization!;
+      expect(org.name, 'Scratch FC');
+      expect(org.reputationTier, ReputationTier.national);
+      expect(org.cashBalance, ReputationTier.national.startingCash);
+      expect(org.currentWeek, 1);
+    });
+
+    test('the default is still an established promotion', () async {
+      await controller.startNewGame(
+        orgName: 'Going Concern FC',
+        tier: ReputationTier.regional,
+      );
+      await settle();
+
+      expect(controller.signedRoster,
+          hasLength(WeightClass.values.length * 20));
+    });
+  });
 }

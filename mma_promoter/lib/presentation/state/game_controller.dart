@@ -313,9 +313,16 @@ class GameController extends ChangeNotifier {
   /// Seeds a brand-new save with the player's chosen org name and starting
   /// tier (which sets cash and fanbase — see [ReputationTierInfo]), then
   /// opens it. Existing saves are left alone.
+  ///
+  /// [signRoster] picks which of the two games this is. On, the
+  /// promotion opens as a going concern with a full roster already under
+  /// contract — you start by booking. Off, the roster is empty and every
+  /// fighter is a free agent, so you start by signing, and the first
+  /// card is one you built yourself.
   Future<void> startNewGame({
     required String orgName,
     required ReputationTier tier,
+    bool signRoster = true,
   }) async {
     await _cancelSubscriptions();
     _clearGameState();
@@ -328,18 +335,21 @@ class GameController extends ChangeNotifier {
     await _orgRepo.save(org);
     await _orgRepo.touch(org.id, DateTime.now());
 
-    // A promotion opens as a going concern: a full roster already under
-    // contract, twenty to a division, plus a pool of free agents to sign
-    // from. The starting contracts cost nothing up front — signing one
-    // normally charges its show money as a bonus, and 160 of those would
-    // bankrupt the save before week one.
-    final openingWeek = GameCalendar.dateForWeek(org.currentWeek);
-    for (final fighter in generateSignedRoster(
-      tier: tier,
-      signedOn: openingWeek,
-      random: _rng,
-    )) {
-      await _fighterRepo.save(fighter);
+    // The talent pool is there either way — it is the market, not the
+    // roster.
+    if (signRoster) {
+      // A going concern: a full roster already under contract, twenty to
+      // a division. The starting contracts cost nothing up front —
+      // signing one normally charges its show money as a bonus, and 160
+      // of those would bankrupt the save before week one.
+      final openingWeek = GameCalendar.dateForWeek(org.currentWeek);
+      for (final fighter in generateSignedRoster(
+        tier: tier,
+        signedOn: openingWeek,
+        random: _rng,
+      )) {
+        await _fighterRepo.save(fighter);
+      }
     }
     for (final fighter in generateStartingRoster(random: _rng)) {
       await _fighterRepo.save(fighter);
