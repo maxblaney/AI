@@ -616,6 +616,90 @@ class EventFinanceCalculator {
     return best;
   }
 
+  /// Cuts [card] down to the run of bouts that makes the most money.
+  ///
+  /// Card length is a trade, not a budget: another bout costs its two
+  /// purses but also deepens the show, and a thin card is punished hard
+  /// on the demand side (a four-fight night earns 67% of full demand, a
+  /// single fight 18%). So the honest question is not "what share of the
+  /// gate may fighters have" — any fixed share is arbitrary, and a 45%
+  /// rule measured out at one- and two-fight cards from year six of a
+  /// climb, profitable but no kind of show — it is simply which length
+  /// nets most.
+  ///
+  /// [card] must already be in the order the matchmaker returns: main
+  /// event first, then by value. Trimming takes from the bottom, which
+  /// is where a real promotion cuts.
+  static List<Fight> trimToBestNet({
+    required Venue venue,
+    required int ticketPrice,
+    required Organization organization,
+    required List<Fight> card,
+    required Map<String, Fighter> fighterLookup,
+    int promotionBudgetSpent = 0,
+  }) {
+    if (card.length <= 1) return card;
+
+    var bestLength = card.length;
+    var bestNet = -1 << 40;
+    for (var length = 1; length <= card.length; length++) {
+      final net = project(
+        venue: venue,
+        ticketPrice: ticketPrice,
+        organization: organization,
+        card: card.take(length).toList(),
+        fighterLookup: fighterLookup,
+        promotionBudgetSpent: promotionBudgetSpent,
+      ).net;
+      if (net > bestNet) {
+        bestNet = net;
+        bestLength = length;
+      }
+    }
+    return card.take(bestLength).toList();
+  }
+
+  /// The room and ticket price this card would make the most money in.
+  ///
+  /// Exists because "your roster costs more than this room takes" has a
+  /// better answer than "book worse fights": a promotion whose fighters
+  /// are worth six figures a night is not failing, it is playing in a
+  /// hall that is too small. The auto-filler can now say so with a
+  /// specific room and price rather than leaving the player to work out
+  /// that moving up is the move.
+  ///
+  /// Considers every venue, prices each at its own optimum, and returns
+  /// the best net. Null when [card] is empty.
+  static ({Venue venue, int ticketPrice, EventProjection projection})?
+      bestVenueAndPrice({
+    required Organization organization,
+    required List<Fight> card,
+    required Map<String, Fighter> fighterLookup,
+  }) {
+    if (card.isEmpty) return null;
+
+    ({Venue venue, int ticketPrice, EventProjection projection})? best;
+    for (final venue in Venue.values) {
+      final price = bestTicketPrice(
+        venue: venue,
+        organization: organization,
+        card: card,
+        fighterLookup: fighterLookup,
+      );
+      final projection = project(
+        venue: venue,
+        ticketPrice: price,
+        organization: organization,
+        card: card,
+        fighterLookup: fighterLookup,
+      );
+      if (best == null || projection.net > best.projection.net) {
+        best = (venue: venue, ticketPrice: price, projection: projection);
+      }
+    }
+    return best;
+  }
+
   /// What [fighter] actually takes home from this fight — their contract's
   /// show money, plus the win bonus if [won]. A fighter with no contract
   /// on file (shouldn't normally happen mid-card) falls back to market

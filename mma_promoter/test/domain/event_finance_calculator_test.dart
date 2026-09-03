@@ -187,6 +187,105 @@ void main() {
     });
   });
 
+  group('EventFinanceCalculator.trimToBestNet', () {
+    List<Fight> costlyCard(int bouts, int pay) => _plainCard(bouts);
+
+    Map<String, Fighter> lookupAt(int bouts, int pay) => {
+          for (var i = 0; i < bouts; i++) ...{
+            'a$i': _fighter('a$i',
+                popularity: 40, showMoney: pay, winBonus: pay),
+            'b$i': _fighter('b$i',
+                popularity: 35, showMoney: pay, winBonus: pay),
+          },
+        };
+
+    test('a card that pays for itself is left alone', () {
+      final kept = EventFinanceCalculator.trimToBestNet(
+        venue: Venue.regionalUsa,
+        ticketPrice: 55,
+        organization: _organization(),
+        card: costlyCard(10, 500),
+        fighterLookup: lookupAt(10, 500),
+      );
+
+      expect(kept, hasLength(10),
+          reason: 'cutting a profitable bout only loses the money it made');
+    });
+
+    test('bouts that cost more than they bring in are cut', () {
+      final kept = EventFinanceCalculator.trimToBestNet(
+        venue: Venue.regionalUsa,
+        ticketPrice: 55,
+        organization: _organization(),
+        card: costlyCard(10, 40000),
+        fighterLookup: lookupAt(10, 40000),
+      );
+
+      // The measured failure this replaces: an auto-filled card took
+      // $235,200 at the gate and paid out about $700,000, because the
+      // fallback pass ignored the budget entirely.
+      expect(kept.length, lessThan(10));
+      expect(kept, isNotEmpty, reason: 'a show still has to happen');
+    });
+
+    test('what it keeps really is the best length available', () {
+      const venue = Venue.regionalUsa;
+      final org = _organization();
+      final card = costlyCard(10, 9000);
+      final lookup = lookupAt(10, 9000);
+
+      final kept = EventFinanceCalculator.trimToBestNet(
+        venue: venue,
+        ticketPrice: 55,
+        organization: org,
+        card: card,
+        fighterLookup: lookup,
+      );
+
+      int netAt(int length) => EventFinanceCalculator.project(
+            venue: venue,
+            ticketPrice: 55,
+            organization: org,
+            card: card.take(length).toList(),
+            fighterLookup: lookup,
+          ).net;
+
+      for (var length = 1; length <= card.length; length++) {
+        expect(netAt(length), lessThanOrEqualTo(netAt(kept.length)),
+            reason: 'a $length-bout card should not beat the '
+                '${kept.length} this chose');
+      }
+    });
+
+    test('it trims from the bottom, keeping the main event', () {
+      final card = costlyCard(10, 40000);
+      final kept = EventFinanceCalculator.trimToBestNet(
+        venue: Venue.regionalUsa,
+        ticketPrice: 55,
+        organization: _organization(),
+        card: card,
+        fighterLookup: lookupAt(10, 40000),
+      );
+
+      expect(kept.first.id, card.first.id,
+          reason: 'a promotion cuts prelims, not its headliner');
+    });
+
+    test('a one-fight card has nothing to trim', () {
+      final card = costlyCard(1, 40000);
+      expect(
+        EventFinanceCalculator.trimToBestNet(
+          venue: Venue.regionalUsa,
+          ticketPrice: 55,
+          organization: _organization(),
+          card: card,
+          fighterLookup: lookupAt(1, 40000),
+        ),
+        hasLength(1),
+      );
+    });
+  });
+
   group('EventFinanceCalculator.bestTicketPrice', () {
     test('a sold-out room is told to charge more', () {
       // The measured case: an international promotion at Boston's own

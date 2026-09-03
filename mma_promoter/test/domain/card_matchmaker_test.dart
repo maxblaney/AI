@@ -218,9 +218,12 @@ void main() {
           reason: 'one fight should not cost nine times the whole budget');
     });
 
-    test('the budget bends rather than leaving the card half empty', () {
-      // Everybody is unaffordable. A two-fight card with no explanation
-      // is worse than a full one the player can see the cost of.
+    test('the budget is a wall, and a short card is the honest answer', () {
+      // Everybody is unaffordable. This used to return the full six
+      // regardless: the last pass checked nothing and did not even add
+      // to what had been spent, so a promotion whose roster had outgrown
+      // its gate got a card it could not pay for and no warning. One
+      // measured example took \$235,200 and paid out about \$700,000.
       final roster = [
         for (var i = 0; i < 12; i++)
           _signed('rich$i', lw, elo: 1800 - i * 10, showMoney: 500000),
@@ -232,7 +235,10 @@ void main() {
         purseBudget: 1000,
       );
 
-      expect(card, hasLength(6));
+      expect(card.length, lessThan(6));
+      // Still a show: the headliner is booked before the budget is
+      // consulted, so there is always a fight to put on.
+      expect(card, hasLength(1));
     });
   });
 

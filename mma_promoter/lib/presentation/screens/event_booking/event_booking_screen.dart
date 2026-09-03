@@ -441,47 +441,92 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
     );
   }
 
+  /// Tells the player why the night came up short, and where it would
+  /// pay for itself instead.
+  void _explainShortCard(
+    GameController controller,
+    Organization org,
+    List<Fight> card,
+  ) {
+    final lookup = {for (final f in controller.allFighters) f.id: f};
+    final better = EventFinanceCalculator.bestVenueAndPrice(
+      organization: org,
+      card: card,
+      fighterLookup: lookup,
+    );
+    final currency = NumberFormat.simpleCurrency(decimalDigits: 0);
+
+    final buffer = StringBuffer(
+      'Stopped at ${card.length} fights — another bout would cost more '
+      'than ${_venue.label} takes at this price.',
+    );
+    if (better != null &&
+        (better.venue != _venue || better.ticketPrice != _lastPrice())) {
+      buffer.write(
+        ' ${better.venue.label} at ${currency.format(better.ticketPrice)} '
+        'would clear ${currency.format(better.projection.net)}.',
+      );
+    }
+    _showError(buffer.toString());
+  }
+
+  int _lastPrice() =>
+      int.tryParse(_ticketPriceController.text) ??
+      _venue.suggestedTicketPrice;
+
   /// How long a card the auto-filler aims at: a main card of five plus
   /// prelims, which is the shape of a real show.
   static const int _autoFillTarget = 10;
-
-  /// Share of a full house's gate the auto-filler will commit to purses.
-  /// Leaves room for the venue, promotion and a night that actually
-  /// turns a profit.
-  static const double _purseShareOfGate = 0.45;
 
   /// Fills the card out to [_autoFillTarget] bouts with whoever is
   /// available, leaving anything already booked exactly where it is.
   void _autoFill(List<Fighter> roster) {
     final controller = context.read<GameController>();
-    // What the night can plausibly gross, at the room and price the
-    // player has actually chosen, times the share of it that sensibly
-    // goes to fighters. Booking a card the gate cannot cover is the
-    // easiest way to lose money in this game, and an auto-filler that
-    // did it by default would be a trap rather than a convenience.
+    // Build the night the roster deserves, then cut it back to the
+    // length that actually makes money. Another bout costs two purses
+    // but also deepens the show, so where to stop is a trade the finance
+    // model can answer exactly — and answers better than any fixed
+    // share of the gate could.
     final ticketPrice =
         int.tryParse(_ticketPriceController.text) ?? _venue.suggestedTicketPrice;
     final org = controller.organization;
-    final expectedHeads = org == null
-        ? _venue.capacity
-        : EventFinanceCalculator.baselineAttendance(
-            organization: org,
-            venue: _venue,
-            ticketPrice: ticketPrice,
-          );
-    final purseBudget =
-        (expectedHeads * ticketPrice * _purseShareOfGate).round();
+    final lookup = {for (final f in controller.allFighters) f.id: f};
+    final wanted = _autoFillTarget - _card.length;
 
-    final added = CardMatchmaker.build(
+    var added = CardMatchmaker.build(
       roster: roster,
-      bouts: _autoFillTarget - _card.length,
+      bouts: wanted,
       unavailable: _usedFighterIds,
-      purseBudget: purseBudget,
       priorMeetings: controller.priorMeetingsByPair,
     );
+    if (org != null && added.isNotEmpty) {
+      // Trim against the whole night, bouts already on the card
+      // included — they are part of what this show draws and costs.
+      final whole = EventFinanceCalculator.trimToBestNet(
+        venue: _venue,
+        ticketPrice: ticketPrice,
+        organization: org,
+        card: [..._card, ...added],
+        fighterLookup: lookup,
+      );
+      final keep = (whole.length - _card.length).clamp(0, added.length);
+      added = added.take(keep).toList();
+    }
     if (added.isEmpty) {
       _showError('Nobody left to match up.');
       return;
+    }
+
+    // A short night means another bout would have cost more than it
+    // brought in, not that the roster ran out. Say which, and say what
+    // to do about it — the answer to "your fighters are worth more than
+    // this room takes" is a bigger room, not worse fights.
+    if (added.length < wanted && org != null) {
+      final couldHaveFilled = roster.length - _usedFighterIds.length >=
+          (wanted - added.length) * 2;
+      if (couldHaveFilled) {
+        _explainShortCard(controller, org, [..._card, ...added]);
+      }
     }
 
     setState(() {
@@ -798,7 +843,12 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(message),
+      // Long enough to read a sentence that names a venue and a price —
+      // the default two seconds is not.
+      duration: const Duration(seconds: 6),
+    ));
   }
 }
 

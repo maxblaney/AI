@@ -161,11 +161,27 @@ class CardMatchmaker {
       spent += candidate.purseCost;
     }
 
-    // The budget is a preference, not a wall. A promotion whose own
-    // roster is priced beyond what it draws would otherwise get a
-    // two-fight card and no explanation; better to fill the night with
-    // the cheapest bouts left and let the results page show the player
-    // exactly where the money went.
+    // Anything still missing gets filled cheapest-first — and, unlike
+    // before, still inside the budget.
+    //
+    // This pass used to ignore the budget entirely: it didn't check it
+    // and didn't even add to [spent]. The comment justifying that said
+    // the budget was "a preference, not a wall", on the reasoning that a
+    // promotion briefly unable to afford a full card should get one
+    // anyway. That is fine while the shortfall is temporary and wrong
+    // once it is permanent. A climbing promotion's whole roster inflates
+    // — fighters win, gain popularity, and pay rises geometrically with
+    // overall — until *every* bout is over budget, the pass above places
+    // nothing, and this one silently books all ten unchecked. Measured,
+    // one such card took \$235,200 at the gate and paid out about
+    // \$700,000: a \$531,000 loss from a button that reported nothing
+    // wrong. The safety valve had quietly become the whole mechanism.
+    //
+    // So it stops when the money does, and the night comes up short. A
+    // short card is worth less at the gate (see the depth multiplier in
+    // EventFinanceCalculator) but it is honest, and it is information:
+    // a promotion that can no longer fill a card has outgrown the room
+    // it is playing, and the fix is a bigger room, not a worse show.
     if (picked.length < bouts) {
       final byCost = [...candidates]
         ..sort((x, y) => x.purseCost.compareTo(y.purseCost));
@@ -174,10 +190,14 @@ class CardMatchmaker {
         if (used.contains(candidate.a.id) || used.contains(candidate.b.id)) {
           continue;
         }
+        if (purseBudget != null && spent + candidate.purseCost > purseBudget) {
+          continue;
+        }
         used
           ..add(candidate.a.id)
           ..add(candidate.b.id);
         picked.add(candidate);
+        spent += candidate.purseCost;
       }
     }
 
