@@ -1068,8 +1068,12 @@ class GameController extends ChangeNotifier {
 
     final refreshes = weeksElapsed ~/ weeksPerRefresh;
     for (var i = 0; i < refreshes; i++) {
+      // Stamped with the week they turned up, so the scouting view can
+      // tell a fighter who arrived this month from one who has been on
+      // the market for three years.
+      final arrivedWeek = org.lastTalentRefreshWeek + (i + 1) * weeksPerRefresh;
       for (final fighter in generateMonthlyTalentPool(random: _rng)) {
-        await _fighterRepo.save(fighter);
+        await _fighterRepo.save(fighter.copyWith(arrivedWeek: arrivedWeek));
       }
     }
     final updated = org.copyWith(

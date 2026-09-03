@@ -593,7 +593,13 @@ class EventFinanceCalculator {
 
     var best = venue.suggestedTicketPrice;
     var bestGate = -1;
-    for (var price = 10; price <= 600; price += 5) {
+    // Up to \$2,000, because a promotion with a following in the millions
+    // genuinely gets there: measured, a 20-million-fan promotion fills a
+    // 25,000 room at \$600 with demand still 6,000 over capacity. A
+    // marquee card at that level really does average several hundred a
+    // seat, so a search that stopped at \$600 was capping the answer
+    // rather than finding it.
+    for (var price = 10; price <= 2000; price += 5) {
       final gate = project(
         venue: venue,
         ticketPrice: price,

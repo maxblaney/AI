@@ -106,6 +106,7 @@ Fighter fighterFromRow(FighterRow row, ContractRow? contractRow) {
     belts: _beltsFromJson(row.beltsJson),
     interimBelts: _beltsFromJson(row.interimBeltsJson),
     suspendedUntilWeek: row.suspendedUntilWeek,
+    arrivedWeek: row.arrivedWeek,
   );
 }
 
@@ -199,6 +200,7 @@ FightersCompanion fighterToCompanion(Fighter fighter, String saveId) {
     beltsJson: Value(_beltsToJson(fighter.belts)),
     interimBeltsJson: Value(_beltsToJson(fighter.interimBelts)),
     suspendedUntilWeek: Value(fighter.suspendedUntilWeek),
+    arrivedWeek: Value(fighter.arrivedWeek),
   );
 }
 

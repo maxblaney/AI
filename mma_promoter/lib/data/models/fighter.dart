@@ -79,6 +79,15 @@ class Fighter {
   /// booked until [Organization.currentWeek] passes it.
   final int? suspendedUntilWeek;
 
+  /// The game week this fighter first appeared in the world.
+  ///
+  /// Everyone who came with the save has week 1; the monthly intake is
+  /// stamped with the week it arrived. Exists so "who is new" is a fact
+  /// rather than a guess — with a talent pool well past a thousand, the
+  /// question a matchmaker actually asks is who has turned up since they
+  /// last looked.
+  final int arrivedWeek;
+
   const Fighter({
     required this.id,
     required this.name,
@@ -114,6 +123,7 @@ class Fighter {
     this.belts = const {},
     this.interimBelts = const {},
     this.suspendedUntilWeek,
+    this.arrivedWeek = 1,
   });
 
   bool get isSigned => contract != null;
@@ -208,6 +218,7 @@ class Fighter {
     Set<WeightClass>? belts,
     Set<WeightClass>? interimBelts,
     int? suspendedUntilWeek,
+    int? arrivedWeek,
     bool clearSuspension = false,
   }) {
     return Fighter(
@@ -251,6 +262,7 @@ class Fighter {
       suspendedUntilWeek: clearSuspension
           ? null
           : (suspendedUntilWeek ?? this.suspendedUntilWeek),
+      arrivedWeek: arrivedWeek ?? this.arrivedWeek,
     );
   }
 }

@@ -1,14 +1,47 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/models/models.dart';
 import '../../../data/seed/roster_seed.dart';
+import '../../../domain/finance/pay_scale.dart';
+import '../../../domain/scouting/division_needs.dart';
 import '../../state/game_controller.dart';
 import '../../widgets/fighter_list_tile.dart';
 import 'fighter_editor_screen.dart';
 import 'fighter_profile_screen.dart';
 
-enum RosterSortKey { name, age, weightClass, wins, popularity, overall }
+enum RosterSortKey {
+  name,
+  age,
+  weightClass,
+  wins,
+  popularity,
+  overall,
+  potential,
+  askingPrice,
+  newest,
+}
+
+/// Age bands a scout actually thinks in: someone to build, someone in
+/// their prime, someone on the way out.
+enum AgeBand { any, prospect, prime, veteran }
+
+extension AgeBandInfo on AgeBand {
+  String get label => switch (this) {
+        AgeBand.any => 'Any age',
+        AgeBand.prospect => 'Under 26',
+        AgeBand.prime => '26-32',
+        AgeBand.veteran => '33+',
+      };
+
+  bool matches(int age) => switch (this) {
+        AgeBand.any => true,
+        AgeBand.prospect => age < 26,
+        AgeBand.prime => age >= 26 && age <= 32,
+        AgeBand.veteran => age > 32,
+      };
+}
 
 extension on RosterSortKey {
   String get label {
@@ -25,9 +58,22 @@ extension on RosterSortKey {
         return 'Popularity';
       case RosterSortKey.overall:
         return 'Overall';
+      case RosterSortKey.potential:
+        return 'Potential';
+      case RosterSortKey.askingPrice:
+        return 'Asking Price';
+      case RosterSortKey.newest:
+        return 'Recently Arrived';
     }
   }
 }
+
+/// What this fighter would cost to put under contract right now — show
+/// money, which is charged as the signing bonus. The number a scout is
+/// actually shopping against.
+int _askingPrice(Fighter fighter) =>
+    PayScale.suggest(overall: fighter.overall, popularity: fighter.popularity)
+        .showMoney;
 
 class RosterScreen extends StatefulWidget {
   const RosterScreen({super.key});
@@ -46,8 +92,19 @@ class _RosterScreenState extends State<RosterScreen> {
   final Set<String> _nationalityFilter = {};
   WeightClass? _weightClassFilter;
   final Set<FightingStyle> _styleFilter = {};
+
+  /// Scouting filters. They apply to both tabs — narrowing your own
+  /// roster by age is a fair question too — but they exist for the
+  /// talent pool, which runs past a thousand names on an older save.
+  AgeBand _ageBand = AgeBand.any;
+  bool _newArrivalsOnly = false;
+  bool _affordableOnly = false;
+
   RosterSortKey _sortKey = RosterSortKey.name;
   bool _sortDescending = false;
+
+  /// How recently a fighter has to have turned up to count as new.
+  static const int newArrivalWeeks = 8;
 
   @override
   void dispose() {
@@ -58,15 +115,35 @@ class _RosterScreenState extends State<RosterScreen> {
   bool get _hasActiveFilters =>
       _nationalityFilter.isNotEmpty ||
       _weightClassFilter != null ||
-      _styleFilter.isNotEmpty;
+      _styleFilter.isNotEmpty ||
+      _ageBand != AgeBand.any ||
+      _newArrivalsOnly ||
+      _affordableOnly;
 
   /// Anything at all narrowing the list, search included — drives the
   /// "nothing matched" wording, which has to name the search or it reads
   /// as an empty talent pool.
   bool get _isNarrowed => _hasActiveFilters || _query.isNotEmpty;
 
-  List<Fighter> _apply(List<Fighter> fighters) {
+  List<Fighter> _apply(
+    List<Fighter> fighters, {
+    int currentWeek = 1,
+    int? cashBalance,
+  }) {
     var result = fighters.where((f) {
+      if (!_ageBand.matches(f.age)) return false;
+      if (_newArrivalsOnly &&
+          currentWeek - f.arrivedWeek >= newArrivalWeeks) {
+        return false;
+      }
+      // "Can I actually sign him" is the first question a scout asks and
+      // the one the list could never answer — you found out by opening a
+      // profile and reading the market rate.
+      if (_affordableOnly &&
+          cashBalance != null &&
+          _askingPrice(f) > cashBalance) {
+        return false;
+      }
       // Name first, then nationality — typing "brazil" to find Brazilians
       // is a reasonable thing to expect of a search box.
       if (_query.isNotEmpty &&
@@ -101,6 +178,12 @@ class _RosterScreenState extends State<RosterScreen> {
           return a.popularity.compareTo(b.popularity);
         case RosterSortKey.overall:
           return a.overall.compareTo(b.overall);
+        case RosterSortKey.potential:
+          return a.potential.compareTo(b.potential);
+        case RosterSortKey.askingPrice:
+          return _askingPrice(a).compareTo(_askingPrice(b));
+        case RosterSortKey.newest:
+          return a.arrivedWeek.compareTo(b.arrivedWeek);
       }
     }
 
@@ -112,6 +195,8 @@ class _RosterScreenState extends State<RosterScreen> {
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<GameController>();
+    final currentWeek = controller.organization?.currentWeek ?? 1;
+    final cash = controller.organization?.cashBalance;
 
     return DefaultTabController(
       length: 2,
@@ -159,20 +244,43 @@ class _RosterScreenState extends State<RosterScreen> {
               child: TabBarView(
                 children: [
                   _FighterList(
-                    fighters: _apply(controller.signedRoster),
+                    fighters: _apply(controller.signedRoster,
+                        currentWeek: currentWeek, cashBalance: cash),
                     total: controller.signedRoster.length,
                     noun: 'signed fighter',
                     emptyText: _isNarrowed
                         ? 'No signed fighters match your search or filters.'
                         : 'No fighters signed yet.',
                   ),
-                  _FighterList(
-                    fighters: _apply(controller.talentPool),
-                    total: controller.talentPool.length,
-                    noun: 'free agent',
-                    emptyText: _isNarrowed
-                        ? 'No free agents match your search or filters.'
-                        : 'No free agents available.',
+                  Column(
+                    children: [
+                      // Which divisions can't make a fight, at the top of
+                      // the market you'd fix them in. "Sign somebody" is
+                      // useless advice against eighteen hundred names;
+                      // "you have two lightweights" is not.
+                      _ShortageBanner(
+                        shortages:
+                            DivisionNeeds.shortages(controller.signedRoster),
+                        selected: _weightClassFilter,
+                        onPick: (division) => setState(() {
+                          _weightClassFilter =
+                              _weightClassFilter == division ? null : division;
+                        }),
+                      ),
+                      Expanded(
+                        child: _FighterList(
+                          fighters: _apply(controller.talentPool,
+                              currentWeek: currentWeek, cashBalance: cash),
+                          total: controller.talentPool.length,
+                          noun: 'free agent',
+                          currentWeek: currentWeek,
+                          showScoutingDetail: true,
+                          emptyText: _isNarrowed
+                              ? 'No free agents match your search or filters.'
+                              : 'No free agents available.',
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -188,6 +296,9 @@ class _RosterScreenState extends State<RosterScreen> {
       _nationalityFilter.clear();
       _weightClassFilter = null;
       _styleFilter.clear();
+      _ageBand = AgeBand.any;
+      _newArrivalsOnly = false;
+      _affordableOnly = false;
     });
   }
 
@@ -253,12 +364,63 @@ class _RosterScreenState extends State<RosterScreen> {
                         _nationalityFilter.clear();
                         _weightClassFilter = null;
                         _styleFilter.clear();
+                        _ageBand = AgeBand.any;
+                        _newArrivalsOnly = false;
+                        _affordableOnly = false;
                       });
                       setSheetState(() {});
                     },
                     child: const Text('Clear All'),
                   ),
                 ],
+              ),
+              const SizedBox(height: 8),
+              // The scouting filters, above the descriptive ones: they
+              // are the questions asked of a market, not of a person.
+              Text('Age', style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: [
+                  for (final band in AgeBand.values)
+                    ChoiceChip(
+                      label: Text(band.label),
+                      selected: _ageBand == band,
+                      onSelected: (_) {
+                        setState(() => _ageBand = band);
+                        setSheetState(() {});
+                      },
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('New arrivals only'),
+                subtitle: Text(
+                  'Turned pro in the last '
+                  '${_RosterScreenState.newArrivalWeeks} weeks',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                value: _newArrivalsOnly,
+                onChanged: (v) {
+                  setState(() => _newArrivalsOnly = v);
+                  setSheetState(() {});
+                },
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Only what I can afford'),
+                subtitle: Text(
+                  'Hides anyone whose signing bonus is more than the bank',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                value: _affordableOnly,
+                onChanged: (v) {
+                  setState(() => _affordableOnly = v);
+                  setSheetState(() {});
+                },
               ),
               const SizedBox(height: 8),
               Text('Weight Class', style: Theme.of(context).textTheme.titleSmall),
@@ -426,11 +588,19 @@ class _FighterList extends StatelessWidget {
   final String noun;
   final String emptyText;
 
+  /// Adds the line a scout is reading for: asking price, potential, and
+  /// whether this one has just turned up. Off on your own roster, where
+  /// none of it is a question any more.
+  final bool showScoutingDetail;
+  final int currentWeek;
+
   const _FighterList({
     required this.fighters,
     required this.total,
     required this.noun,
     required this.emptyText,
+    this.showScoutingDetail = false,
+    this.currentWeek = 1,
   });
 
   @override
@@ -461,7 +631,7 @@ class _FighterList extends StatelessWidget {
             itemCount: fighters.length,
             itemBuilder: (context, index) {
               final fighter = fighters[index];
-              return FighterListTile(
+              final tile = FighterListTile(
                 fighter: fighter,
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
@@ -469,10 +639,151 @@ class _FighterList extends StatelessWidget {
                   ),
                 ),
               );
+              if (!showScoutingDetail) return tile;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  tile,
+                  _ScoutingLine(fighter: fighter, currentWeek: currentWeek),
+                  const Divider(height: 1),
+                ],
+              );
             },
           ),
         ),
       ],
+    );
+  }
+}
+
+/// The line under a free agent that says whether to bother: what they
+/// would cost, how old they are, how far they might still come, and
+/// whether they only turned up this month.
+///
+/// All of it was reachable before — by opening the profile, one fighter
+/// at a time, out of a pool past a thousand. Scouting is a comparison,
+/// and a comparison you have to make one page at a time isn't one.
+class _ScoutingLine extends StatelessWidget {
+  final Fighter fighter;
+  final int currentWeek;
+
+  const _ScoutingLine({required this.fighter, required this.currentWeek});
+
+  @override
+  Widget build(BuildContext context) {
+    final currency = NumberFormat.simpleCurrency(decimalDigits: 0);
+    final scheme = Theme.of(context).colorScheme;
+    final small = Theme.of(context).textTheme.bodySmall;
+    final isNew =
+        currentWeek - fighter.arrivedWeek < _RosterScreenState.newArrivalWeeks;
+    // Room left to grow, which is the whole case for signing a 22-year-old
+    // over a finished 30-year-old with the same overall today.
+    final upside = (fighter.potential - fighter.overall).round();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Wrap(
+        spacing: 10,
+        runSpacing: 4,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          if (isNew)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              decoration: BoxDecoration(
+                color: scheme.primary,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                'NEW',
+                style: small?.copyWith(
+                  color: scheme.onPrimary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 10,
+                ),
+              ),
+            ),
+          Text('Age ${fighter.age}', style: small),
+          Text('OVR ${fighter.overall.round()}', style: small),
+          if (upside > 2)
+            Text(
+              'Upside +$upside',
+              style: small?.copyWith(
+                color: Colors.lightGreenAccent,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          Text(
+            '${currency.format(_askingPrice(fighter))} to show',
+            style: small?.copyWith(color: scheme.onSurfaceVariant),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The divisions that cannot make a fight, above the market you would fix
+/// them in. Tapping one filters the pool to it.
+class _ShortageBanner extends StatelessWidget {
+  final List<({WeightClass division, int count, DivisionNeed need})> shortages;
+  final WeightClass? selected;
+  final ValueChanged<WeightClass> onPick;
+
+  const _ShortageBanner({
+    required this.shortages,
+    required this.selected,
+    required this.onPick,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (shortages.isEmpty) return const SizedBox.shrink();
+    final scheme = Theme.of(context).colorScheme;
+
+    Color colourFor(DivisionNeed need) => switch (need) {
+          DivisionNeed.empty => scheme.error,
+          DivisionNeed.critical => scheme.error,
+          DivisionNeed.thin => Colors.amber,
+          DivisionNeed.fine => scheme.onSurfaceVariant,
+        };
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Short of fighters here',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          const SizedBox(height: 4),
+          SizedBox(
+            height: 34,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: shortages.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 6),
+              itemBuilder: (context, i) {
+                final s = shortages[i];
+                final isSelected = selected == s.division;
+                return ActionChip(
+                  onPressed: () => onPick(s.division),
+                  backgroundColor:
+                      isSelected ? scheme.primaryContainer : null,
+                  side: BorderSide(color: colourFor(s.need)),
+                  label: Text(
+                    '${s.division.label} · ${s.count}',
+                    style: TextStyle(color: colourFor(s.need)),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

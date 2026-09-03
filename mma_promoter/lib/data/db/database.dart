@@ -25,7 +25,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   /// Games persist on every platform now (web included), so a schema
   /// change without a matching migration step here would silently break
@@ -178,6 +178,13 @@ class AppDatabase extends _$AppDatabase {
             await customStatement(
               'UPDATE organizations SET last_aged_week = current_week',
             );
+          }
+          if (from < 12) {
+            // v12 records when a fighter turned up, so the scouting view
+            // can say who is new. Everyone already in an existing save
+            // keeps the week-1 default: they were all here before anyone
+            // was counting, and dating them now would be inventing.
+            await m.addColumn(fighters, fighters.arrivedWeek);
           }
         },
       );

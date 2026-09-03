@@ -604,6 +604,14 @@ class $FightersTable extends Fighters
   late final GeneratedColumn<int> suspendedUntilWeek = GeneratedColumn<int>(
       'suspended_until_week', aliasedName, true,
       type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _arrivedWeekMeta =
+      const VerificationMeta('arrivedWeek');
+  @override
+  late final GeneratedColumn<int> arrivedWeek = GeneratedColumn<int>(
+      'arrived_week', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(1));
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -693,7 +701,8 @@ class $FightersTable extends Fighters
         lastFoughtWeek,
         beltsJson,
         interimBeltsJson,
-        suspendedUntilWeek
+        suspendedUntilWeek,
+        arrivedWeek
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1249,6 +1258,12 @@ class $FightersTable extends Fighters
           suspendedUntilWeek.isAcceptableOrUnknown(
               data['suspended_until_week']!, _suspendedUntilWeekMeta));
     }
+    if (data.containsKey('arrived_week')) {
+      context.handle(
+          _arrivedWeekMeta,
+          arrivedWeek.isAcceptableOrUnknown(
+              data['arrived_week']!, _arrivedWeekMeta));
+    }
     return context;
   }
 
@@ -1436,6 +1451,8 @@ class $FightersTable extends Fighters
           DriftSqlType.string, data['${effectivePrefix}interim_belts_json'])!,
       suspendedUntilWeek: attachedDatabase.typeMapping.read(
           DriftSqlType.int, data['${effectivePrefix}suspended_until_week']),
+      arrivedWeek: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}arrived_week'])!,
     );
   }
 
@@ -1563,6 +1580,9 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
   /// Absolute game week a suspension runs through (a failed drug test,
   /// say). Null when eligible to compete.
   final int? suspendedUntilWeek;
+
+  /// Game week this fighter first appeared. See [Fighter.arrivedWeek].
+  final int arrivedWeek;
   const FighterRow(
       {required this.id,
       required this.name,
@@ -1651,7 +1671,8 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       this.lastFoughtWeek,
       required this.beltsJson,
       required this.interimBeltsJson,
-      this.suspendedUntilWeek});
+      this.suspendedUntilWeek,
+      required this.arrivedWeek});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -1754,6 +1775,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
     if (!nullToAbsent || suspendedUntilWeek != null) {
       map['suspended_until_week'] = Variable<int>(suspendedUntilWeek);
     }
+    map['arrived_week'] = Variable<int>(arrivedWeek);
     return map;
   }
 
@@ -1857,6 +1879,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       suspendedUntilWeek: suspendedUntilWeek == null && nullToAbsent
           ? const Value.absent()
           : Value(suspendedUntilWeek),
+      arrivedWeek: Value(arrivedWeek),
     );
   }
 
@@ -1961,6 +1984,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       beltsJson: serializer.fromJson<String>(json['beltsJson']),
       interimBeltsJson: serializer.fromJson<String>(json['interimBeltsJson']),
       suspendedUntilWeek: serializer.fromJson<int?>(json['suspendedUntilWeek']),
+      arrivedWeek: serializer.fromJson<int>(json['arrivedWeek']),
     );
   }
   @override
@@ -2056,6 +2080,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       'beltsJson': serializer.toJson<String>(beltsJson),
       'interimBeltsJson': serializer.toJson<String>(interimBeltsJson),
       'suspendedUntilWeek': serializer.toJson<int?>(suspendedUntilWeek),
+      'arrivedWeek': serializer.toJson<int>(arrivedWeek),
     };
   }
 
@@ -2147,7 +2172,8 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           Value<int?> lastFoughtWeek = const Value.absent(),
           String? beltsJson,
           String? interimBeltsJson,
-          Value<int?> suspendedUntilWeek = const Value.absent()}) =>
+          Value<int?> suspendedUntilWeek = const Value.absent(),
+          int? arrivedWeek}) =>
       FighterRow(
         id: id ?? this.id,
         name: name ?? this.name,
@@ -2250,6 +2276,7 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
         suspendedUntilWeek: suspendedUntilWeek.present
             ? suspendedUntilWeek.value
             : this.suspendedUntilWeek,
+        arrivedWeek: arrivedWeek ?? this.arrivedWeek,
       );
   FighterRow copyWithCompanion(FightersCompanion data) {
     return FighterRow(
@@ -2432,6 +2459,8 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
       suspendedUntilWeek: data.suspendedUntilWeek.present
           ? data.suspendedUntilWeek.value
           : this.suspendedUntilWeek,
+      arrivedWeek:
+          data.arrivedWeek.present ? data.arrivedWeek.value : this.arrivedWeek,
     );
   }
 
@@ -2525,7 +2554,8 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           ..write('lastFoughtWeek: $lastFoughtWeek, ')
           ..write('beltsJson: $beltsJson, ')
           ..write('interimBeltsJson: $interimBeltsJson, ')
-          ..write('suspendedUntilWeek: $suspendedUntilWeek')
+          ..write('suspendedUntilWeek: $suspendedUntilWeek, ')
+          ..write('arrivedWeek: $arrivedWeek')
           ..write(')'))
         .toString();
   }
@@ -2619,7 +2649,8 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
         lastFoughtWeek,
         beltsJson,
         interimBeltsJson,
-        suspendedUntilWeek
+        suspendedUntilWeek,
+        arrivedWeek
       ]);
   @override
   bool operator ==(Object other) =>
@@ -2712,7 +2743,8 @@ class FighterRow extends DataClass implements Insertable<FighterRow> {
           other.lastFoughtWeek == this.lastFoughtWeek &&
           other.beltsJson == this.beltsJson &&
           other.interimBeltsJson == this.interimBeltsJson &&
-          other.suspendedUntilWeek == this.suspendedUntilWeek);
+          other.suspendedUntilWeek == this.suspendedUntilWeek &&
+          other.arrivedWeek == this.arrivedWeek);
 }
 
 class FightersCompanion extends UpdateCompanion<FighterRow> {
@@ -2804,6 +2836,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
   final Value<String> beltsJson;
   final Value<String> interimBeltsJson;
   final Value<int?> suspendedUntilWeek;
+  final Value<int> arrivedWeek;
   final Value<int> rowid;
   const FightersCompanion({
     this.id = const Value.absent(),
@@ -2894,6 +2927,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     this.beltsJson = const Value.absent(),
     this.interimBeltsJson = const Value.absent(),
     this.suspendedUntilWeek = const Value.absent(),
+    this.arrivedWeek = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   FightersCompanion.insert({
@@ -2985,6 +3019,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     this.beltsJson = const Value.absent(),
     this.interimBeltsJson = const Value.absent(),
     this.suspendedUntilWeek = const Value.absent(),
+    this.arrivedWeek = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         name = Value(name),
@@ -3119,6 +3154,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     Expression<String>? beltsJson,
     Expression<String>? interimBeltsJson,
     Expression<int>? suspendedUntilWeek,
+    Expression<int>? arrivedWeek,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -3222,6 +3258,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
       if (interimBeltsJson != null) 'interim_belts_json': interimBeltsJson,
       if (suspendedUntilWeek != null)
         'suspended_until_week': suspendedUntilWeek,
+      if (arrivedWeek != null) 'arrived_week': arrivedWeek,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -3315,6 +3352,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
       Value<String>? beltsJson,
       Value<String>? interimBeltsJson,
       Value<int?>? suspendedUntilWeek,
+      Value<int>? arrivedWeek,
       Value<int>? rowid}) {
     return FightersCompanion(
       id: id ?? this.id,
@@ -3410,6 +3448,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
       beltsJson: beltsJson ?? this.beltsJson,
       interimBeltsJson: interimBeltsJson ?? this.interimBeltsJson,
       suspendedUntilWeek: suspendedUntilWeek ?? this.suspendedUntilWeek,
+      arrivedWeek: arrivedWeek ?? this.arrivedWeek,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -3687,6 +3726,9 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
     if (suspendedUntilWeek.present) {
       map['suspended_until_week'] = Variable<int>(suspendedUntilWeek.value);
     }
+    if (arrivedWeek.present) {
+      map['arrived_week'] = Variable<int>(arrivedWeek.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -3784,6 +3826,7 @@ class FightersCompanion extends UpdateCompanion<FighterRow> {
           ..write('beltsJson: $beltsJson, ')
           ..write('interimBeltsJson: $interimBeltsJson, ')
           ..write('suspendedUntilWeek: $suspendedUntilWeek, ')
+          ..write('arrivedWeek: $arrivedWeek, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -8248,6 +8291,7 @@ typedef $$FightersTableCreateCompanionBuilder = FightersCompanion Function({
   Value<String> beltsJson,
   Value<String> interimBeltsJson,
   Value<int?> suspendedUntilWeek,
+  Value<int> arrivedWeek,
   Value<int> rowid,
 });
 typedef $$FightersTableUpdateCompanionBuilder = FightersCompanion Function({
@@ -8339,6 +8383,7 @@ typedef $$FightersTableUpdateCompanionBuilder = FightersCompanion Function({
   Value<String> beltsJson,
   Value<String> interimBeltsJson,
   Value<int?> suspendedUntilWeek,
+  Value<int> arrivedWeek,
   Value<int> rowid,
 });
 
@@ -8641,6 +8686,9 @@ class $$FightersTableFilterComposer
   ColumnFilters<int> get suspendedUntilWeek => $composableBuilder(
       column: $table.suspendedUntilWeek,
       builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get arrivedWeek => $composableBuilder(
+      column: $table.arrivedWeek, builder: (column) => ColumnFilters(column));
 }
 
 class $$FightersTableOrderingComposer
@@ -8954,6 +9002,9 @@ class $$FightersTableOrderingComposer
   ColumnOrderings<int> get suspendedUntilWeek => $composableBuilder(
       column: $table.suspendedUntilWeek,
       builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get arrivedWeek => $composableBuilder(
+      column: $table.arrivedWeek, builder: (column) => ColumnOrderings(column));
 }
 
 class $$FightersTableAnnotationComposer
@@ -9228,6 +9279,9 @@ class $$FightersTableAnnotationComposer
 
   GeneratedColumn<int> get suspendedUntilWeek => $composableBuilder(
       column: $table.suspendedUntilWeek, builder: (column) => column);
+
+  GeneratedColumn<int> get arrivedWeek => $composableBuilder(
+      column: $table.arrivedWeek, builder: (column) => column);
 }
 
 class $$FightersTableTableManager extends RootTableManager<
@@ -9341,6 +9395,7 @@ class $$FightersTableTableManager extends RootTableManager<
             Value<String> beltsJson = const Value.absent(),
             Value<String> interimBeltsJson = const Value.absent(),
             Value<int?> suspendedUntilWeek = const Value.absent(),
+            Value<int> arrivedWeek = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               FightersCompanion(
@@ -9432,6 +9487,7 @@ class $$FightersTableTableManager extends RootTableManager<
             beltsJson: beltsJson,
             interimBeltsJson: interimBeltsJson,
             suspendedUntilWeek: suspendedUntilWeek,
+            arrivedWeek: arrivedWeek,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -9523,6 +9579,7 @@ class $$FightersTableTableManager extends RootTableManager<
             Value<String> beltsJson = const Value.absent(),
             Value<String> interimBeltsJson = const Value.absent(),
             Value<int?> suspendedUntilWeek = const Value.absent(),
+            Value<int> arrivedWeek = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               FightersCompanion.insert(
@@ -9614,6 +9671,7 @@ class $$FightersTableTableManager extends RootTableManager<
             beltsJson: beltsJson,
             interimBeltsJson: interimBeltsJson,
             suspendedUntilWeek: suspendedUntilWeek,
+            arrivedWeek: arrivedWeek,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0

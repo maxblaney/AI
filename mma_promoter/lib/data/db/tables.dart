@@ -140,6 +140,9 @@ class Fighters extends Table {
   /// say). Null when eligible to compete.
   IntColumn get suspendedUntilWeek => integer().nullable()();
 
+  /// Game week this fighter first appeared. See [Fighter.arrivedWeek].
+  IntColumn get arrivedWeek => integer().withDefault(const Constant(1))();
+
   @override
   Set<Column> get primaryKey => {id};
 }
