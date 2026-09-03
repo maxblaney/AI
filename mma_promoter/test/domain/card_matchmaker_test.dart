@@ -48,6 +48,38 @@ void main() {
       expect(card, hasLength(6));
     });
 
+    test('a bout already run is passed over for one that has not been', () {
+      // Four evenly-matched lightweights: without a history the top two
+      // headline. Having already fought twice should push that pairing
+      // down the card.
+      final roster = [
+        for (var i = 0; i < 4; i++) _signed('f$i', lw, elo: 1600 - i * 5),
+      ];
+
+      final fresh = CardMatchmaker.build(roster: roster, bouts: 1);
+      expect(
+        {fresh.first.fighterAId, fresh.first.fighterBId},
+        {'f0', 'f1'},
+      );
+
+      final withHistory = CardMatchmaker.build(
+        roster: roster,
+        bouts: 1,
+        priorMeetings: {CardMatchmaker.pairKey('f0', 'f1'): 2},
+      );
+      expect(
+        {withHistory.first.fighterAId, withHistory.first.fighterBId},
+        isNot({'f0', 'f1'}),
+      );
+    });
+
+    test('pair keys read the same whichever corner is named first', () {
+      expect(
+        CardMatchmaker.pairKey('ade', 'szy'),
+        CardMatchmaker.pairKey('szy', 'ade'),
+      );
+    });
+
     test('fighters are matched inside their own division', () {
       final roster = [
         for (var i = 0; i < 4; i++) _signed('lw$i', lw),

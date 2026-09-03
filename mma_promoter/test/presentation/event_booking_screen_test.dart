@@ -257,9 +257,12 @@ void main() {
     await addFight(tester, 'Fighter A', 'Fighter B');
     await addFight(tester, 'Fighter C', 'Fighter D');
 
+    // Tile titles are spans now — a rank prefix is styled differently
+    // from the name it sits in front of — so read the flattened text
+    // rather than Text.data, which a Text.rich leaves null.
     List<String> order() => tester
         .widgetList<Text>(find.byType(Text))
-        .map((t) => t.data)
+        .map((t) => t.data ?? t.textSpan?.toPlainText())
         .whereType<String>()
         .where((t) => t.contains(' vs '))
         .toList();

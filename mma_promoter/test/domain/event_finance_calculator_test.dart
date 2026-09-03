@@ -98,6 +98,95 @@ void main() {
   _cardSizeAndPopularityTests();
   _venueAndPricingTests();
 
+  group('EventFinanceCalculator.project', () {
+    test('an empty card costs the venue and nothing else', () {
+      final p = EventFinanceCalculator.project(
+        venue: Venue.regionalUsa,
+        ticketPrice: 55,
+        organization: _organization(),
+        card: const [],
+        fighterLookup: const {},
+      );
+
+      expect(p.attendance, 0);
+      expect(p.revenue, 0);
+      expect(p.purses, 0);
+      expect(p.venueCost, Venue.regionalUsa.baseCost);
+      expect(p.net, -Venue.regionalUsa.baseCost);
+    });
+
+    test('lands close to what the night actually returns', () {
+      // The projection is the same demand model with the luck roll left
+      // out, so it should sit inside the +/-15% the roll can move.
+      final card = _plainCard(8);
+      final lookup = _plainLookup(8);
+      const venue = Venue.regionalUsa;
+      final org = _organization();
+
+      final projected = EventFinanceCalculator.project(
+        venue: venue,
+        ticketPrice: 55,
+        organization: org,
+        card: card,
+        fighterLookup: lookup,
+      );
+      final actual = EventFinanceCalculator(random: Random(9)).calculate(
+        venue: venue,
+        ticketPrice: 55,
+        organization: org,
+        card: card,
+        fighterLookup: lookup,
+        promotionBudgetSpent: 0,
+      );
+
+      expect(
+        projected.attendance,
+        closeTo(actual.attendance, actual.attendance * 0.2),
+      );
+      // Purses are the half that is genuinely knowable up front, so the
+      // projection should be within one win bonus per bout of the truth.
+      expect(projected.purses, closeTo(actual.breakdown.purses, 8 * 1000));
+    });
+
+    test('an expensive card projects a loss', () {
+      final card = _plainCard(3);
+      final lookup = {
+        for (var i = 0; i < 3; i++) ...{
+          'a$i': _fighter('a$i', popularity: 20, showMoney: 60000,
+              winBonus: 60000),
+          'b$i': _fighter('b$i', popularity: 20, showMoney: 60000,
+              winBonus: 60000),
+        },
+      };
+
+      final p = EventFinanceCalculator.project(
+        venue: Venue.regionalUsa,
+        ticketPrice: 55,
+        organization: _organization(),
+        card: card,
+        fighterLookup: lookup,
+      );
+
+      expect(p.net, lessThan(0));
+      expect(p.purseShareOfRevenue, greaterThan(1));
+    });
+
+    test('a bigger following fills more of the room for the same card', () {
+      EventProjection at(int fanbase) => EventFinanceCalculator.project(
+            venue: Venue.regionalUsa,
+            ticketPrice: 55,
+            organization: _organization(fanbaseSize: fanbase),
+            card: _plainCard(8),
+            fighterLookup: _plainLookup(8),
+          );
+
+      // The whole point of climbing tiers: the same show draws better
+      // for a promotion people have heard of.
+      expect(at(80000).attendance, greaterThan(at(8000).attendance));
+      expect(at(8000).attendance, greaterThan(at(800).attendance));
+    });
+  });
+
   group('EventFinanceCalculator', () {
     test('attendance never exceeds venue capacity', () {
       final calculator = EventFinanceCalculator(random: Random(1));

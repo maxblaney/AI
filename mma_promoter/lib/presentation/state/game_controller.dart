@@ -17,6 +17,7 @@ import '../../data/repositories/repository_contracts.dart';
 import '../../data/repositories/save_scope.dart';
 import '../../data/seed/roster_seed.dart';
 import '../../domain/betting/fight_odds.dart';
+import '../../domain/booking/card_matchmaker.dart';
 import '../../domain/calendar/game_calendar.dart';
 import '../../domain/condition/fighter_condition.dart';
 import '../../domain/career/career_progression_engine.dart';
@@ -26,6 +27,7 @@ import '../../domain/simulation/fight_excitement.dart';
 import '../../domain/finance/event_finance_calculator.dart';
 import '../../domain/finance/pay_scale.dart';
 import '../../domain/finance/running_costs.dart';
+import '../../domain/history/head_to_head.dart';
 import '../../domain/history/recent_form.dart';
 import '../../domain/history/record_book.dart';
 import '../../domain/rankings/division_rankings.dart';
@@ -199,6 +201,17 @@ class GameController extends ChangeNotifier {
   /// row, and four hundred separate lookups behind a scrolling list is
   /// not a thing to do.
   Map<String, List<FormEntry>> recentFormByFighterId = {};
+
+  /// The same pass's raw material: every resolved fight each fighter has
+  /// had here, newest first. Kept alongside the form lines so a caller
+  /// can ask a question the five-fight summary can't answer — chiefly
+  /// whether two given fighters have already met.
+  Map<String, List<Fight>> _resolvedFightsByFighterId = {};
+
+  /// How many times each pair of fighters has already met here, keyed by
+  /// [CardMatchmaker.pairKey]. Handed to the auto-filler so it stops
+  /// short of rebooking the same bout every month.
+  Map<String, int> priorMeetingsByPair = {};
 
   List<Fighter> get signedRoster =>
       allFighters.where((f) => f.isSigned && !f.retired).toList();
@@ -450,6 +463,17 @@ class GameController extends ChangeNotifier {
     );
   }
 
+  /// What [aId] and [bId] have already done to each other here. Empty
+  /// (and [HeadToHead.isRematch] false) when they've never met.
+  ///
+  /// Synchronous on purpose: the card tiles ask this once per bout on
+  /// every rebuild, and a future per tile would flicker.
+  HeadToHead headToHead(String aId, String bId) => HeadToHead.from(
+        fights: _resolvedFightsByFighterId[aId] ?? const [],
+        aId: aId,
+        bId: bId,
+      );
+
   Future<List<Fight>> getEventCard(String id) => _eventRepo.getCard(id);
 
   /// How many weeks of camp a fighter got for their upcoming bout — the
@@ -501,6 +525,13 @@ class GameController extends ChangeNotifier {
       for (final id in [fight.fighterAId, fight.fighterBId]) {
         (byFighter[id] ??= []).add(fight);
       }
+    }
+    _resolvedFightsByFighterId = byFighter;
+    priorMeetingsByPair = {};
+    for (final fight in fights) {
+      if (!fight.isResolved) continue;
+      final key = CardMatchmaker.pairKey(fight.fighterAId, fight.fighterBId);
+      priorMeetingsByPair[key] = (priorMeetingsByPair[key] ?? 0) + 1;
     }
     recentFormByFighterId = {
       for (final entry in byFighter.entries)

@@ -153,6 +153,43 @@ class EventFinanceResult {
 /// Turns a booked card into attendance, PPV buys, revenue, expenses and a
 /// reputation delta. Pure Dart so it can be unit tested independent of the
 /// database/UI.
+/// What a card is expected to make, worked out while it is still being
+/// built.
+///
+/// A card's cost is knowable the moment the fighters are picked, and its
+/// gate is a decent guess from the same terms the real calculator uses —
+/// but until this existed neither was shown until the night was already
+/// run and the money already spent. Booking a show that could not pay
+/// for itself was the easiest mistake in the game to make and the only
+/// one you couldn't see coming.
+class EventProjection {
+  /// Expected heads, with no luck roll — the middle of the distribution
+  /// rather than a promise.
+  final int attendance;
+  final int ticketRevenue;
+  final int ppvRevenue;
+  final int venueCost;
+
+  /// Show money for everyone booked, plus one win bonus per bout.
+  final int purses;
+
+  const EventProjection({
+    required this.attendance,
+    required this.ticketRevenue,
+    required this.ppvRevenue,
+    required this.venueCost,
+    required this.purses,
+  });
+
+  int get revenue => ticketRevenue + ppvRevenue;
+  int get expenses => venueCost + purses;
+  int get net => revenue - expenses;
+
+  /// What share of the projected gate the fighters are taking. The
+  /// number a matchmaker actually watches.
+  double get purseShareOfRevenue => revenue == 0 ? 1 : purses / revenue;
+}
+
 class EventFinanceCalculator {
   /// What a booked bout is worth in demand terms before anyone's name is
   /// considered — the value of simply having another fight on the card.
@@ -172,6 +209,16 @@ class EventFinanceCalculator {
   /// How fast the show fills out toward a full night. Higher = you need
   /// more bouts before the card stops feeling thin.
   static const double _depthScale = 3.2;
+
+  /// Heads each fan of the promotion is worth on the night.
+  ///
+  /// This is the one demand term that grows as a promotion climbs, so it
+  /// is what a tier is actually *for*. Set too low it stops mattering:
+  /// with the card itself worth a thousand heads, a regional promotion
+  /// with ten times a local one's following drew the same house for the
+  /// same card while paying twice the purses — which made moving up a
+  /// tier a straight downgrade.
+  static const double fanbaseDrawRate = 0.045;
 
   /// The ticket price demand is measured against, market-wide.
   ///
@@ -229,7 +276,7 @@ class EventFinanceCalculator {
     required Venue venue,
     required int ticketPrice,
   }) {
-    final base = organization.fanbaseSize * 0.015 + venue.localWalkUp;
+    final base = organization.fanbaseSize * fanbaseDrawRate + venue.localWalkUp;
     final turnout = turnoutAt(ticketPrice: ticketPrice, venue: venue);
     return (base * turnout).round().clamp(0, venue.capacity);
   }
@@ -323,7 +370,7 @@ class EventFinanceCalculator {
 
     // Each demand term kept separately rather than summed on the spot,
     // so the results page can show where the crowd came from.
-    final fanbaseDemand = organization.fanbaseSize * 0.015;
+    final fanbaseDemand = organization.fanbaseSize * fanbaseDrawRate;
     final mainEventDemand = mainEventPopularity * 9;
     final cardDemand = cardDraw * 1.6;
 
@@ -414,11 +461,98 @@ class EventFinanceCalculator {
     );
   }
 
+  /// Runs the same demand model as [calculate] with the luck roll left
+  /// out and results assumed, so a card can be costed while it is being
+  /// built.
+  ///
+  /// Purses assume exactly one winner per bout, which is what happens
+  /// unless a fight is drawn — so this is the honest number to plan
+  /// against rather than a best case with no bonuses paid.
+  static EventProjection project({
+    required Venue venue,
+    required int ticketPrice,
+    required Organization organization,
+    required List<Fight> card,
+    required Map<String, Fighter> fighterLookup,
+    int promotionBudgetSpent = 0,
+  }) {
+    if (card.isEmpty) {
+      return EventProjection(
+        attendance: 0,
+        ticketRevenue: 0,
+        ppvRevenue: 0,
+        venueCost: venue.baseCost,
+        purses: 0,
+      );
+    }
+
+    final mainEvent = card.firstWhere(
+      (f) => f.isMainEvent,
+      orElse: () => card.first,
+    );
+    final mainEventPopularity = _averagePopularity([
+      fighterLookup[mainEvent.fighterAId],
+      fighterLookup[mainEvent.fighterBId],
+    ]);
+    final cardDraw = card.fold<double>(0, (sum, fight) {
+      final a = fighterLookup[fight.fighterAId]?.popularity ?? 0;
+      final b = fighterLookup[fight.fighterBId]?.popularity ?? 0;
+      return sum +
+          _drawPerBout +
+          pow(a.toDouble(), _popularityDamping) +
+          pow(b.toDouble(), _popularityDamping);
+    });
+    final promoEffect = sqrt(promotionBudgetSpent.clamp(0, 500000)) * 4;
+    final depth = cardDepthMultiplier(card.length);
+
+    final baseDemand = (organization.fanbaseSize * fanbaseDrawRate +
+                mainEventPopularity * 9 +
+                cardDraw * 1.6 +
+                promoEffect) *
+            depth +
+        venue.localWalkUp;
+    final attendance =
+        (baseDemand * turnoutAt(ticketPrice: ticketPrice, venue: venue))
+            .round()
+            .clamp(0, venue.capacity);
+
+    final canSellPpv = organization.reputationTier == ReputationTier.national ||
+        organization.reputationTier == ReputationTier.international;
+    final ppvBuys = canSellPpv
+        ? (((organization.fanbaseSize * 0.01) +
+                    (mainEventPopularity * 15) +
+                    (cardDraw * 2.2) +
+                    promoEffect * 2) *
+                depth)
+            .round()
+        : 0;
+
+    // One win bonus per bout, averaged across the two corners — which
+    // one collects it isn't knowable yet, and the difference between
+    // them is small next to the show money.
+    final purses = card.fold<int>(0, (sum, fight) {
+      final a = fighterLookup[fight.fighterAId];
+      final b = fighterLookup[fight.fighterBId];
+      final show = _purseFor(a, won: false) + _purseFor(b, won: false);
+      final bonusA = (a?.contract?.winBonus ?? 0);
+      final bonusB = (b?.contract?.winBonus ?? 0);
+      return sum + show + ((bonusA + bonusB) / 2).round();
+    });
+
+    return EventProjection(
+      attendance: attendance,
+      ticketRevenue: attendance * ticketPrice,
+      ppvRevenue: ppvBuys * 40,
+      venueCost: venue.baseCost,
+      purses: purses + promotionBudgetSpent,
+    );
+  }
+
   /// What [fighter] actually takes home from this fight — their contract's
   /// show money, plus the win bonus if [won]. A fighter with no contract
   /// on file (shouldn't normally happen mid-card) falls back to market
   /// rate off [PayScale].
-  int _purseFor(Fighter? fighter, {required bool won}) {
+  static int _purseFor(Fighter? fighter, {required bool won}) {
     final contract = fighter?.contract;
     if (contract != null) {
       return won ? contract.payOnWin : contract.showMoney;
@@ -430,7 +564,7 @@ class EventFinanceCalculator {
     return won ? suggested.total : suggested.showMoney;
   }
 
-  double _averagePopularity(List<Fighter?> fighters) {
+  static double _averagePopularity(List<Fighter?> fighters) {
     final present = fighters.whereType<Fighter>().toList();
     if (present.isEmpty) return 0;
     return present.map((f) => f.popularity).reduce((a, b) => a + b) /

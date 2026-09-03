@@ -33,12 +33,31 @@ class CardMatchmaker {
   /// on its own is how a promotion goes under.
   static const double maxMainEventShare = 0.45;
 
+  /// How much hype a bout notionally loses for each time these two have
+  /// already fought here.
+  ///
+  /// A penalty rather than a ban: a rematch of a war, or a title fight
+  /// somebody is owed, is real matchmaking and should still be able to
+  /// headline. What this stops is the auto-filler running the same bout
+  /// month after month simply because it is the highest-rated pairing
+  /// the ladder allows — which, left alone, it would.
+  static const int rematchHypePenalty = 10;
+
+  /// The key [priorMeetings] is read with. Order-independent, because a
+  /// rematch is the same fight whichever corner is listed first.
+  static String pairKey(String aId, String bId) =>
+      (aId.compareTo(bId) <= 0) ? '$aId|$bId' : '$bId|$aId';
+
   static List<Fight> build({
     required List<Fighter> roster,
     required int bouts,
     Set<String> unavailable = const {},
     int rounds = 3,
     int mainEventRounds = 5,
+
+    /// How many times each pair has already met, keyed by [pairKey].
+    /// Pairs absent from the map are treated as first meetings.
+    Map<String, int> priorMeetings = const {},
 
     /// Roughly what the night can afford to pay its fighters. Null means
     /// no ceiling, which is fine for a small roster and dangerous for a
@@ -72,16 +91,18 @@ class CardMatchmaker {
             division: division,
             chosen: TitleFightType.none,
           );
+          final hype = HypeCalculator.forFight(
+            a: a,
+            b: b,
+            titleFightType: titleFightType,
+          ).score;
+          final met = priorMeetings[pairKey(a.id, b.id)] ?? 0;
           candidates.add(_Candidate(
             a: a,
             b: b,
             division: division,
             titleFightType: titleFightType,
-            hype: HypeCalculator.forFight(
-              a: a,
-              b: b,
-              titleFightType: titleFightType,
-            ).score,
+            hype: (hype - met * rematchHypePenalty).clamp(0, 100),
           ));
         }
       }

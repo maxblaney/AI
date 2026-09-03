@@ -3,8 +3,10 @@ import '../../../domain/booking/card_matchmaker.dart';
 import '../../../domain/finance/event_finance_calculator.dart';
 import '../../../domain/booking/fight_hype.dart';
 import '../../../domain/booking/title_fight_rules.dart';
+import '../../../domain/history/head_to_head.dart';
 import '../../../domain/history/recent_form.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/utils/id_generator.dart';
@@ -245,7 +247,10 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
               helperMaxLines: 2,
               prefixText: '\$',
             ),
-            onChanged: (_) => _ticketPriceEdited = true,
+            // setState, not a bare assignment: the ledger below prices
+            // the card off this field, so it has to rebuild as the
+            // player types.
+            onChanged: (_) => setState(() => _ticketPriceEdited = true),
           ),
           const SizedBox(height: 24),
           Row(
@@ -320,6 +325,25 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
                   ),
               ],
             ),
+          // What this card is expected to make, updated as it is built.
+          // The cost of a card is knowable the moment the fighters are
+          // picked; before this it wasn't shown until the night had run
+          // and the money was already gone.
+          if (_card.isNotEmpty && controller.organization != null)
+            _CardLedger(
+              projection: EventFinanceCalculator.project(
+                venue: _venue,
+                ticketPrice: int.tryParse(_ticketPriceController.text) ??
+                    _venue.suggestedTicketPrice,
+                organization: controller.organization!,
+                card: _card,
+                fighterLookup: {
+                  for (final f in controller.allFighters) f.id: f,
+                },
+              ),
+              weeklyOverhead: controller.weeklyOverhead,
+              cashBalance: controller.organization!.cashBalance,
+            ),
           const SizedBox(height: 24),
           FilledButton(
             onPressed: _submitting ? null : _confirm,
@@ -356,11 +380,20 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
     required int index,
     required bool isMainCardEligible,
   }) {
+    final a = controller.fighterById(fight.fighterAId);
+    final b = controller.fighterById(fight.fighterBId);
     return _FightTile(
       fight: fight,
       index: index,
-      fighterA: controller.fighterById(fight.fighterAId),
-      fighterB: controller.fighterById(fight.fighterBId),
+      fighterA: a,
+      fighterB: b,
+      // Each man's standing in his *own* division, which is the rank he
+      // actually carries — a lightweight moving up to welterweight for
+      // one night is still the lightweight #2, and that is the fact
+      // worth putting on the tile.
+      rankA: a == null ? null : controller.divisionRankOf(a),
+      rankB: b == null ? null : controller.divisionRankOf(b),
+      headToHead: controller.headToHead(fight.fighterAId, fight.fighterBId),
       isMainEvent: fight.id == _mainEventFightId,
       isCoMainEvent: fight.id == _coMainEventFightId,
       showMainEventControls: isMainCardEligible,
@@ -429,6 +462,7 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
       bouts: _autoFillTarget - _card.length,
       unavailable: _usedFighterIds,
       purseBudget: purseBudget,
+      priorMeetings: controller.priorMeetingsByPair,
     );
     if (added.isEmpty) {
       _showError('Nobody left to match up.');
@@ -574,7 +608,8 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
                         .map((f) => DropdownMenuItem(
                             value: f.id,
                             child: _fighterOption(context, f,
-                                bookedAt: weightClass)))
+                                bookedAt: weightClass,
+                                rank: controller.divisionRankOf(f))))
                         .toList(),
                     onChanged: (v) => setState(() => fighterAId = v),
                   ),
@@ -587,7 +622,8 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
                         .map((f) => DropdownMenuItem(
                             value: f.id,
                             child: _fighterOption(context, f,
-                                bookedAt: weightClass)))
+                                bookedAt: weightClass,
+                                rank: controller.divisionRankOf(f))))
                         .toList(),
                     onChanged: (v) => setState(() => fighterBId = v),
                   ),
@@ -773,6 +809,14 @@ class _FightTile extends StatelessWidget {
   final int index;
   final Fighter? fighterA;
   final Fighter? fighterB;
+
+  /// Divisional standing for each corner — 'C', 'iC', a contender
+  /// number, or null for unranked.
+  final String? rankA;
+  final String? rankB;
+
+  /// Whether these two have met here before, and how it went.
+  final HeadToHead headToHead;
   final bool isMainEvent;
   final bool isCoMainEvent;
   final bool showMainEventControls;
@@ -786,6 +830,9 @@ class _FightTile extends StatelessWidget {
     required this.index,
     required this.fighterA,
     required this.fighterB,
+    required this.rankA,
+    required this.rankB,
+    required this.headToHead,
     required this.isMainEvent,
     required this.isCoMainEvent,
     required this.showMainEventControls,
@@ -828,12 +875,28 @@ class _FightTile extends StatelessWidget {
       child: Column(
         children: [
           ListTile(
-            title: Text('${a?.name ?? '?'} vs ${b?.name ?? '?'}'),
+            // Ranks ride on the names themselves rather than a line of
+            // their own: "#2 vs #9" underneath two names leaves the
+            // player working out which number belongs to whom, and a
+            // card is read at a glance or not at all.
+            title: Text.rich(
+              TextSpan(children: [
+                ..._namePart(context, a, rankA),
+                const TextSpan(text: ' vs '),
+                ..._namePart(context, b, rankB),
+              ]),
+            ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (hype != null) _TileHype(hype: hype),
                 Text(tags.join(' · ')),
+                if (headToHead.isRematch && a != null && b != null)
+                  _RematchLine(
+                    headToHead: headToHead,
+                    nameA: a.name,
+                    nameB: b.name,
+                  ),
               ],
             ),
             // Tapping the bout opens it for editing — the same reflex as
@@ -885,6 +948,218 @@ class _FightTile extends StatelessWidget {
                   onPressed: onRemove,
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The running money on a card being built: what it should gross, what
+/// it will cost, and what that leaves.
+///
+/// Deliberately plain arithmetic rather than a verdict. The projection
+/// has no luck roll in it and the gate is a model, not a promise, so the
+/// job here is to let a player see a card that cannot pay for itself
+/// *before* they run it — not to tell them what to book.
+class _CardLedger extends StatelessWidget {
+  final EventProjection projection;
+  final int weeklyOverhead;
+  final int cashBalance;
+
+  const _CardLedger({
+    required this.projection,
+    required this.weeklyOverhead,
+    required this.cashBalance,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final currency = NumberFormat.simpleCurrency(decimalDigits: 0);
+    final scheme = Theme.of(context).colorScheme;
+    final net = projection.net;
+    final losing = net < 0;
+    final share = (projection.purseShareOfRevenue * 100).round();
+
+    return Card(
+      margin: const EdgeInsets.only(top: 16),
+      color: losing
+          ? scheme.errorContainer.withOpacity(0.35)
+          : scheme.surfaceContainerHighest,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  losing ? Icons.warning_amber : Icons.savings_outlined,
+                  size: 18,
+                  color: losing ? scheme.error : scheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  losing ? 'This card loses money' : 'Projected for this card',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: losing ? scheme.error : null,
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _LedgerRow(
+              label: 'Gate (~${projection.attendance} in)',
+              value: currency.format(projection.ticketRevenue),
+            ),
+            if (projection.ppvRevenue > 0)
+              _LedgerRow(
+                label: 'PPV',
+                value: currency.format(projection.ppvRevenue),
+              ),
+            _LedgerRow(
+              label: 'Purses ($share% of gross)',
+              value: '-${currency.format(projection.purses)}',
+              // Fighter pay is the one line the player controls bout by
+              // bout, so it is the one worth colouring when it runs away.
+              emphasise: share > 60,
+            ),
+            _LedgerRow(
+              label: 'Venue',
+              value: '-${currency.format(projection.venueCost)}',
+            ),
+            const Divider(height: 16),
+            _LedgerRow(
+              label: 'Net',
+              value: '${net < 0 ? '-' : ''}${currency.format(net.abs())}',
+              bold: true,
+              emphasise: losing,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Cash ${currency.format(cashBalance)} · '
+              'overheads ${currency.format(weeklyOverhead)}/wk run whether '
+              'or not you put a show on.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+            ),
+            Text(
+              'A projection, not a promise — the real gate swings about '
+              '15% either way.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    fontStyle: FontStyle.italic,
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LedgerRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool bold;
+  final bool emphasise;
+
+  const _LedgerRow({
+    required this.label,
+    required this.value,
+    this.bold = false,
+    this.emphasise = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final style = (bold
+            ? Theme.of(context).textTheme.titleSmall
+            : Theme.of(context).textTheme.bodyMedium)
+        ?.copyWith(color: emphasise ? scheme.error : null);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 1),
+      child: Row(
+        children: [
+          Expanded(child: Text(label, style: style)),
+          Text(value, style: style),
+        ],
+      ),
+    );
+  }
+}
+
+/// One corner's name on a card tile, with its divisional standing worn
+/// in front of it the way a fight poster writes it: "#3 Femi Adeleke",
+/// "C Michal Szymanski".
+///
+/// Returned as spans rather than a widget so both corners sit in one
+/// paragraph and wrap as a single line of text — two Rows would break
+/// "vs" onto its own line on a narrow phone.
+List<InlineSpan> _namePart(BuildContext context, Fighter? fighter, String? rank) {
+  final name = fighter?.name ?? '?';
+  if (rank == null) return [TextSpan(text: name)];
+
+  final isBelt = rank == 'C' || rank == 'iC';
+  return [
+    TextSpan(
+      text: isBelt ? '$rank ' : '#$rank ',
+      style: TextStyle(
+        color: isBelt
+            ? (rank == 'C' ? AppColors.belt : AppColors.beltInterim)
+            : Theme.of(context).colorScheme.onSurfaceVariant,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+    TextSpan(text: name),
+  ];
+}
+
+/// The "you've run this one before" line on a card tile.
+///
+/// Deliberately louder than the tags beside it: booking a rematch by
+/// accident is one of the few genuinely bad cards a player can put
+/// together, and this is the only place the game gets to say so before
+/// the fight is confirmed.
+class _RematchLine extends StatelessWidget {
+  final HeadToHead headToHead;
+  final String nameA;
+  final String nameB;
+
+  const _RematchLine({
+    required this.headToHead,
+    required this.nameA,
+    required this.nameB,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Surnames only — the full names are already on the line above, and
+    // the series line has to share a tile with everything else.
+    String last(String name) => name.split(' ').last;
+    final summary = headToHead.summary(last(nameA), last(nameB));
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Row(
+        children: [
+          const Icon(Icons.replay, size: 13, color: Colors.amber),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              summary.isEmpty
+                  ? headToHead.label
+                  : '${headToHead.label} · $summary',
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.amber,
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
           ),
         ],
@@ -947,6 +1222,7 @@ Widget _fighterOption(
   BuildContext context,
   Fighter fighter, {
   WeightClass? bookedAt,
+  String? rank,
 }) {
   final hurt = fighter.injuryStatus != InjuryStatus.healthy;
   // Crossing divisions is worth calling out — it's the player's own
@@ -959,6 +1235,20 @@ Widget _fighterOption(
         const Padding(
           padding: EdgeInsets.only(right: 4),
           child: Icon(Icons.emoji_events, size: 14, color: AppColors.belt),
+        ),
+      // Contenders are picked by number as much as by name, so the
+      // ladder position belongs in the list you pick from and not only
+      // in the preview underneath it.
+      if (rank != null && rank != 'C' && rank != 'iC')
+        Padding(
+          padding: const EdgeInsets.only(right: 4),
+          child: Text(
+            '#$rank',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
         ),
       Expanded(child: Text(fighter.name, overflow: TextOverflow.ellipsis)),
       if (movement != null) ...[
@@ -1050,6 +1340,7 @@ class _MatchupPreviewState extends State<_MatchupPreview> {
     final titleFightType = widget.titleFightType;
     final controller = widget.controller;
     final odds = OddsCalculator.forFight(a: a, b: b);
+    final h2h = controller.headToHead(a.id, b.id);
     final hype = HypeCalculator.forFight(
       a: a,
       b: b,
@@ -1122,6 +1413,13 @@ class _MatchupPreviewState extends State<_MatchupPreview> {
                 );
               },
             ),
+            // Whether the player is about to run something they've
+            // already run. Better learned in the dialog, before the bout
+            // is added, than off the tile afterwards.
+            if (h2h.isRematch) ...[
+              const SizedBox(height: 6),
+              _RematchLine(headToHead: h2h, nameA: a.name, nameB: b.name),
+            ],
             const SizedBox(height: 6),
             Row(
               children: [
