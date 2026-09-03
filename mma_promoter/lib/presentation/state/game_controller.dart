@@ -23,6 +23,7 @@ import '../../domain/condition/fighter_condition.dart';
 import '../../domain/career/career_progression_engine.dart';
 import '../../domain/events/random_event_engine.dart';
 import '../../domain/packs/fighter_pack.dart';
+import '../../domain/growth/fanbase_growth.dart';
 import '../../domain/simulation/fight_excitement.dart';
 import '../../domain/finance/event_finance_calculator.dart';
 import '../../domain/finance/pay_scale.dart';
@@ -869,12 +870,44 @@ class GameController extends ChangeNotifier {
     );
     await _eventRepo.saveEvent(completedEvent);
 
+    // How good the night was, as the crowd would rate it — the same 1-10
+    // reading the results page shows on each fight, averaged over the
+    // card. It is what decides whether the promotion grew.
+    final ratings = [
+      for (final fight in resolvedCard)
+        if (fight.result != null)
+          FightExcitement.rate(
+            result: fight.result!,
+            scheduledRounds: fight.rounds,
+          ).rating,
+    ];
+    final averageExcitement = ratings.isEmpty
+        ? 0.0
+        : ratings.reduce((a, b) => a + b) / ratings.length;
+    final headliner = resolvedCard.firstWhere(
+      (f) => f.isMainEvent,
+      orElse: () => resolvedCard.first,
+    );
+    final mainEventPopularity = [
+      fighterLookup[headliner.fighterAId]?.popularity,
+      fighterLookup[headliner.fighterBId]?.popularity,
+    ].whereType<int>().fold<double>(0, (a, b) => a + b) /
+        2;
+
+    final fanChange = FanbaseGrowth.forEvent(
+      fanbaseSize: org.fanbaseSize,
+      attendance: finance.attendance,
+      venueCapacity: event.venue.capacity,
+      ppvBuys: finance.ppvBuys,
+      mainEventPopularity: mainEventPopularity,
+      averageExcitement: averageExcitement,
+    );
+
     await _orgRepo.save(org.copyWith(
       cashBalance: org.cashBalance + finance.netProfit,
       reputationPoints:
           (org.reputationPoints + finance.reputationChange).clamp(0, 1 << 30),
-      fanbaseSize:
-          org.fanbaseSize + (finance.attendance ~/ 10).clamp(0, 1 << 30),
+      fanbaseSize: (org.fanbaseSize + fanChange).clamp(0, 1 << 30),
     ));
     await _maybePromoteTier();
 
