@@ -16,6 +16,15 @@ class Organization {
   /// (every 4 weeks).
   final int lastTalentRefreshWeek;
 
+  /// The game week everyone on the books last had a birthday.
+  ///
+  /// Fighters used to have an age and never grow into it: the number was
+  /// stamped at generation and never moved again, which quietly made the
+  /// retirement engine's age rule dead code for anyone not generated at
+  /// 34 or over. A twenty-two-year-old prospect stayed twenty-two for a
+  /// twelve-year career and a talent pool of 1,840 never turned over.
+  final int lastAgedWeek;
+
   /// The game's own clock — an absolute week count starting at 1. This is
   /// the single source of truth for "now"; nothing in the game reads the
   /// real wall clock. See [GameCalendar].
@@ -48,6 +57,7 @@ class Organization {
     required this.homeRegion,
     required this.promotionBudget,
     this.lastTalentRefreshWeek = 1,
+    this.lastAgedWeek = 1,
     this.currentWeek = 1,
     this.autoResignFighters = true,
   });
@@ -62,6 +72,7 @@ class Organization {
     String? homeRegion,
     int? promotionBudget,
     int? lastTalentRefreshWeek,
+    int? lastAgedWeek,
     int? currentWeek,
     bool? autoResignFighters,
   }) {
@@ -75,6 +86,7 @@ class Organization {
       homeRegion: homeRegion ?? this.homeRegion,
       promotionBudget: promotionBudget ?? this.promotionBudget,
       lastTalentRefreshWeek: lastTalentRefreshWeek ?? this.lastTalentRefreshWeek,
+      lastAgedWeek: lastAgedWeek ?? this.lastAgedWeek,
       currentWeek: currentWeek ?? this.currentWeek,
       autoResignFighters: autoResignFighters ?? this.autoResignFighters,
     );

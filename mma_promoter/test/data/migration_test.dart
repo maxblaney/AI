@@ -110,7 +110,8 @@ void main() {
     raw.execute('CREATE TABLE fights (id TEXT NOT NULL PRIMARY KEY)');
     // v7 adds a column to organizations and v9 one to events, so both
     // tables have to exist even though this fixture is about fighters.
-    raw.execute('CREATE TABLE organizations (id TEXT NOT NULL PRIMARY KEY)');
+    raw.execute('CREATE TABLE organizations (id TEXT NOT NULL PRIMARY KEY, '
+        'current_week INTEGER NOT NULL DEFAULT 1)');
     raw.execute('CREATE TABLE events (id TEXT NOT NULL PRIMARY KEY)');
 
     raw.execute(
@@ -157,7 +158,8 @@ void main() {
     // A light heavyweight generated under the old 200 lb limit walked
     // around at 206; the same fighter generated today would be 211.
     // v7 adds a column to organizations and v9 one to events.
-    raw.execute('CREATE TABLE organizations (id TEXT NOT NULL PRIMARY KEY)');
+    raw.execute('CREATE TABLE organizations (id TEXT NOT NULL PRIMARY KEY, '
+        'current_week INTEGER NOT NULL DEFAULT 1)');
     raw.execute('CREATE TABLE events (id TEXT NOT NULL PRIMARY KEY)');
 
     raw.execute("INSERT INTO fighters VALUES ('lhw', 'lightHeavyweight', 206)");
@@ -187,9 +189,10 @@ void main() {
         "weight_class TEXT NOT NULL DEFAULT 'lightweight', "
         'weight_lbs INTEGER NOT NULL DEFAULT 155)');
     raw.execute('CREATE TABLE organizations (id TEXT NOT NULL PRIMARY KEY, '
-        'auto_resign_fighters INTEGER NOT NULL DEFAULT 0)');
+        'auto_resign_fighters INTEGER NOT NULL DEFAULT 0, '
+        'current_week INTEGER NOT NULL DEFAULT 1)');
     raw.execute('CREATE TABLE events (id TEXT NOT NULL PRIMARY KEY)');
-    raw.execute("INSERT INTO organizations VALUES ('org', 0)");
+    raw.execute("INSERT INTO organizations VALUES ('org', 0, 1)");
 
     final db = AppDatabase.forTesting(NativeDatabase.opened(raw));
     await db.customSelect('SELECT 1').get();
@@ -216,7 +219,8 @@ void main() {
     // A real database already at v7 has been through the v7 step, so it
     // carries the auto-re-sign column that v10 rewrites.
     raw.execute('CREATE TABLE organizations (id TEXT NOT NULL PRIMARY KEY, '
-        'auto_resign_fighters INTEGER NOT NULL DEFAULT 0)');
+        'auto_resign_fighters INTEGER NOT NULL DEFAULT 0, '
+        'current_week INTEGER NOT NULL DEFAULT 1)');
     raw.execute('CREATE TABLE events (id TEXT NOT NULL PRIMARY KEY)');
 
     final db = AppDatabase.forTesting(NativeDatabase.opened(raw));

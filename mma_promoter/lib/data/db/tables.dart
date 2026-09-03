@@ -171,6 +171,10 @@ class Organizations extends Table {
   TextColumn get homeRegion => text()();
   IntColumn get promotionBudget => integer().withDefault(const Constant(0))();
   IntColumn get lastTalentRefreshWeek => integer().withDefault(const Constant(1))();
+
+  /// The game week the roster last had a birthday. See
+  /// [Organization.lastAgedWeek].
+  IntColumn get lastAgedWeek => integer().withDefault(const Constant(1))();
   IntColumn get currentWeek => integer().withDefault(const Constant(1))();
 
   /// Player setting: re-sign a fighter automatically when their contract

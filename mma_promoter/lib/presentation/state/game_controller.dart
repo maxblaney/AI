@@ -1033,6 +1033,8 @@ class GameController extends ChangeNotifier {
     organization = updated;
 
     updated = await _maybeRefreshTalentPool(updated);
+    updated = await _maybeAgeEveryone(updated);
+    await _maybeWarnRosterThin(updated);
     await _healInjuries(updated);
     await _clearExpiredSuspensions(updated);
     await _maybeRollIncident(updated);
@@ -1072,6 +1074,92 @@ class GameController extends ChangeNotifier {
     }
     final updated = org.copyWith(
       lastTalentRefreshWeek: org.lastTalentRefreshWeek + refreshes * weeksPerRefresh,
+    );
+    await _orgRepo.save(updated);
+    return updated;
+  }
+
+  /// How few fighters under contract counts as a roster in trouble.
+  ///
+  /// A full card is ten bouts, so twenty bodies — and that is before
+  /// injuries, suspensions and the fact that they have to be spread
+  /// across divisions to face each other at all. Forty is roughly the
+  /// point where the next card starts being hard to make.
+  static const int rosterThinThreshold = 40;
+
+  /// How long to leave it before saying so again.
+  static const int _rosterWarningCooldownWeeks = 26;
+
+  /// Says something when the roster is running down.
+  ///
+  /// Fighters retire and nothing signs replacements — that part is the
+  /// player's job and should be. What was not reasonable is that the job
+  /// was invisible: the first sign of trouble was a booking screen that
+  /// would not build a card, years after the drift began.
+  Future<void> _maybeWarnRosterThin(Organization org) async {
+    final count = signedRoster.length;
+    if (count > rosterThinThreshold) return;
+
+    final recentlyWarned = inboxItems.any((i) =>
+        i.type == InboxItemType.contract &&
+        i.title.contains('roster is thinning') &&
+        org.currentWeek - i.week < _rosterWarningCooldownWeeks);
+    if (recentlyWarned) return;
+
+    final pool = talentPool.length;
+    await _inboxRepo.save(_newInboxItem(
+      org,
+      InboxItemType.contract,
+      title: 'Your roster is thinning',
+      body: 'You have $count fighters under contract. A full card needs '
+          'twenty bodies spread across the divisions, before injuries and '
+          'suspensions — at this rate the next one will be hard to make.'
+          '\n\nThere are $pool free agents looking for work. Sign some.',
+    ));
+  }
+
+  /// Gives everyone in the game world a birthday once a year.
+  ///
+  /// Ages were stamped at generation and never moved, which had two
+  /// consequences the game was quietly living with. The retirement
+  /// engine's age rule — a rising chance from 34 — could only ever fire
+  /// for a fighter *generated* old, so careers never ended of their own
+  /// accord. And the talent pool never turned over: measured across
+  /// twelve years it grew to 1,840 fighters, none of whom would ever
+  /// mature into anything or age out of it, while the player's own
+  /// roster drained 160 to 31 because retirement only ever took from the
+  /// signed side.
+  ///
+  /// Everyone ages, not just the roster — a prospect the player has been
+  /// watching should be twenty-five when they finally sign him, and the
+  /// pool should retire its own veterans rather than hoarding them
+  /// forever.
+  Future<Organization> _maybeAgeEveryone(Organization org) async {
+    const weeksPerYear = 52;
+    final elapsed = org.currentWeek - org.lastAgedWeek;
+    if (elapsed < weeksPerYear) return org;
+
+    final years = elapsed ~/ weeksPerYear;
+    for (final fighter in allFighters) {
+      if (fighter.retired) continue;
+      var aged = fighter.copyWith(age: (fighter.age + years).clamp(18, 60));
+
+      // Retirement is rolled after a fight, so it only ever reached
+      // fighters the player was booking. Free agents aged and aged and
+      // never left: the pool grew to 1,530 with a mean age of 35 and
+      // nobody in it would ever go away. A fighter nobody is booking
+      // retires too — quietly, on their own birthday, which is closer to
+      // how careers actually end than a press conference is.
+      if (!aged.isSigned) {
+        for (var i = 0; i < years; i++) {
+          aged = _careerEngine.maybeRetire(aged);
+          if (aged.retired) break;
+        }
+      }
+      await _fighterRepo.save(aged);
+    }
+    final updated = org.copyWith(
+      lastAgedWeek: org.lastAgedWeek + years * weeksPerYear,
     );
     await _orgRepo.save(updated);
     return updated;

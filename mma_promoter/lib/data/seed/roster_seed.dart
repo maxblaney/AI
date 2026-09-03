@@ -598,15 +598,28 @@ Fighter _signedFighter(
   );
 }
 
-/// Generates roughly [count] brand-new free agents spread randomly across
-/// weight classes, for the monthly talent-pool refresh — keeps the pool
-/// from going stale as the player signs fighters out of it over time.
+/// Generates roughly [count] fighters turning pro, spread randomly across
+/// weight classes, for the monthly talent-pool refresh.
+///
+/// These are **prospects**, not a second draw from the same distribution
+/// the world was built with. The refresh used to roll ordinary fighters —
+/// which, once everyone started having birthdays, meant the intake aged
+/// as fast as the people it was replacing: measured over twelve years the
+/// pool's mean age went 29.8 to 35.1 and the number of fighters under 26
+/// fell from 71 to 31, while the player's roster starved. A sport is fed
+/// by people at the start of their careers, so this is where they come
+/// from: low fight counts, and the young ages that follow from them.
 List<Fighter> generateMonthlyTalentPool({int count = 10, Random? random}) {
   final rng = random ?? Random();
   const weightClasses = WeightClass.values;
   return List.generate(
     count,
-    (_) => _generateFighter(weightClasses[rng.nextInt(weightClasses.length)], rng),
+    (_) => _generateFighter(
+      weightClasses[rng.nextInt(weightClasses.length)],
+      rng,
+      // 0-5 pro fights, which the age model turns into roughly 21-27.
+      experienceOverride: rng.nextInt(6),
+    ),
   );
 }
 
@@ -726,8 +739,13 @@ Fighter _generateFighter(
   /// starting roster, which draws from a narrower, higher band than the
   /// free-agent pool does.
   int? centerOverride,
+
+  /// Forces how many pro fights this fighter already has, instead of
+  /// rolling one. Age is derived from it, so this is also how a fighter
+  /// is made young — see [generateMonthlyTalentPool].
+  int? experienceOverride,
 }) {
-  final int experienceFights = _rollFightCount(rng);
+  final int experienceFights = experienceOverride ?? _rollFightCount(rng);
 
   // Every fighter has a talent-tier "center" their stats cluster around.
   // Young/inexperienced fighters swing wider around that center (raw,

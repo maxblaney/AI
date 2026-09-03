@@ -25,7 +25,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   /// Games persist on every platform now (web included), so a schema
   /// change without a matching migration step here would silently break
@@ -166,6 +166,17 @@ class AppDatabase extends _$AppDatabase {
             // has the switch in Settings.
             await customStatement(
               'UPDATE organizations SET auto_resign_fighters = 1',
+            );
+          }
+          if (from < 11) {
+            // v11 starts the clock on birthdays. An existing save has
+            // been running with ages frozen, so its roster begins ageing
+            // from wherever it is now rather than being back-dated —
+            // retiring half of somebody's promotion the moment they
+            // update would be a worse bug than the one being fixed.
+            await m.addColumn(organizations, organizations.lastAgedWeek);
+            await customStatement(
+              'UPDATE organizations SET last_aged_week = current_week',
             );
           }
         },

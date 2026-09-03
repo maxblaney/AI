@@ -254,6 +254,7 @@ Organization organizationFromRow(OrganizationRow row) {
     homeRegion: row.homeRegion,
     promotionBudget: row.promotionBudget,
     lastTalentRefreshWeek: row.lastTalentRefreshWeek,
+    lastAgedWeek: row.lastAgedWeek,
     currentWeek: row.currentWeek,
     autoResignFighters: row.autoResignFighters,
   );
@@ -270,6 +271,7 @@ OrganizationsCompanion organizationToCompanion(Organization org) {
     homeRegion: org.homeRegion,
     promotionBudget: Value(org.promotionBudget),
     lastTalentRefreshWeek: Value(org.lastTalentRefreshWeek),
+    lastAgedWeek: Value(org.lastAgedWeek),
     currentWeek: Value(org.currentWeek),
     autoResignFighters: Value(org.autoResignFighters),
   );
