@@ -216,6 +216,9 @@ void main() {
         signed('a', 'Fighter A', fightsRemaining: 1),
         signed('b', 'Fighter B', fightsRemaining: 5),
       ]);
+      // Auto-re-sign is on by default now — this is the behaviour for a
+      // player who has turned it off to work their own contracts.
+      await controller.setAutoResignFighters(false);
 
       await runOneFight(controller);
 
@@ -238,6 +241,7 @@ void main() {
         signed('a', 'Fighter A', fightsRemaining: 1),
         signed('b', 'Fighter B', fightsRemaining: 5),
       ]);
+      await controller.setAutoResignFighters(false);
       final before = controller.weeklyOverhead;
 
       await runOneFight(controller);

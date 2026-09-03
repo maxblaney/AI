@@ -23,9 +23,19 @@ class Organization {
 
   /// When true, a fighter whose contract runs out after a fight is
   /// re-signed automatically at whatever they're now worth, rather than
-  /// sitting on an expired deal until the player notices. A convenience
-  /// setting, off by default — managing contracts is part of the game
-  /// for anyone who wants it.
+  /// walking as a free agent.
+  ///
+  /// **On** by default. It was off, and off it quietly ended the game:
+  /// every fighter leaves when their deal runs out, nothing signs
+  /// replacements, and a measured three-year run went 160 signed ->
+  /// 94 -> 24 -> unable to fill a card by month 29. Long before that the
+  /// shrinking roster forced the same expensive twenty onto every show,
+  /// so purses ran from \$52k a card to \$125k while the gate stood
+  /// still and a promotion in profit turned \$56k-a-show loss-making.
+  /// A default that deletes your roster over two seasons is a trap, not
+  /// a difficulty setting — so the switch stays, for players who want to
+  /// work their own contracts, but it now starts in the position that
+  /// leaves you with a promotion.
   final bool autoResignFighters;
 
   const Organization({
@@ -39,7 +49,7 @@ class Organization {
     required this.promotionBudget,
     this.lastTalentRefreshWeek = 1,
     this.currentWeek = 1,
-    this.autoResignFighters = false,
+    this.autoResignFighters = true,
   });
 
   Organization copyWith({

@@ -1103,6 +1103,33 @@ class GameController extends ChangeNotifier {
     }
   }
 
+  /// Says so in the mailbox when a fighter has one fight left on their
+  /// deal, before it runs out rather than after.
+  ///
+  /// Only matters when [Organization.autoResignFighters] is off, which
+  /// is the case where the player is doing the contracts themselves —
+  /// and the whole problem with letting a deal lapse used to be that the
+  /// first you heard of it was the note saying the man had already
+  /// gone.
+  Future<void> _maybeWarnContractExpiring(Fighter fighter) async {
+    final contract = fighter.contract;
+    final org = organization;
+    if (contract == null || org == null) return;
+    if (org.autoResignFighters) return;
+    if (contract.fightsRemaining != 1) return;
+
+    await _inboxRepo.save(_newInboxItem(
+      org,
+      InboxItemType.contract,
+      fighterId: fighter.id,
+      title: '${fighter.name} has one fight left',
+      body: '${fighter.name} has one bout left on their deal. Fight it out '
+          'without re-signing them and they leave as a free agent — '
+          'getting them back then costs a signing bonus like anyone else '
+          'in the pool.',
+    ));
+  }
+
   /// What happens when the fight just fought was the last one on the
   /// deal.
   ///
@@ -1416,6 +1443,7 @@ class GameController extends ChangeNotifier {
     );
     if (updated.contract != null) {
       updated = updated.copyWith(contract: updated.contract!.afterFight());
+      await _maybeWarnContractExpiring(updated);
       updated = await _handleExpiredContract(updated);
     }
 

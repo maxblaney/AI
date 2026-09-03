@@ -25,7 +25,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   /// Games persist on every platform now (web included), so a schema
   /// change without a matching migration step here would silently break
@@ -154,6 +154,19 @@ class AppDatabase extends _$AppDatabase {
             // has moved on since, so inventing one after the fact would
             // be inventing, not recovering.
             await m.addColumn(events, events.financeBreakdownJson);
+          }
+          if (from < 10) {
+            // Auto-re-sign now defaults on, and a save made before this
+            // is carrying the old default rather than a decision — the
+            // setting is two releases old and nothing in the game ever
+            // asked the player about it, while leaving it off empties
+            // their roster over about two seasons. Flip the stored value
+            // too, so an existing save is repaired rather than only new
+            // ones being safe. Anyone who wants the old behaviour still
+            // has the switch in Settings.
+            await customStatement(
+              'UPDATE organizations SET auto_resign_fighters = 1',
+            );
           }
         },
       );

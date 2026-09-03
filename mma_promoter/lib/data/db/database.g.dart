@@ -4271,7 +4271,7 @@ class $OrganizationsTable extends Organizations
       requiredDuringInsert: false,
       defaultConstraints: GeneratedColumn.constraintIsAlways(
           'CHECK ("auto_resign_fighters" IN (0, 1))'),
-      defaultValue: const Constant(false));
+      defaultValue: const Constant(true));
   static const VerificationMeta _lastPlayedAtMsMeta =
       const VerificationMeta('lastPlayedAtMs');
   @override
@@ -4433,7 +4433,8 @@ class OrganizationRow extends DataClass implements Insertable<OrganizationRow> {
   final int currentWeek;
 
   /// Player setting: re-sign a fighter automatically when their contract
-  /// runs out. Off by default.
+  /// runs out. On by default — see [Organization.autoResignFighters] for
+  /// why the default flipped.
   final bool autoResignFighters;
 
   /// When this save was last opened, as epoch milliseconds — orders the

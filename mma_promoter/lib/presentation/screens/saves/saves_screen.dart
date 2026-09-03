@@ -125,7 +125,10 @@ class _SavesScreenState extends State<SavesScreen> {
                       'deal, put them straight onto a new four-fight '
                       'contract at what they are now worth. The signing '
                       'bonus still comes out of the bank, and the mailbox '
-                      'tells you what it cost.',
+                      'tells you what it cost. Turn it off to work your '
+                      'own contracts — anyone you let fight out their '
+                      'deal leaves as a free agent, and the mailbox warns '
+                      'you a fight ahead.',
                     ),
                     isThreeLine: true,
                   ),

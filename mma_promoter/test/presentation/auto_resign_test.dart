@@ -72,14 +72,31 @@ void main() {
     expect(summary, isNotNull, reason: 'the event should have run');
   }
 
-  test('off by default, a deal you let run out costs you the fighter',
+  test('on by default, so a roster survives being left alone', () async {
+    final controller = await controllerWith([
+      signed('a', 'Fighter A', fightsRemaining: 1),
+      signed('b', 'Fighter B', fightsRemaining: 3),
+    ]);
+
+    // The old default was off, and off it quietly ended the game: a
+    // measured three-year run went 160 signed to unable to fill a card.
+    expect(controller.organization!.autoResignFighters, isTrue,
+        reason: 'a default that empties the roster is a trap, not a '
+            'difficulty setting');
+
+    await runOneFight(controller);
+    expect(controller.fighterById('a')!.isSigned, isTrue);
+
+    controller.dispose();
+  });
+
+  test('switched off, a deal you let run out costs you the fighter',
       () async {
     final controller = await controllerWith([
       signed('a', 'Fighter A', fightsRemaining: 1),
       signed('b', 'Fighter B', fightsRemaining: 3),
     ]);
-    expect(controller.organization!.autoResignFighters, isFalse,
-        reason: 'managing contracts is the default');
+    await controller.setAutoResignFighters(false);
 
     await runOneFight(controller);
 
@@ -105,7 +122,6 @@ void main() {
       signed('a', 'Fighter A', fightsRemaining: 1),
       signed('b', 'Fighter B', fightsRemaining: 3),
     ]);
-    await controller.setAutoResignFighters(true);
     expect(controller.organization!.autoResignFighters, isTrue);
 
     await runOneFight(controller);
@@ -128,7 +144,31 @@ void main() {
     controller.dispose();
   });
 
-  testWidgets('the settings switch turns it on', (tester) async {
+  test('with it off, the mailbox warns a fight before the deal lapses',
+      () async {
+    final controller = await controllerWith([
+      signed('a', 'Fighter A', fightsRemaining: 2),
+      signed('b', 'Fighter B', fightsRemaining: 5),
+    ]);
+    await controller.setAutoResignFighters(false);
+
+    await runOneFight(controller);
+
+    // One fight left now, and nobody has left yet — which is the whole
+    // point of saying so at this moment rather than the next one.
+    expect(controller.fighterById('a')!.contract!.fightsRemaining, 1);
+    expect(controller.fighterById('a')!.isSigned, isTrue);
+    expect(
+      controller.inboxItems.any((i) =>
+          i.type == InboxItemType.contract &&
+          i.title.contains('one fight left')),
+      isTrue,
+    );
+
+    controller.dispose();
+  });
+
+  testWidgets('the settings switch turns it off', (tester) async {
     final controller = await controllerWith([
       signed('a', 'Fighter A', fightsRemaining: 2),
     ]);
@@ -142,12 +182,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Auto re-sign fighters'), findsOneWidget);
-    expect(controller.organization!.autoResignFighters, isFalse);
+    expect(controller.organization!.autoResignFighters, isTrue);
 
     await tester.tap(find.byType(SwitchListTile));
     await tester.pumpAndSettle();
 
-    expect(controller.organization!.autoResignFighters, isTrue);
+    expect(controller.organization!.autoResignFighters, isFalse);
 
     controller.dispose();
   });

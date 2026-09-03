@@ -180,13 +180,43 @@ void main() {
     await db.close();
   });
 
+  test('an existing save has auto re-sign switched on', () async {
+    final raw = sql.sqlite3.openInMemory();
+    raw.execute('PRAGMA user_version = 9');
+    raw.execute('CREATE TABLE fighters (id TEXT NOT NULL PRIMARY KEY, '
+        "weight_class TEXT NOT NULL DEFAULT 'lightweight', "
+        'weight_lbs INTEGER NOT NULL DEFAULT 155)');
+    raw.execute('CREATE TABLE organizations (id TEXT NOT NULL PRIMARY KEY, '
+        'auto_resign_fighters INTEGER NOT NULL DEFAULT 0)');
+    raw.execute('CREATE TABLE events (id TEXT NOT NULL PRIMARY KEY)');
+    raw.execute("INSERT INTO organizations VALUES ('org', 0)");
+
+    final db = AppDatabase.forTesting(NativeDatabase.opened(raw));
+    await db.customSelect('SELECT 1').get();
+
+    // A save carrying the old default is carrying it because nothing
+    // ever asked — and left alone it empties the roster over about two
+    // seasons, so the repair reaches saves already in progress rather
+    // than only new ones.
+    expect(
+      raw.select('SELECT auto_resign_fighters FROM organizations').single[
+          'auto_resign_fighters'],
+      1,
+    );
+
+    await db.close();
+  });
+
   test('an upgraded database gets the fighter packs table', () async {
     final raw = sql.sqlite3.openInMemory();
     raw.execute('PRAGMA user_version = 7');
     raw.execute('CREATE TABLE fighters (id TEXT NOT NULL PRIMARY KEY, '
         "weight_class TEXT NOT NULL DEFAULT 'lightweight', "
         'weight_lbs INTEGER NOT NULL DEFAULT 155)');
-    raw.execute('CREATE TABLE organizations (id TEXT NOT NULL PRIMARY KEY)');
+    // A real database already at v7 has been through the v7 step, so it
+    // carries the auto-re-sign column that v10 rewrites.
+    raw.execute('CREATE TABLE organizations (id TEXT NOT NULL PRIMARY KEY, '
+        'auto_resign_fighters INTEGER NOT NULL DEFAULT 0)');
     raw.execute('CREATE TABLE events (id TEXT NOT NULL PRIMARY KEY)');
 
     final db = AppDatabase.forTesting(NativeDatabase.opened(raw));

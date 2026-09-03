@@ -174,9 +174,10 @@ class Organizations extends Table {
   IntColumn get currentWeek => integer().withDefault(const Constant(1))();
 
   /// Player setting: re-sign a fighter automatically when their contract
-  /// runs out. Off by default.
+  /// runs out. On by default — see [Organization.autoResignFighters] for
+  /// why the default flipped.
   BoolColumn get autoResignFighters =>
-      boolean().withDefault(const Constant(false))();
+      boolean().withDefault(const Constant(true))();
 
   /// When this save was last opened, as epoch milliseconds — orders the
   /// saves list so the game you were most recently playing is on top.
