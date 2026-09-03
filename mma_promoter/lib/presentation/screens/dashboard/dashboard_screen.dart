@@ -219,7 +219,14 @@ class _StatsRow extends StatelessWidget {
       runSpacing: 12,
       children: [
         _StatCard(label: 'Cash', value: currency.format(org.cashBalance)),
-        _StatCard(label: 'Reputation', value: org.reputationTier.label),
+        // The tier is what you *are*; the line under it is what you are
+        // climbing toward. Reputation used to accumulate to nothing and
+        // the tier never moved, so neither number was worth reading.
+        _StatCard(
+          label: 'Reputation',
+          value: org.reputationTier.label,
+          footnote: _tierProgress(org),
+        ),
         _StatCard(label: 'Fanbase', value: '${org.fanbaseSize}'),
         _StatCard(
           label: 'Weekly Costs',
@@ -231,11 +238,27 @@ class _StatsRow extends StatelessWidget {
   }
 }
 
+/// How far off the next tier is, or that there isn't one.
+String _tierProgress(Organization org) {
+  final next = org.reputationTier.nextTier;
+  if (next == null) return '${org.reputationPoints} rep · at the top';
+  final togo = next.reputationRequired - org.reputationPoints;
+  return '${org.reputationPoints} rep · $togo to ${next.label}';
+}
+
 class _StatCard extends StatelessWidget {
   final String label;
   final String value;
 
-  const _StatCard({required this.label, required this.value});
+  /// A smaller line under the value, for context the headline number
+  /// can't carry on its own.
+  final String? footnote;
+
+  const _StatCard({
+    required this.label,
+    required this.value,
+    this.footnote,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -248,6 +271,13 @@ class _StatCard extends StatelessWidget {
           children: [
             Text(label, style: Theme.of(context).textTheme.bodySmall),
             Text(value, style: Theme.of(context).textTheme.titleMedium),
+            if (footnote != null)
+              Text(
+                footnote!,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
           ],
         ),
       ),

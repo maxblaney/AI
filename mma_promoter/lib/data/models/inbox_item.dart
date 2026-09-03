@@ -19,6 +19,9 @@ enum InboxItemType {
 
   /// A contract ran out: either re-signed for you, or waiting on you.
   contract,
+
+  /// The promotion itself moved up a tier.
+  promotion,
 }
 
 extension InboxItemTypeLabel on InboxItemType {
@@ -38,6 +41,8 @@ extension InboxItemTypeLabel on InboxItemType {
         return 'Backstage';
       case InboxItemType.contract:
         return 'Contract';
+      case InboxItemType.promotion:
+        return 'Promotion';
     }
   }
 }

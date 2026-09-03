@@ -187,6 +187,93 @@ void main() {
     });
   });
 
+  group('EventFinanceCalculator.bestTicketPrice', () {
+    test('a sold-out room is told to charge more', () {
+      // The measured case: an international promotion at Boston's own
+      // suggested \$64 sells out at 20,000 and is told nothing, while
+      // \$80 sells the same 20,000 seats for \$320,000 more.
+      const venue = Venue.bostonMa;
+      final org = _organization(
+        fanbaseSize: 800000,
+        tier: ReputationTier.international,
+      );
+      final card = _plainCard(10);
+      final lookup = {
+        for (var i = 0; i < 10; i++) ...{
+          'a$i': _fighter('a$i', popularity: 60),
+          'b$i': _fighter('b$i', popularity: 55),
+        },
+      };
+
+      final atSuggested = EventFinanceCalculator.project(
+        venue: venue,
+        ticketPrice: venue.suggestedTicketPrice,
+        organization: org,
+        card: card,
+        fighterLookup: lookup,
+      );
+      expect(atSuggested.soldOut, isTrue,
+          reason: 'this is the case the suggestion gets wrong');
+
+      final best = EventFinanceCalculator.bestTicketPrice(
+        venue: venue,
+        organization: org,
+        card: card,
+        fighterLookup: lookup,
+      );
+      expect(best, greaterThan(venue.suggestedTicketPrice));
+
+      final atBest = EventFinanceCalculator.project(
+        venue: venue,
+        ticketPrice: best,
+        organization: org,
+        card: card,
+        fighterLookup: lookup,
+      );
+      expect(atBest.ticketRevenue, greaterThan(atSuggested.ticketRevenue));
+    });
+
+    test('no price beats the one it picks', () {
+      const venue = Venue.regionalUsa;
+      final org = _organization();
+      final card = _plainCard(8);
+      final lookup = _plainLookup(8);
+
+      final best = EventFinanceCalculator.bestTicketPrice(
+        venue: venue,
+        organization: org,
+        card: card,
+        fighterLookup: lookup,
+      );
+      int gateAt(int price) => EventFinanceCalculator.project(
+            venue: venue,
+            ticketPrice: price,
+            organization: org,
+            card: card,
+            fighterLookup: lookup,
+          ).ticketRevenue;
+
+      final bestGate = gateAt(best);
+      for (final price in [15, 30, 45, 60, 90, 140, 220, 400]) {
+        expect(gateAt(price), lessThanOrEqualTo(bestGate),
+            reason: '\$$price should not beat the suggested \$$best');
+      }
+    });
+
+    test('a half-empty room is not flagged as a sell-out', () {
+      final p = EventFinanceCalculator.project(
+        venue: Venue.bostonMa,
+        ticketPrice: 55,
+        organization: _organization(fanbaseSize: 5000),
+        card: _plainCard(4),
+        fighterLookup: _plainLookup(4),
+      );
+
+      expect(p.soldOut, isFalse);
+      expect(p.uncappedAttendance, p.attendance);
+    });
+  });
+
   group('EventFinanceCalculator', () {
     test('attendance never exceeds venue capacity', () {
       final calculator = EventFinanceCalculator(random: Random(1));

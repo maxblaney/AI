@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../data/models/models.dart';
 import '../../../domain/calendar/game_calendar.dart';
 import '../../state/game_controller.dart';
+import '../../theme/app_theme.dart';
 import '../roster/fighter_profile_screen.dart';
 
 /// Notifications about the player's own roster — injuries, retirements,
@@ -51,6 +52,8 @@ class _InboxTile extends StatelessWidget {
         return Icons.bolt;
       case InboxItemType.contract:
         return Icons.description_outlined;
+      case InboxItemType.promotion:
+        return Icons.trending_up;
     }
   }
 
@@ -71,6 +74,8 @@ class _InboxTile extends StatelessWidget {
         return Colors.purpleAccent;
       case InboxItemType.contract:
         return Theme.of(context).colorScheme.secondary;
+      case InboxItemType.promotion:
+        return AppColors.belt;
     }
   }
 

@@ -330,20 +330,35 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
           // picked; before this it wasn't shown until the night had run
           // and the money was already gone.
           if (_card.isNotEmpty && controller.organization != null)
-            _CardLedger(
-              projection: EventFinanceCalculator.project(
-                venue: _venue,
-                ticketPrice: int.tryParse(_ticketPriceController.text) ??
-                    _venue.suggestedTicketPrice,
-                organization: controller.organization!,
-                card: _card,
-                fighterLookup: {
-                  for (final f in controller.allFighters) f.id: f,
-                },
-              ),
-              weeklyOverhead: controller.weeklyOverhead,
-              cashBalance: controller.organization!.cashBalance,
-            ),
+            Builder(builder: (context) {
+              final lookup = {
+                for (final f in controller.allFighters) f.id: f,
+              };
+              final price = int.tryParse(_ticketPriceController.text) ??
+                  _venue.suggestedTicketPrice;
+              return _CardLedger(
+                projection: EventFinanceCalculator.project(
+                  venue: _venue,
+                  ticketPrice: price,
+                  organization: controller.organization!,
+                  card: _card,
+                  fighterLookup: lookup,
+                ),
+                ticketPrice: price,
+                bestPrice: EventFinanceCalculator.bestTicketPrice(
+                  venue: _venue,
+                  organization: controller.organization!,
+                  card: _card,
+                  fighterLookup: lookup,
+                ),
+                onUseBestPrice: (best) => setState(() {
+                  _ticketPriceController.text = '$best';
+                  _ticketPriceEdited = true;
+                }),
+                weeklyOverhead: controller.weeklyOverhead,
+                cashBalance: controller.organization!.cashBalance,
+              );
+            }),
           const SizedBox(height: 24),
           FilledButton(
             onPressed: _submitting ? null : _confirm,
@@ -965,11 +980,21 @@ class _FightTile extends StatelessWidget {
 /// *before* they run it — not to tell them what to book.
 class _CardLedger extends StatelessWidget {
   final EventProjection projection;
+  final int ticketPrice;
+
+  /// What this card would take the most at, in this room. Differs from
+  /// the venue's own suggestion, which knows nothing about how big the
+  /// promotion asking has become.
+  final int bestPrice;
+  final ValueChanged<int> onUseBestPrice;
   final int weeklyOverhead;
   final int cashBalance;
 
   const _CardLedger({
     required this.projection,
+    required this.ticketPrice,
+    required this.bestPrice,
+    required this.onUseBestPrice,
     required this.weeklyOverhead,
     required this.cashBalance,
   });
@@ -1030,6 +1055,51 @@ class _CardLedger extends StatelessWidget {
               label: 'Venue',
               value: '-${currency.format(projection.venueCost)}',
             ),
+            // Turning people away is not a triumph — it is the room
+            // telling you the ticket is underpriced.
+            if (projection.soldOut)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Row(
+                  children: [
+                    const Icon(Icons.local_activity_outlined,
+                        size: 15, color: Colors.amber),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Selling out — about '
+                        '${projection.uncappedAttendance - projection.attendance} '
+                        'more would come than the room holds.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.amber,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            if (bestPrice != ticketPrice)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        bestPrice > ticketPrice
+                            ? 'This card takes the most at '
+                                '${currency.format(bestPrice)} a ticket.'
+                            : 'A cheaper ticket takes more here: '
+                                '${currency.format(bestPrice)}.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => onUseBestPrice(bestPrice),
+                      child: const Text('Use it'),
+                    ),
+                  ],
+                ),
+              ),
             const Divider(height: 16),
             _LedgerRow(
               label: 'Net',

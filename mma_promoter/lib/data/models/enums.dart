@@ -153,6 +153,57 @@ extension ReputationTierInfo on ReputationTier {
     }
   }
 
+  /// The tier above this one, or null at the top.
+  ReputationTier? get nextTier => switch (this) {
+        ReputationTier.local => ReputationTier.regional,
+        ReputationTier.regional => ReputationTier.national,
+        ReputationTier.national => ReputationTier.international,
+        ReputationTier.international => null,
+      };
+
+  /// Cumulative reputation needed before a promotion is recognised at
+  /// this tier.
+  ///
+  /// A card earns between -5 and +5 reputation, and a well-run show
+  /// reliably makes +2 or +3 — measured at about 25 a year on a card a
+  /// month at the bottom, rising past 30 once pay-per-view money lets
+  /// you book better fights. Against that these come out at roughly two
+  /// years to leave Local, three or four more to reach National, and
+  /// four beyond that to go International.
+  ///
+  /// A first draft set these at 50/175/400 and a measured twelve-year
+  /// career reached 308 — the top of the ladder was decoration you could
+  /// see and never touch. These are the numbers a career actually
+  /// arrives at.
+  ///
+  /// Cumulative and never reset, so a promotion that has climbed does
+  /// not slide back on one bad year. Reputation can still fall — it just
+  /// takes sustained failure to lose ground you have already made.
+  int get reputationRequired => switch (this) {
+        ReputationTier.local => 0,
+        ReputationTier.regional => 40,
+        ReputationTier.national => 130,
+        ReputationTier.international => 280,
+      };
+
+  /// What changes when a promotion arrives at this tier, in the order a
+  /// player cares about. Used by the mailbox note announcing it.
+  List<String> get promotionPerks => switch (this) {
+        ReputationTier.local => const [],
+        ReputationTier.regional => const [
+            'Bigger rooms are worth booking as your following grows',
+            'Fight-night bonuses rise to \$1,000',
+          ],
+        ReputationTier.national => const [
+            'Your cards can be sold on pay-per-view',
+            'Fight-night bonuses rise to \$10,000',
+          ],
+        ReputationTier.international => const [
+            'Pay-per-view reaches a global audience',
+            'Fight-night bonuses rise to \$100,000',
+          ],
+      };
+
   /// The overall band the fighters a promotion of this tier starts under
   /// contract with fall inside.
   ///

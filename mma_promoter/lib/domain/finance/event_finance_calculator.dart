@@ -173,13 +173,27 @@ class EventProjection {
   /// Show money for everyone booked, plus one win bonus per bout.
   final int purses;
 
+  /// What the room *would* have drawn with no capacity limit. Bigger
+  /// than [attendance] means people were turned away.
+  final int uncappedAttendance;
+
+  /// The venue this was priced for, so the sold-out arithmetic below
+  /// has a capacity to work against.
+  final int capacity;
+
   const EventProjection({
     required this.attendance,
     required this.ticketRevenue,
     required this.ppvRevenue,
     required this.venueCost,
     required this.purses,
+    required this.uncappedAttendance,
+    required this.capacity,
   });
+
+  /// True when demand exceeds the room. Every head above capacity is a
+  /// ticket you could have sold dearer instead.
+  bool get soldOut => capacity > 0 && uncappedAttendance > capacity;
 
   int get revenue => ticketRevenue + ppvRevenue;
   int get expenses => venueCost + purses;
@@ -483,6 +497,8 @@ class EventFinanceCalculator {
         ppvRevenue: 0,
         venueCost: venue.baseCost,
         purses: 0,
+        uncappedAttendance: 0,
+        capacity: venue.capacity,
       );
     }
 
@@ -511,10 +527,11 @@ class EventFinanceCalculator {
                 promoEffect) *
             depth +
         venue.localWalkUp;
-    final attendance =
+    final uncapped =
         (baseDemand * turnoutAt(ticketPrice: ticketPrice, venue: venue))
             .round()
-            .clamp(0, venue.capacity);
+            .clamp(0, 1 << 30);
+    final attendance = uncapped.clamp(0, venue.capacity);
 
     final canSellPpv = organization.reputationTier == ReputationTier.national ||
         organization.reputationTier == ReputationTier.international;
@@ -545,7 +562,52 @@ class EventFinanceCalculator {
       ppvRevenue: ppvBuys * 40,
       venueCost: venue.baseCost,
       purses: purses + promotionBudgetSpent,
+      uncappedAttendance: uncapped,
+      capacity: venue.capacity,
     );
+  }
+
+  /// The ticket price this card would take the most money at, in this
+  /// room, for this promotion.
+  ///
+  /// The venue's own [Venue.suggestedTicketPrice] is a fixed number per
+  /// building and knows nothing about who is asking. A promotion that has
+  /// grown into an arena sells the place out at that price and is told
+  /// nothing about it — measured, an international promotion at Boston's
+  /// suggested \$64 sold out at 20,000 and left \$320,000 a night on the
+  /// table, because \$80 sold the same 20,000 seats. The optimum sits
+  /// where demand meets capacity: below it you are giving tickets away,
+  /// above it you are turning the room's own seats down.
+  ///
+  /// Searched rather than solved: demand is a curve with a capacity
+  /// elbow in it, and a coarse-then-fine sweep is both exact enough for
+  /// a suggestion and honest about the shape.
+  static int bestTicketPrice({
+    required Venue venue,
+    required Organization organization,
+    required List<Fight> card,
+    required Map<String, Fighter> fighterLookup,
+    int promotionBudgetSpent = 0,
+  }) {
+    if (card.isEmpty) return venue.suggestedTicketPrice;
+
+    var best = venue.suggestedTicketPrice;
+    var bestGate = -1;
+    for (var price = 10; price <= 600; price += 5) {
+      final gate = project(
+        venue: venue,
+        ticketPrice: price,
+        organization: organization,
+        card: card,
+        fighterLookup: fighterLookup,
+        promotionBudgetSpent: promotionBudgetSpent,
+      ).ticketRevenue;
+      if (gate > bestGate) {
+        bestGate = gate;
+        best = price;
+      }
+    }
+    return best;
   }
 
   /// What [fighter] actually takes home from this fight — their contract's

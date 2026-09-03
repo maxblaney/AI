@@ -876,6 +876,7 @@ class GameController extends ChangeNotifier {
       fanbaseSize:
           org.fanbaseSize + (finance.attendance ~/ 10).clamp(0, 1 << 30),
     ));
+    await _maybePromoteTier();
 
     await _maybeTriggerRandomEvent();
 
@@ -885,6 +886,61 @@ class GameController extends ChangeNotifier {
       finance: finance,
       fighterOutcomes: fighterOutcomes,
     );
+  }
+
+  /// Sets the promotion's banked reputation outright.
+  ///
+  /// Only for tests: reaching a tier threshold honestly takes dozens of
+  /// simulated cards, and the thing under test is what happens when the
+  /// line is crossed, not how long the crossing takes.
+  @visibleForTesting
+  Future<void> debugSetReputationPoints(int points) async {
+    final org = organization;
+    if (org == null) return;
+    await _orgRepo.save(org.copyWith(reputationPoints: points));
+  }
+
+  /// Moves the promotion up a tier once it has earned the reputation for
+  /// it, and says so in the mailbox.
+  ///
+  /// The tier used to be chosen at new-game and then never change: you
+  /// banked reputation for years and it bought nothing, and a Local
+  /// promotion could never become a National one. That made the ladder a
+  /// difficulty select rather than the progression it reads as. This is
+  /// the thing reputation is *for*.
+  ///
+  /// Climbing is not free — a bigger operation costs more to run every
+  /// week, and the roster does not improve just because the letterhead
+  /// did — but it unlocks pay-per-view at National, which is where the
+  /// money above a gate actually lives.
+  ///
+  /// Promotion only. A bad year costs reputation, and can cost the
+  /// progress toward the *next* tier, but does not take back a tier
+  /// already reached.
+  Future<void> _maybePromoteTier() async {
+    final org = organization;
+    if (org == null) return;
+    final next = org.reputationTier.nextTier;
+    if (next == null) return;
+    if (org.reputationPoints < next.reputationRequired) return;
+
+    await _orgRepo.save(org.copyWith(reputationTier: next));
+    final perks = next.promotionPerks
+        .map((p) => '\u2022 $p')
+        .join('\n');
+    await _inboxRepo.save(_newInboxItem(
+      org,
+      InboxItemType.promotion,
+      title: '${org.name} is now a ${next.label} promotion',
+      body: 'You have built enough of a reputation to be spoken of as a '
+          '${next.label.toLowerCase()} outfit.\n\n$perks\n\nRunning an '
+          'operation this size costs more every week — check the '
+          'dashboard before you book the next one.',
+    ));
+
+    // Recurse: a single huge night should not strand the promotion one
+    // threshold below where its reputation already puts it.
+    await _maybePromoteTier();
   }
 
   /// Moves belts after a card. Winning a championship fight takes that
