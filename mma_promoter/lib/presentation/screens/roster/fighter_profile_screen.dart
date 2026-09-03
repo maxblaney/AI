@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../data/models/models.dart';
 import '../../../domain/finance/pay_scale.dart';
+import '../../../domain/finance/payroll_health.dart';
 import '../../state/game_controller.dart';
 import '../../widgets/fighter_avatar.dart';
 import 'fighter_editor_screen.dart';
@@ -266,6 +267,17 @@ class FighterProfileScreen extends StatelessWidget {
                   'to show, ${currency.format(suggested.winBonus)} to win.',
                   style: Theme.of(dialogContext).textTheme.bodySmall,
                 ),
+                // What this deal is against a night's takings. Pay rises
+                // geometrically with skill, so a roster's payroll is
+                // dominated by its best few and three good signings can
+                // multiply it while the average barely moves — which is
+                // precisely the mistake that is invisible one profile
+                // page at a time.
+                _SigningWeight(
+                  payroll: controller.payrollHealth,
+                  perFight: suggested.total,
+                  currency: currency,
+                ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: showController,
@@ -509,6 +521,65 @@ class _StatBar extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           SizedBox(width: 28, child: Text('$value', textAlign: TextAlign.right)),
+        ],
+      ),
+    );
+  }
+}
+
+/// What one contract weighs against what a show actually takes.
+class _SigningWeight extends StatelessWidget {
+  final PayrollHealth? payroll;
+
+  /// Show money plus win bonus — what this fighter costs on a night they
+  /// win, which is the number to plan against.
+  final int perFight;
+  final NumberFormat currency;
+
+  const _SigningWeight({
+    required this.payroll,
+    required this.perFight,
+    required this.currency,
+  });
+
+  /// A single fighter taking more than this much of a night's takings is
+  /// a headliner's wage, whoever they are.
+  static const double heavyShare = 0.15;
+
+  @override
+  Widget build(BuildContext context) {
+    final health = payroll;
+    if (health == null || health.revenuePerShow <= 0) {
+      return const SizedBox.shrink();
+    }
+
+    final share = health.shareOfOneShow(perFight);
+    final heavy = share >= heavyShare;
+    final scheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            heavy ? Icons.warning_amber : Icons.receipt_long_outlined,
+            size: 15,
+            color: heavy ? scheme.error : scheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              'Your last ${health.shows} shows took '
+              '${currency.format(health.revenuePerShow)} each, and paid '
+              '${health.sharePercent}% of it to fighters. This deal is '
+              '${(share * 100).round()}% of a night on its own.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: heavy ? scheme.error : scheme.onSurfaceVariant,
+                    fontWeight: heavy ? FontWeight.bold : null,
+                  ),
+            ),
+          ),
         ],
       ),
     );

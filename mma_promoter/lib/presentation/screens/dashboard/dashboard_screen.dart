@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../data/models/models.dart';
 import '../../../domain/calendar/game_calendar.dart';
+import '../../../domain/finance/payroll_health.dart';
 import '../../state/game_controller.dart';
 import '../calendar/calendar_screen.dart';
 import '../saves/saves_screen.dart';
@@ -79,6 +80,7 @@ class DashboardScreen extends StatelessWidget {
                   org: org,
                   currency: currency,
                   weeklyOverhead: controller.weeklyOverhead,
+                  payroll: controller.payrollHealth,
                 ),
                 // Being cut off should never be a surprise — the slide
                 // into it takes months, and this is the warning.
@@ -206,10 +208,15 @@ class _StatsRow extends StatelessWidget {
   /// they cannot manage.
   final int weeklyOverhead;
 
+  /// Null until the promotion has run a show — there is no ratio to
+  /// report before there are takings to take a share of.
+  final PayrollHealth? payroll;
+
   const _StatsRow({
     required this.org,
     required this.currency,
     required this.weeklyOverhead,
+    required this.payroll,
   });
 
   @override
@@ -232,6 +239,23 @@ class _StatsRow extends StatelessWidget {
           label: 'Weekly Costs',
           value: '-${currency.format(weeklyOverhead)}',
         ),
+        // The reading that predicts a cash crisis. A promotion can sit
+        // at 40% for years, upgrade its roster, and be paying out more
+        // than its shows take before anything says so.
+        if (payroll != null)
+          _StatCard(
+            label: 'Fighter Pay',
+            value: '${payroll!.sharePercent}% of takings',
+            footnote: switch (payroll!.pressure) {
+              PayrollPressure.comfortable =>
+                'last ${payroll!.shows} shows · room to grow',
+              PayrollPressure.tight =>
+                'last ${payroll!.shows} shows · little room left',
+              PayrollPressure.overcommitted =>
+                'last ${payroll!.shows} shows · more than they take in',
+            },
+            emphasise: payroll!.pressure.needsAttention,
+          ),
         _StatCard(label: 'Home Region', value: org.homeRegion),
       ],
     );
@@ -254,10 +278,14 @@ class _StatCard extends StatelessWidget {
   /// can't carry on its own.
   final String? footnote;
 
+  /// Colours the card when the number is one to act on.
+  final bool emphasise;
+
   const _StatCard({
     required this.label,
     required this.value,
     this.footnote,
+    this.emphasise = false,
   });
 
   @override
@@ -270,7 +298,13 @@ class _StatCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(label, style: Theme.of(context).textTheme.bodySmall),
-            Text(value, style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              value,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: emphasise ? Theme.of(context).colorScheme.error : null,
+                    fontWeight: emphasise ? FontWeight.bold : null,
+                  ),
+            ),
             if (footnote != null)
               Text(
                 footnote!,

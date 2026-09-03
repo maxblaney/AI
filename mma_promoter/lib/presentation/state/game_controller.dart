@@ -27,6 +27,7 @@ import '../../domain/growth/fanbase_growth.dart';
 import '../../domain/simulation/fight_excitement.dart';
 import '../../domain/finance/event_finance_calculator.dart';
 import '../../domain/finance/pay_scale.dart';
+import '../../domain/finance/payroll_health.dart';
 import '../../domain/finance/running_costs.dart';
 import '../../domain/history/head_to_head.dart';
 import '../../domain/history/recent_form.dart';
@@ -540,6 +541,16 @@ class GameController extends ChangeNotifier {
     };
     notifyListeners();
   }
+
+  /// What share of recent takings is going to fighters, or null before
+  /// the promotion has run a show.
+  ///
+  /// The reading that predicts a cash crisis and that nothing used to
+  /// surface: a promotion can sit comfortably at 40% for years, upgrade
+  /// its roster, and be paying out 145% of what its shows take before
+  /// anything says so.
+  PayrollHealth? get payrollHealth =>
+      PayrollHealth.fromRecentEvents(completedEvents);
 
   /// The promotion's all-time leaderboards, built from its own fights
   /// only — a fighter's record elsewhere doesn't count toward these.
@@ -1363,8 +1374,15 @@ class GameController extends ChangeNotifier {
       exclusive: contract.exclusive,
       signedOn: GameCalendar.dateForWeek(org.currentWeek),
     );
+    // A renewal is not a signing. Charging a full purse up front to keep
+    // somebody already yours — and then paying it again when they fight
+    // — was double-counting, and it landed hardest exactly when a
+    // promotion is most fragile: measured, the year a roster upgrades,
+    // purses jumped from 36% of takings to 145% in one step. Retaining a
+    // fighter costs a fraction of taking one off the open market.
+    final renewalFee = (rate.showMoney * renewalFeeShare).round();
     await _orgRepo.save(
-      org.copyWith(cashBalance: org.cashBalance - rate.showMoney),
+      org.copyWith(cashBalance: org.cashBalance - renewalFee),
     );
     await _inboxRepo.save(_newInboxItem(
       org,
@@ -1374,10 +1392,18 @@ class GameController extends ChangeNotifier {
       body: '${fighter.name} fought out their deal and has been re-signed '
           'automatically for $_autoResignFightCount more fights at '
           '\$${rate.showMoney} to show and \$${rate.winBonus} to win. The '
-          'signing bonus has come out of the bank.',
+          'renewal fee of \$$renewalFee has come out of the bank.',
     ));
     return fighter.copyWith(contract: renewed);
   }
+
+  /// What a renewal costs up front, as a share of the new show money.
+  ///
+  /// A new signing is charged the full show money — you are buying
+  /// somebody off the open market against everyone else who wants them.
+  /// Keeping a fighter already under contract is not that, so it is not
+  /// priced like it.
+  static const double renewalFeeShare = 0.25;
 
   /// How many fights an automatic renewal is worth. Short enough that the
   /// player still gets a say every so often.

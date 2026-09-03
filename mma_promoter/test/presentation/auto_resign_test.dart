@@ -123,6 +123,7 @@ void main() {
       signed('b', 'Fighter B', fightsRemaining: 3),
     ]);
     expect(controller.organization!.autoResignFighters, isTrue);
+    final cashBefore = controller.organization!.cashBalance;
 
     await runOneFight(controller);
 
@@ -132,6 +133,12 @@ void main() {
     // At market rate rather than the old one — a 70-overall fighter is
     // worth more than the $1,000 this fixture had them on.
     expect(a.contract!.showMoney, greaterThan(1000));
+    // But the renewal itself costs a fraction of a signing, not a whole
+    // purse: keeping somebody already yours is not buying them off the
+    // open market, and charging as though it were sent purses to 145%
+    // of takings in the year a roster upgrades.
+    final charged = cashBefore - controller.organization!.cashBalance;
+    expect(charged, lessThan(a.contract!.showMoney));
     expect(
       controller.inboxItems.any((i) =>
           i.type == InboxItemType.contract && i.title.contains('re-signed')),
