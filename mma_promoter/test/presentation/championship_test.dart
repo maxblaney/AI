@@ -21,7 +21,7 @@ void main() {
     await controller.init();
     await controller.startNewGame(
       orgName: 'Belt FC',
-      tier: ReputationTier.regional,
+      tier: ReputationTier.international,
     );
   });
 

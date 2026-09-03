@@ -4941,6 +4941,12 @@ class $EventsTable extends Events with TableInfo<$EventsTable, EventRow> {
       GeneratedColumn<String>(
           'performance_of_the_night_fighter_id', aliasedName, true,
           type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _financeBreakdownJsonMeta =
+      const VerificationMeta('financeBreakdownJson');
+  @override
+  late final GeneratedColumn<String> financeBreakdownJson =
+      GeneratedColumn<String>('finance_breakdown_json', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -4958,7 +4964,8 @@ class $EventsTable extends Events with TableInfo<$EventsTable, EventRow> {
         expenses,
         reputationChange,
         fightOfTheNightFightId,
-        performanceOfTheNightFighterId
+        performanceOfTheNightFighterId,
+        financeBreakdownJson
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -5057,6 +5064,12 @@ class $EventsTable extends Events with TableInfo<$EventsTable, EventRow> {
               data['performance_of_the_night_fighter_id']!,
               _performanceOfTheNightFighterIdMeta));
     }
+    if (data.containsKey('finance_breakdown_json')) {
+      context.handle(
+          _financeBreakdownJsonMeta,
+          financeBreakdownJson.isAcceptableOrUnknown(
+              data['finance_breakdown_json']!, _financeBreakdownJsonMeta));
+    }
     return context;
   }
 
@@ -5100,6 +5113,9 @@ class $EventsTable extends Events with TableInfo<$EventsTable, EventRow> {
       performanceOfTheNightFighterId: attachedDatabase.typeMapping.read(
           DriftSqlType.string,
           data['${effectivePrefix}performance_of_the_night_fighter_id']),
+      financeBreakdownJson: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}finance_breakdown_json']),
     );
   }
 
@@ -5133,6 +5149,10 @@ class EventRow extends DataClass implements Insertable<EventRow> {
   final int reputationChange;
   final String? fightOfTheNightFightId;
   final String? performanceOfTheNightFighterId;
+
+  /// The finance calculator's own working for this night, as JSON.
+  /// Null for events that ran before the results page showed it.
+  final String? financeBreakdownJson;
   const EventRow(
       {required this.id,
       required this.bookedAtWeek,
@@ -5149,7 +5169,8 @@ class EventRow extends DataClass implements Insertable<EventRow> {
       required this.expenses,
       required this.reputationChange,
       this.fightOfTheNightFightId,
-      this.performanceOfTheNightFighterId});
+      this.performanceOfTheNightFighterId,
+      this.financeBreakdownJson});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -5174,6 +5195,9 @@ class EventRow extends DataClass implements Insertable<EventRow> {
     if (!nullToAbsent || performanceOfTheNightFighterId != null) {
       map['performance_of_the_night_fighter_id'] =
           Variable<String>(performanceOfTheNightFighterId);
+    }
+    if (!nullToAbsent || financeBreakdownJson != null) {
+      map['finance_breakdown_json'] = Variable<String>(financeBreakdownJson);
     }
     return map;
   }
@@ -5201,6 +5225,9 @@ class EventRow extends DataClass implements Insertable<EventRow> {
           performanceOfTheNightFighterId == null && nullToAbsent
               ? const Value.absent()
               : Value(performanceOfTheNightFighterId),
+      financeBreakdownJson: financeBreakdownJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(financeBreakdownJson),
     );
   }
 
@@ -5227,6 +5254,8 @@ class EventRow extends DataClass implements Insertable<EventRow> {
           serializer.fromJson<String?>(json['fightOfTheNightFightId']),
       performanceOfTheNightFighterId:
           serializer.fromJson<String?>(json['performanceOfTheNightFighterId']),
+      financeBreakdownJson:
+          serializer.fromJson<String?>(json['financeBreakdownJson']),
     );
   }
   @override
@@ -5251,6 +5280,7 @@ class EventRow extends DataClass implements Insertable<EventRow> {
           serializer.toJson<String?>(fightOfTheNightFightId),
       'performanceOfTheNightFighterId':
           serializer.toJson<String?>(performanceOfTheNightFighterId),
+      'financeBreakdownJson': serializer.toJson<String?>(financeBreakdownJson),
     };
   }
 
@@ -5270,8 +5300,8 @@ class EventRow extends DataClass implements Insertable<EventRow> {
           int? expenses,
           int? reputationChange,
           Value<String?> fightOfTheNightFightId = const Value.absent(),
-          Value<String?> performanceOfTheNightFighterId =
-              const Value.absent()}) =>
+          Value<String?> performanceOfTheNightFighterId = const Value.absent(),
+          Value<String?> financeBreakdownJson = const Value.absent()}) =>
       EventRow(
         id: id ?? this.id,
         bookedAtWeek: bookedAtWeek ?? this.bookedAtWeek,
@@ -5293,6 +5323,9 @@ class EventRow extends DataClass implements Insertable<EventRow> {
         performanceOfTheNightFighterId: performanceOfTheNightFighterId.present
             ? performanceOfTheNightFighterId.value
             : this.performanceOfTheNightFighterId,
+        financeBreakdownJson: financeBreakdownJson.present
+            ? financeBreakdownJson.value
+            : this.financeBreakdownJson,
       );
   EventRow copyWithCompanion(EventsCompanion data) {
     return EventRow(
@@ -5325,6 +5358,9 @@ class EventRow extends DataClass implements Insertable<EventRow> {
           data.performanceOfTheNightFighterId.present
               ? data.performanceOfTheNightFighterId.value
               : this.performanceOfTheNightFighterId,
+      financeBreakdownJson: data.financeBreakdownJson.present
+          ? data.financeBreakdownJson.value
+          : this.financeBreakdownJson,
     );
   }
 
@@ -5347,7 +5383,8 @@ class EventRow extends DataClass implements Insertable<EventRow> {
           ..write('reputationChange: $reputationChange, ')
           ..write('fightOfTheNightFightId: $fightOfTheNightFightId, ')
           ..write(
-              'performanceOfTheNightFighterId: $performanceOfTheNightFighterId')
+              'performanceOfTheNightFighterId: $performanceOfTheNightFighterId, ')
+          ..write('financeBreakdownJson: $financeBreakdownJson')
           ..write(')'))
         .toString();
   }
@@ -5369,7 +5406,8 @@ class EventRow extends DataClass implements Insertable<EventRow> {
       expenses,
       reputationChange,
       fightOfTheNightFightId,
-      performanceOfTheNightFighterId);
+      performanceOfTheNightFighterId,
+      financeBreakdownJson);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -5390,7 +5428,8 @@ class EventRow extends DataClass implements Insertable<EventRow> {
           other.reputationChange == this.reputationChange &&
           other.fightOfTheNightFightId == this.fightOfTheNightFightId &&
           other.performanceOfTheNightFighterId ==
-              this.performanceOfTheNightFighterId);
+              this.performanceOfTheNightFighterId &&
+          other.financeBreakdownJson == this.financeBreakdownJson);
 }
 
 class EventsCompanion extends UpdateCompanion<EventRow> {
@@ -5410,6 +5449,7 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
   final Value<int> reputationChange;
   final Value<String?> fightOfTheNightFightId;
   final Value<String?> performanceOfTheNightFighterId;
+  final Value<String?> financeBreakdownJson;
   final Value<int> rowid;
   const EventsCompanion({
     this.id = const Value.absent(),
@@ -5428,6 +5468,7 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
     this.reputationChange = const Value.absent(),
     this.fightOfTheNightFightId = const Value.absent(),
     this.performanceOfTheNightFighterId = const Value.absent(),
+    this.financeBreakdownJson = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   EventsCompanion.insert({
@@ -5447,6 +5488,7 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
     this.reputationChange = const Value.absent(),
     this.fightOfTheNightFightId = const Value.absent(),
     this.performanceOfTheNightFighterId = const Value.absent(),
+    this.financeBreakdownJson = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         name = Value(name),
@@ -5469,6 +5511,7 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
     Expression<int>? reputationChange,
     Expression<String>? fightOfTheNightFightId,
     Expression<String>? performanceOfTheNightFighterId,
+    Expression<String>? financeBreakdownJson,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -5491,6 +5534,8 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
         'fight_of_the_night_fight_id': fightOfTheNightFightId,
       if (performanceOfTheNightFighterId != null)
         'performance_of_the_night_fighter_id': performanceOfTheNightFighterId,
+      if (financeBreakdownJson != null)
+        'finance_breakdown_json': financeBreakdownJson,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -5512,6 +5557,7 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
       Value<int>? reputationChange,
       Value<String?>? fightOfTheNightFightId,
       Value<String?>? performanceOfTheNightFighterId,
+      Value<String?>? financeBreakdownJson,
       Value<int>? rowid}) {
     return EventsCompanion(
       id: id ?? this.id,
@@ -5532,6 +5578,7 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
           fightOfTheNightFightId ?? this.fightOfTheNightFightId,
       performanceOfTheNightFighterId:
           performanceOfTheNightFighterId ?? this.performanceOfTheNightFighterId,
+      financeBreakdownJson: financeBreakdownJson ?? this.financeBreakdownJson,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -5589,6 +5636,10 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
       map['performance_of_the_night_fighter_id'] =
           Variable<String>(performanceOfTheNightFighterId.value);
     }
+    if (financeBreakdownJson.present) {
+      map['finance_breakdown_json'] =
+          Variable<String>(financeBreakdownJson.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -5615,6 +5666,7 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
           ..write('fightOfTheNightFightId: $fightOfTheNightFightId, ')
           ..write(
               'performanceOfTheNightFighterId: $performanceOfTheNightFighterId, ')
+          ..write('financeBreakdownJson: $financeBreakdownJson, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -10041,6 +10093,7 @@ typedef $$EventsTableCreateCompanionBuilder = EventsCompanion Function({
   Value<int> reputationChange,
   Value<String?> fightOfTheNightFightId,
   Value<String?> performanceOfTheNightFighterId,
+  Value<String?> financeBreakdownJson,
   Value<int> rowid,
 });
 typedef $$EventsTableUpdateCompanionBuilder = EventsCompanion Function({
@@ -10060,6 +10113,7 @@ typedef $$EventsTableUpdateCompanionBuilder = EventsCompanion Function({
   Value<int> reputationChange,
   Value<String?> fightOfTheNightFightId,
   Value<String?> performanceOfTheNightFighterId,
+  Value<String?> financeBreakdownJson,
   Value<int> rowid,
 });
 
@@ -10124,6 +10178,10 @@ class $$EventsTableFilterComposer
       $composableBuilder(
           column: $table.performanceOfTheNightFighterId,
           builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get financeBreakdownJson => $composableBuilder(
+      column: $table.financeBreakdownJson,
+      builder: (column) => ColumnFilters(column));
 }
 
 class $$EventsTableOrderingComposer
@@ -10188,6 +10246,10 @@ class $$EventsTableOrderingComposer
       $composableBuilder(
           column: $table.performanceOfTheNightFighterId,
           builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get financeBreakdownJson => $composableBuilder(
+      column: $table.financeBreakdownJson,
+      builder: (column) => ColumnOrderings(column));
 }
 
 class $$EventsTableAnnotationComposer
@@ -10248,6 +10310,9 @@ class $$EventsTableAnnotationComposer
       $composableBuilder(
           column: $table.performanceOfTheNightFighterId,
           builder: (column) => column);
+
+  GeneratedColumn<String> get financeBreakdownJson => $composableBuilder(
+      column: $table.financeBreakdownJson, builder: (column) => column);
 }
 
 class $$EventsTableTableManager extends RootTableManager<
@@ -10290,6 +10355,7 @@ class $$EventsTableTableManager extends RootTableManager<
             Value<String?> fightOfTheNightFightId = const Value.absent(),
             Value<String?> performanceOfTheNightFighterId =
                 const Value.absent(),
+            Value<String?> financeBreakdownJson = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               EventsCompanion(
@@ -10309,6 +10375,7 @@ class $$EventsTableTableManager extends RootTableManager<
             reputationChange: reputationChange,
             fightOfTheNightFightId: fightOfTheNightFightId,
             performanceOfTheNightFighterId: performanceOfTheNightFighterId,
+            financeBreakdownJson: financeBreakdownJson,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -10329,6 +10396,7 @@ class $$EventsTableTableManager extends RootTableManager<
             Value<String?> fightOfTheNightFightId = const Value.absent(),
             Value<String?> performanceOfTheNightFighterId =
                 const Value.absent(),
+            Value<String?> financeBreakdownJson = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               EventsCompanion.insert(
@@ -10348,6 +10416,7 @@ class $$EventsTableTableManager extends RootTableManager<
             reputationChange: reputationChange,
             fightOfTheNightFightId: fightOfTheNightFightId,
             performanceOfTheNightFighterId: performanceOfTheNightFighterId,
+            financeBreakdownJson: financeBreakdownJson,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0

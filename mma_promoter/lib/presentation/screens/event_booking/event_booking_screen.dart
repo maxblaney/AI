@@ -1,4 +1,6 @@
 import '../../../domain/betting/fight_odds.dart';
+import '../../../domain/booking/card_matchmaker.dart';
+import '../../../domain/finance/event_finance_calculator.dart';
 import '../../../domain/booking/fight_hype.dart';
 import '../../../domain/booking/title_fight_rules.dart';
 import '../../../domain/history/recent_form.dart';
@@ -247,9 +249,19 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
           ),
           const SizedBox(height: 24),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('Card', style: Theme.of(context).textTheme.titleLarge),
+              const Spacer(),
+              // Most of a card is prelims nobody agonises over. This
+              // fills the rest of the night in one tap; everything it
+              // picks can still be reordered, edited or thrown out.
+              TextButton.icon(
+                icon: const Icon(Icons.auto_awesome, size: 18),
+                label: Text(_card.isEmpty ? 'Auto-fill' : 'Fill rest'),
+                onPressed: roster.length - _usedFighterIds.length >= 2
+                    ? () => _autoFill(roster)
+                    : null,
+              ),
               TextButton.icon(
                 icon: const Icon(Icons.add),
                 label: const Text('Add Fight'),
@@ -379,6 +391,63 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
         if (_coMainEventFightId == fight.id) _coMainEventFightId = null;
       }),
     );
+  }
+
+  /// How long a card the auto-filler aims at: a main card of five plus
+  /// prelims, which is the shape of a real show.
+  static const int _autoFillTarget = 10;
+
+  /// Share of a full house's gate the auto-filler will commit to purses.
+  /// Leaves room for the venue, promotion and a night that actually
+  /// turns a profit.
+  static const double _purseShareOfGate = 0.45;
+
+  /// Fills the card out to [_autoFillTarget] bouts with whoever is
+  /// available, leaving anything already booked exactly where it is.
+  void _autoFill(List<Fighter> roster) {
+    final controller = context.read<GameController>();
+    // What the night can plausibly gross, at the room and price the
+    // player has actually chosen, times the share of it that sensibly
+    // goes to fighters. Booking a card the gate cannot cover is the
+    // easiest way to lose money in this game, and an auto-filler that
+    // did it by default would be a trap rather than a convenience.
+    final ticketPrice =
+        int.tryParse(_ticketPriceController.text) ?? _venue.suggestedTicketPrice;
+    final org = controller.organization;
+    final expectedHeads = org == null
+        ? _venue.capacity
+        : EventFinanceCalculator.baselineAttendance(
+            organization: org,
+            venue: _venue,
+            ticketPrice: ticketPrice,
+          );
+    final purseBudget =
+        (expectedHeads * ticketPrice * _purseShareOfGate).round();
+
+    final added = CardMatchmaker.build(
+      roster: roster,
+      bouts: _autoFillTarget - _card.length,
+      unavailable: _usedFighterIds,
+      purseBudget: purseBudget,
+    );
+    if (added.isEmpty) {
+      _showError('Nobody left to match up.');
+      return;
+    }
+
+    setState(() {
+      _card.addAll(added);
+      // Only claim the top of the card if the player hasn't already
+      // decided who headlines — filling out the prelims shouldn't
+      // demote the fight they built the show around.
+      _mainEventFightId ??= _card.first.id;
+      if (_coMainEventFightId == null && _card.length >= 2) {
+        _coMainEventFightId =
+            _card.firstWhere((f) => f.id != _mainEventFightId).id;
+      }
+    });
+    _showError('Added ${added.length} '
+        'fight${added.length == 1 ? '' : 's'} — reorder or edit any of them.');
   }
 
   /// Adds a fight, or edits [existing] in place — same dialog either

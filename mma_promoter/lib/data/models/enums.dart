@@ -169,7 +169,7 @@ extension ReputationTierInfo on ReputationTier {
       case ReputationTier.regional:
         return (min: 56, max: 78);
       case ReputationTier.national:
-        return (min: 70, max: 95);
+        return (min: 66, max: 86);
       case ReputationTier.international:
         return (min: 75, max: 99);
     }

@@ -1,3 +1,4 @@
+import '../../domain/finance/event_finance_calculator.dart';
 import 'enums.dart';
 
 enum EventStatus { scheduled, completed }
@@ -23,6 +24,14 @@ class MmaEvent {
   final String? fightOfTheNightFightId;
   final String? performanceOfTheNightFighterId;
 
+  /// Where this night's crowd and money came from, as the finance
+  /// calculator's own working. Stored rather than recomputed: the
+  /// fighters it was derived from keep fighting, so their popularity and
+  /// purses drift, and a breakdown recomputed a year later would not be
+  /// the one that produced these numbers. Null for events that ran
+  /// before the breakdown existed.
+  final EventFinanceBreakdown? financeBreakdown;
+
   const MmaEvent({
     required this.id,
     required this.name,
@@ -39,6 +48,7 @@ class MmaEvent {
     this.reputationChange = 0,
     this.fightOfTheNightFightId,
     this.performanceOfTheNightFighterId,
+    this.financeBreakdown,
   });
 
   bool get isCompleted => status == EventStatus.completed;
@@ -60,6 +70,7 @@ class MmaEvent {
     int? reputationChange,
     String? fightOfTheNightFightId,
     String? performanceOfTheNightFighterId,
+    EventFinanceBreakdown? financeBreakdown,
   }) {
     return MmaEvent(
       id: id ?? this.id,
@@ -79,6 +90,7 @@ class MmaEvent {
           fightOfTheNightFightId ?? this.fightOfTheNightFightId,
       performanceOfTheNightFighterId: performanceOfTheNightFighterId ??
           this.performanceOfTheNightFighterId,
+      financeBreakdown: financeBreakdown ?? this.financeBreakdown,
     );
   }
 }

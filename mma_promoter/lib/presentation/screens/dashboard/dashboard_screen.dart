@@ -75,7 +75,15 @@ class DashboardScreen extends StatelessWidget {
               children: [
                 _WeekCard(org: org, controller: controller, onAdvance: () => _advanceWeek(context)),
                 const SizedBox(height: 16),
-                _StatsRow(org: org, currency: currency),
+                _StatsRow(
+                  org: org,
+                  currency: currency,
+                  weeklyOverhead: controller.weeklyOverhead,
+                ),
+                // Being cut off should never be a surprise — the slide
+                // into it takes months, and this is the warning.
+                if (controller.isOverextended)
+                  _CutOffBanner(currency: currency, ceiling: controller.debtCeiling),
                 const SizedBox(height: 24),
                 Text('Upcoming Events', style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 8),
@@ -156,11 +164,53 @@ class _WeekCard extends StatelessWidget {
   }
 }
 
+/// Shown once the bank has stopped the promotion booking anything new.
+class _CutOffBanner extends StatelessWidget {
+  final NumberFormat currency;
+  final int ceiling;
+
+  const _CutOffBanner({required this.currency, required this.ceiling});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: Theme.of(context).colorScheme.errorContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            const Icon(Icons.account_balance, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'The bank has cut you off past ${currency.format(-ceiling)} '
+                'in debt. Run the cards you have booked and release '
+                'fighters you are not using — every one of them is on your '
+                'weekly bill.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _StatsRow extends StatelessWidget {
   final Organization org;
   final NumberFormat currency;
 
-  const _StatsRow({required this.org, required this.currency});
+  /// What the promotion spends every week whether or not it runs a card.
+  /// On the dashboard because a cost the player cannot see is a cost
+  /// they cannot manage.
+  final int weeklyOverhead;
+
+  const _StatsRow({
+    required this.org,
+    required this.currency,
+    required this.weeklyOverhead,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -171,6 +221,10 @@ class _StatsRow extends StatelessWidget {
         _StatCard(label: 'Cash', value: currency.format(org.cashBalance)),
         _StatCard(label: 'Reputation', value: org.reputationTier.label),
         _StatCard(label: 'Fanbase', value: '${org.fanbaseSize}'),
+        _StatCard(
+          label: 'Weekly Costs',
+          value: '-${currency.format(weeklyOverhead)}',
+        ),
         _StatCard(label: 'Home Region', value: org.homeRegion),
       ],
     );

@@ -216,6 +216,10 @@ class Events extends Table {
   TextColumn get fightOfTheNightFightId => text().nullable()();
   TextColumn get performanceOfTheNightFighterId => text().nullable()();
 
+  /// The finance calculator's own working for this night, as JSON.
+  /// Null for events that ran before the results page showed it.
+  TextColumn get financeBreakdownJson => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }

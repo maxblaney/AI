@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 
 import '../db/database.dart';
+import '../../domain/finance/event_finance_calculator.dart';
 import '../models/models.dart';
 
 /// Conversions between Drift row types (persistence) and plain domain
@@ -274,6 +275,19 @@ OrganizationsCompanion organizationToCompanion(Organization org) {
   );
 }
 
+/// An unreadable or absent blob means no breakdown, not a broken event —
+/// the numbers it explains are stored separately and stand on their own.
+EventFinanceBreakdown? _breakdownFromJson(String? raw) {
+  if (raw == null || raw.isEmpty) return null;
+  try {
+    final decoded = jsonDecode(raw);
+    if (decoded is! Map<String, dynamic>) return null;
+    return EventFinanceBreakdown.fromJson(decoded);
+  } on FormatException {
+    return null;
+  }
+}
+
 MmaEvent eventFromRow(EventRow row) {
   return MmaEvent(
     id: row.id,
@@ -291,6 +305,7 @@ MmaEvent eventFromRow(EventRow row) {
     reputationChange: row.reputationChange,
     fightOfTheNightFightId: row.fightOfTheNightFightId,
     performanceOfTheNightFighterId: row.performanceOfTheNightFighterId,
+    financeBreakdown: _breakdownFromJson(row.financeBreakdownJson),
   );
 }
 
@@ -313,6 +328,9 @@ EventsCompanion eventToCompanion(MmaEvent event, String saveId) {
     fightOfTheNightFightId: Value(event.fightOfTheNightFightId),
     performanceOfTheNightFighterId:
         Value(event.performanceOfTheNightFighterId),
+    financeBreakdownJson: Value(event.financeBreakdown == null
+        ? null
+        : jsonEncode(event.financeBreakdown!.toJson())),
   );
 }
 

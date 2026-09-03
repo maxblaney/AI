@@ -72,7 +72,8 @@ void main() {
     expect(summary, isNotNull, reason: 'the event should have run');
   }
 
-  test('off by default, an expired deal is only flagged', () async {
+  test('off by default, a deal you let run out costs you the fighter',
+      () async {
     final controller = await controllerWith([
       signed('a', 'Fighter A', fightsRemaining: 1),
       signed('b', 'Fighter B', fightsRemaining: 3),
@@ -83,14 +84,16 @@ void main() {
     await runOneFight(controller);
 
     final a = controller.fighterById('a')!;
-    expect(a.contract!.fightsRemaining, 0);
-    expect(a.contract!.isExpired, isTrue);
-    // Still on the roster — an expired deal is a thing to deal with, not
-    // an eviction.
-    expect(a.isSigned, isTrue);
+    // They leave. An expired contract used to be a mailbox note and
+    // nothing else, which left the contract system with no consequence
+    // for neglecting it.
+    expect(a.contract, isNull);
+    expect(a.isSigned, isFalse);
+    expect(controller.talentPool.any((f) => f.id == 'a'), isTrue,
+        reason: 'a free agent, not deleted');
     expect(
       controller.inboxItems.any((i) =>
-          i.type == InboxItemType.contract && i.title.contains('contract is up')),
+          i.type == InboxItemType.contract && i.title.contains('has left')),
       isTrue,
     );
 

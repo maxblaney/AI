@@ -108,9 +108,10 @@ void main() {
         is_interim_champion INTEGER NOT NULL DEFAULT 0
       )''');
     raw.execute('CREATE TABLE fights (id TEXT NOT NULL PRIMARY KEY)');
-    // v7 adds a column to organizations, so the table has to exist even
-    // though this fixture is about fighters.
+    // v7 adds a column to organizations and v9 one to events, so both
+    // tables have to exist even though this fixture is about fighters.
     raw.execute('CREATE TABLE organizations (id TEXT NOT NULL PRIMARY KEY)');
+    raw.execute('CREATE TABLE events (id TEXT NOT NULL PRIMARY KEY)');
 
     raw.execute(
         "INSERT INTO fighters VALUES ('champ', 'lightweight', 155, 1, 0)");
@@ -155,8 +156,9 @@ void main() {
 
     // A light heavyweight generated under the old 200 lb limit walked
     // around at 206; the same fighter generated today would be 211.
-    // v7 adds a column to organizations, so the table has to exist.
+    // v7 adds a column to organizations and v9 one to events.
     raw.execute('CREATE TABLE organizations (id TEXT NOT NULL PRIMARY KEY)');
+    raw.execute('CREATE TABLE events (id TEXT NOT NULL PRIMARY KEY)');
 
     raw.execute("INSERT INTO fighters VALUES ('lhw', 'lightHeavyweight', 206)");
     raw.execute("INSERT INTO fighters VALUES ('mw', 'middleweight', 189)");
@@ -185,6 +187,7 @@ void main() {
         "weight_class TEXT NOT NULL DEFAULT 'lightweight', "
         'weight_lbs INTEGER NOT NULL DEFAULT 155)');
     raw.execute('CREATE TABLE organizations (id TEXT NOT NULL PRIMARY KEY)');
+    raw.execute('CREATE TABLE events (id TEXT NOT NULL PRIMARY KEY)');
 
     final db = AppDatabase.forTesting(NativeDatabase.opened(raw));
     // Packs live outside any save, so an existing game gaining the

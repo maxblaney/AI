@@ -43,17 +43,23 @@ void main() {
       final balanceBefore = controller.organization!.cashBalance;
       expect(balanceBefore, lessThan(0));
 
+      // A week now costs the promotion its overheads as well as the
+      // interest — the two are charged in that order, so the interest is
+      // taken on the balance after the week's running costs.
+      final overhead = controller.weeklyOverhead;
       await controller.advanceWeek();
 
       final balanceAfter = controller.organization!.cashBalance;
+      final afterOverhead = balanceBefore - overhead;
       final expectedInterest =
-          (-balanceBefore * GameController.weeklyDebtInterestRate).round();
+          (-afterOverhead * GameController.weeklyDebtInterestRate).round();
 
-      expect(balanceAfter, balanceBefore - expectedInterest);
+      expect(balanceAfter, afterOverhead - expectedInterest);
       expect(balanceAfter, lessThan(balanceBefore));
     });
 
-    test('advanceWeek charges no interest on a positive balance', () async {
+    test('advanceWeek charges overheads but no interest in the black',
+        () async {
       final controller = GameController.inMemory();
       await controller.init();
       await controller.startNewGame(orgName: 'Solvent Inc', tier: ReputationTier.regional);
@@ -62,9 +68,13 @@ void main() {
       final balanceBefore = controller.organization!.cashBalance;
       expect(balanceBefore, greaterThan(0));
 
+      final overhead = controller.weeklyOverhead;
       await controller.advanceWeek();
 
-      expect(controller.organization!.cashBalance, balanceBefore);
+      // Overheads are charged either way; interest is the thing that
+      // only applies in the red.
+      expect(controller.organization!.cashBalance, balanceBefore - overhead);
+      expect(overhead, greaterThan(0));
     });
   });
 }

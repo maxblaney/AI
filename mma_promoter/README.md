@@ -112,8 +112,8 @@ Two consequences worth knowing:
   adopted into its own save instead of being orphaned behind an id
   nothing points at. `test/data/migration_test.dart` builds an old
   database by hand and checks exactly that, for v1, for the v5 belt
-  backfill, for v6's light-heavyweight reweigh, and for v8 creating the
-  fighter-packs table. One trap this batch
+  backfill, for v6's light-heavyweight reweigh, for v8 creating the
+  fighter-packs table, and for v9's finance breakdown column. One trap this batch
   walked into and fixed: the v2 step read whole organization rows through
   `select(organizations)`, which maps every column the *current* Dart
   schema declares — so the moment v7 added a non-nullable column, an
@@ -468,6 +468,64 @@ the native mobile app with real persistence.
   weakest is named underneath, so a short bar tells you what to fix
   rather than just that something is wrong. Setting Title Implications
   moves the bar live.
+- **Auto-fill the card** (`CardMatchmaker`, Book Event → Auto-fill /
+  Fill rest). Ten fights meant ten trips through the same dialog, and
+  most of a card is prelims nobody agonises over. This picks the rest of
+  the night in one tap — everything it chooses can still be reordered,
+  edited or thrown out. Pairings are adjacent on each division's ladder,
+  so the fights are competitive; a champion in his own division gets a
+  title fight; the best available bout headlines and goes five.
+  - **It buys the undercard on value, not hype — and that is not a
+    detail.** Hype tracks popularity, popularity tracks overall, and
+    purses rise *geometrically* with overall, so "the ten best fights
+    available" is also "the ten most expensive fighters on the roster".
+    Simulating a year of those cards lost money at every tier above
+    Local. A matchmaker buys one main event and fills the undercard with
+    hype per dollar, inside a budget taken from what the room and price
+    can plausibly gross — `EventFinanceCalculator.baselineAttendance`,
+    not the building's capacity, because a promotion drawing 1,600 into
+    a 20,000-seat arena would otherwise budget five times its gate.
+- **The results page shows its working** (`EventFinanceBreakdown`,
+  schema v9). Under the headline numbers, "Why this gate" opens into
+  where the crowd came from (your following, the main event, the rest of
+  the card, promotion, local walk-up), what it was multiplied by (card
+  depth, ticket price, luck on the night), whether the room was the
+  right size, and how the money split. The one-line summary names the
+  fix — "the ticket was dear for this market", "the room was a size too
+  big" — rather than leaving the player to infer it. The breakdown is
+  stored with the event rather than recomputed, because the fighters it
+  came from keep fighting and a breakdown rebuilt a year later would not
+  be the one that produced these numbers.
+- **Money is no longer a scoreboard** (`RunningCosts`). It only ever went
+  up: every tier opened profitable, nothing was spent between events,
+  and there was no floor to fall through — which left venue choice,
+  ticket pricing and roster size carefully modelled decisions with no
+  consequence for getting them wrong. Three things now push back.
+  - **Weekly overheads.** Staff and premises by tier, plus a small
+    retainer per fighter under contract. Sitting still costs money, so a
+    card has to be worth putting on and a roster you never book is one
+    you are paying for. Shown on the dashboard, because a cost the
+    player cannot see is one they cannot manage.
+  - **A debt ceiling.** Past three quarters of the tier's opening cash
+    in debt, the bank stops you booking anything new; below that, debt
+    is pressure rather than a wall, because running a card is the only
+    way out. A dashboard banner says so. The slide there takes months.
+  - **Contracts that run out lose you the fighter.** An expired deal used
+    to be a mailbox note and nothing else, so the whole contract system —
+    pay scale, fight counts, the auto-re-sign setting — had no
+    consequence attached to neglecting it. They now leave for the talent
+    pool, and getting them back costs a signing bonus like anyone else.
+  - **Measured over a simulated year**, one card every four weeks versus
+    idling, cash at the end: Local +$127k / −$16k, Regional +$70k /
+    −$36k, National +$717k / −$178k, International +$2.60M / −$1.16M.
+    Playing pays, idling bleeds, at every tier.
+- **National's roster band is 66–86**, down from 70–95. Overheads made
+  this visible: National ran at a loss *worse than doing nothing* — its
+  fanbase rises 10× per tier but purses rise geometrically, so a band
+  reaching 95 cost roughly 33× Regional's against 10× the revenue.
+  International survives the same jump only because its 800,000 fanbase
+  catches up. Narrowing the band turned National from −$904k a year into
+  +$717k.
 - **Two ways to open a save** (New Promotion → Starting Roster).
   *Established promotion* is the old behaviour — 160 fighters already
   under contract, twenty to a division, so you can book a card on day

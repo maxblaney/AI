@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -63,6 +64,35 @@ Fight _mainEventFight(String aId, String bId) {
     ),
   );
 }
+
+/// A card of [bouts] resolved fights between generic mid-popularity
+/// fighters, for the breakdown tests below.
+List<Fight> _plainCard(int bouts) => [
+      for (var i = 0; i < bouts; i++)
+        Fight(
+          id: 'f$i',
+          eventId: 'event-1',
+          fighterAId: 'a$i',
+          fighterBId: 'b$i',
+          weightClass: WeightClass.lightweight,
+          cardOrder: i,
+          isMainEvent: i == 0,
+          result: FightResult(
+            winnerId: 'a$i',
+            method: FightMethod.decision,
+            round: 3,
+            winnerPerformanceRating: 70,
+            loserPerformanceRating: 60,
+          ),
+        ),
+    ];
+
+Map<String, Fighter> _plainLookup(int bouts) => {
+      for (var i = 0; i < bouts; i++) ...{
+        'a$i': _fighter('a$i', popularity: 40),
+        'b$i': _fighter('b$i', popularity: 35),
+      },
+    };
 
 void main() {
   _cardSizeAndPopularityTests();
@@ -516,6 +546,109 @@ void _venueAndPricingTests() {
         expect(turnout, lessThan(previous));
         previous = turnout;
       }
+    });
+  });
+
+
+  group('the breakdown explains the gate', () {
+    test('the demand terms add up to what was actually used', () {
+      final calc = EventFinanceCalculator(random: Random(3));
+      final result = calc.calculate(
+        venue: Venue.regionalUsa,
+        ticketPrice: Venue.regionalUsa.suggestedTicketPrice,
+        organization: _organization(fanbaseSize: 8000),
+        card: _plainCard(6),
+        fighterLookup: _plainLookup(6),
+        promotionBudgetSpent: 5000,
+      );
+      final b = result.breakdown;
+
+      // Every term the model uses is reported, so the arithmetic on the
+      // results page reads straight down rather than being asserted.
+      expect(b.rawDemand,
+          b.fromFanbase + b.fromMainEvent + b.fromCard + b.fromPromotion +
+              b.fromWalkUp);
+      expect(b.fromFanbase, greaterThan(0));
+      expect(b.fromWalkUp, Venue.regionalUsa.localWalkUp.round());
+      expect(b.fromPromotion, greaterThan(0),
+          reason: 'promo spend bought something');
+    });
+
+    test('the money split matches the totals it explains', () {
+      final calc = EventFinanceCalculator(random: Random(3));
+      final result = calc.calculate(
+        venue: Venue.regionalUsa,
+        ticketPrice: 60,
+        organization: _organization(fanbaseSize: 8000),
+        card: _plainCard(4),
+        fighterLookup: _plainLookup(4),
+        promotionBudgetSpent: 2000,
+      );
+      final b = result.breakdown;
+
+      expect(b.ticketRevenue + b.ppvRevenue, result.revenue);
+      expect(b.venueCost + b.purses + b.promotionSpend, result.expenses);
+      expect(b.ticketRevenue, result.attendance * 60);
+    });
+
+    test('a sold-out room says so, and says what it turned away', () {
+      final calc = EventFinanceCalculator(random: Random(3));
+      final result = calc.calculate(
+        // A huge following in the smallest hall in the game.
+        venue: Venue.regionalUsa,
+        ticketPrice: 20,
+        organization: _organization(fanbaseSize: 900000),
+        card: _plainCard(10),
+        fighterLookup: _plainLookup(10),
+        promotionBudgetSpent: 0,
+      );
+
+      expect(result.breakdown.soldOut, isTrue);
+      expect(result.attendance, Venue.regionalUsa.capacity);
+      expect(result.breakdown.uncappedAttendance,
+          greaterThan(Venue.regionalUsa.capacity));
+    });
+
+    test('a dear ticket and a cheap one pull the multiplier apart', () {
+      EventFinanceBreakdown at(int price) => EventFinanceCalculator(
+            random: Random(3),
+          )
+              .calculate(
+                venue: Venue.regionalUsa,
+                ticketPrice: price,
+                organization: _organization(fanbaseSize: 8000),
+                card: _plainCard(6),
+                fighterLookup: _plainLookup(6),
+                promotionBudgetSpent: 0,
+              )
+              .breakdown;
+
+      expect(at(20).priceMultiplier, greaterThan(1.0));
+      expect(at(140).priceMultiplier, lessThan(1.0));
+    });
+
+    test('it survives the round trip through storage', () {
+      final calc = EventFinanceCalculator(random: Random(3));
+      final original = calc
+          .calculate(
+            venue: Venue.regionalUsa,
+            ticketPrice: 55,
+            organization: _organization(fanbaseSize: 8000),
+            card: _plainCard(5),
+            fighterLookup: _plainLookup(5),
+            promotionBudgetSpent: 1000,
+          )
+          .breakdown;
+
+      final restored = EventFinanceBreakdown.fromJson(
+          jsonDecode(jsonEncode(original.toJson())) as Map<String, dynamic>)!;
+
+      expect(restored.rawDemand, original.rawDemand);
+      expect(restored.depthMultiplier, original.depthMultiplier);
+      expect(restored.priceMultiplier, original.priceMultiplier);
+      expect(restored.soldOut, original.soldOut);
+      expect(restored.purses, original.purses);
+      expect(restored.ticketRevenue, original.ticketRevenue);
     });
   });
 }

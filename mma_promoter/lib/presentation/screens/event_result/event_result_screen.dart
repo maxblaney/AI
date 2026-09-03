@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/models/models.dart';
+import '../../../domain/finance/event_finance_calculator.dart';
 import '../../../domain/simulation/fight_excitement.dart';
 import '../../state/game_controller.dart';
 import '../event_booking/event_booking_screen.dart';
@@ -245,6 +246,10 @@ class _ResultsViewState extends State<_ResultsView> {
             _MetricChip(label: 'Reputation', value: '${event.reputationChange >= 0 ? '+' : ''}${event.reputationChange}'),
           ],
         ),
+        if (event.financeBreakdown != null) ...[
+          const SizedBox(height: 16),
+          _GateBreakdown(event: event, breakdown: event.financeBreakdown!),
+        ],
         const SizedBox(height: 24),
         Text('Results', style: Theme.of(context).textTheme.titleLarge),
         for (final fight in card)
@@ -636,4 +641,287 @@ Color _excitementColor(int rating) {
   if (rating >= 5) return Colors.lightGreen;
   if (rating >= 3) return Colors.blueGrey;
   return Colors.grey;
+}
+
+/// Shows the finance calculator's working: where the crowd came from,
+/// what each decision did to it, and how the money split.
+///
+/// The model behind a gate is intricate — card depth, a saturating price
+/// curve, venue walk-up, an overshoot penalty — and until this it
+/// reported four numbers and no reasons. A player could not tell a room
+/// that was too big from a ticket that was too dear, which made venue
+/// and pricing guesswork rather than decisions.
+class _GateBreakdown extends StatefulWidget {
+  final MmaEvent event;
+  final EventFinanceBreakdown breakdown;
+
+  const _GateBreakdown({required this.event, required this.breakdown});
+
+  @override
+  State<_GateBreakdown> createState() => _GateBreakdownState();
+}
+
+class _GateBreakdownState extends State<_GateBreakdown> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final b = widget.breakdown;
+    final currency = NumberFormat.simpleCurrency(decimalDigits: 0);
+    final scheme = Theme.of(context).colorScheme;
+
+    return Card(
+      child: Column(
+        children: [
+          ListTile(
+            title: const Text('Why this gate'),
+            subtitle: Text(_headline(b)),
+            trailing: Icon(_open ? Icons.expand_less : Icons.expand_more),
+            onTap: () => setState(() => _open = !_open),
+          ),
+          if (_open)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('WHO CAME',
+                      style: Theme.of(context).textTheme.labelSmall),
+                  const SizedBox(height: 6),
+                  _DemandBar(label: 'Your following', heads: b.fromFanbase,
+                      total: b.rawDemand),
+                  _DemandBar(label: 'Main event', heads: b.fromMainEvent,
+                      total: b.rawDemand),
+                  _DemandBar(label: 'Rest of the card', heads: b.fromCard,
+                      total: b.rawDemand),
+                  if (b.fromPromotion > 0)
+                    _DemandBar(label: 'Promotion', heads: b.fromPromotion,
+                        total: b.rawDemand),
+                  _DemandBar(label: 'Local walk-up', heads: b.fromWalkUp,
+                      total: b.rawDemand),
+                  const Divider(height: 20),
+                  Text('WHAT IT WAS MULTIPLIED BY',
+                      style: Theme.of(context).textTheme.labelSmall),
+                  const SizedBox(height: 6),
+                  _FactorRow(
+                    label: 'Card depth',
+                    factor: b.depthMultiplier,
+                    note: '${widget.event.attendance == 0 ? '' : ''}'
+                        'a full night is 1.00',
+                  ),
+                  _FactorRow(
+                    label: 'Ticket price',
+                    factor: b.priceMultiplier,
+                    note: '\$${widget.event.ticketPrice} at '
+                        '${widget.event.venue.label}',
+                  ),
+                  _FactorRow(
+                    label: 'Luck on the night',
+                    factor: b.luckMultiplier,
+                    note: 'always within 15%',
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    b.soldOut
+                        ? 'Sold out — the model wanted '
+                            '${b.uncappedAttendance} and the room holds '
+                            '${widget.event.venue.capacity}. A bigger '
+                            'venue would have taken more.'
+                        : b.venueOvershoot > 0
+                            ? '${widget.event.attendance} in a room for '
+                                '${widget.event.venue.capacity}. '
+                                '${b.venueOvershoot} size'
+                                '${b.venueOvershoot == 1 ? '' : 's'} too big — '
+                                'it cost reputation and rent.'
+                            : '${widget.event.attendance} in a room for '
+                                '${widget.event.venue.capacity} — about the '
+                                'right size.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: b.soldOut
+                              ? scheme.primary
+                              : b.venueOvershoot > 0
+                                  ? Colors.orange
+                                  : scheme.onSurfaceVariant,
+                        ),
+                  ),
+                  const Divider(height: 20),
+                  Text('THE MONEY',
+                      style: Theme.of(context).textTheme.labelSmall),
+                  const SizedBox(height: 6),
+                  _MoneyRow(label: 'Tickets', amount: b.ticketRevenue,
+                      currency: currency),
+                  if (b.ppvRevenue > 0)
+                    _MoneyRow(label: 'PPV', amount: b.ppvRevenue,
+                        currency: currency),
+                  _MoneyRow(label: 'Venue', amount: -b.venueCost,
+                      currency: currency),
+                  _MoneyRow(label: 'Purses', amount: -b.purses,
+                      currency: currency),
+                  if (b.promotionSpend > 0)
+                    _MoneyRow(label: 'Promotion', amount: -b.promotionSpend,
+                        currency: currency),
+                  // Bonuses are paid after the card runs, so they land on
+                  // the event's expenses without being in the breakdown
+                  // the calculator produced.
+                  if (widget.event.expenses >
+                      b.venueCost + b.purses + b.promotionSpend)
+                    _MoneyRow(
+                      label: 'Night bonuses',
+                      amount: -(widget.event.expenses -
+                          b.venueCost - b.purses - b.promotionSpend),
+                      currency: currency,
+                    ),
+                  const Divider(height: 16),
+                  _MoneyRow(label: 'Net', amount: widget.event.netProfit,
+                      currency: currency, bold: true),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// The one-line version, so the card is useful without opening it.
+  String _headline(EventFinanceBreakdown b) {
+    if (b.soldOut) return 'Sold out — a bigger room would have taken more';
+    if (b.venueOvershoot >= 2) return 'The room was far too big for this card';
+    if (b.venueOvershoot == 1) return 'The room was a size too big';
+    if (b.depthMultiplier < 0.6) return 'A thin card held the gate down';
+    if (b.priceMultiplier < 0.75) return 'The ticket was dear for this market';
+    if (b.priceMultiplier > 1.3) return 'The ticket was cheap — you left money on it';
+    return 'Tap to see where the crowd came from';
+  }
+}
+
+/// One demand term as a labelled share of the whole.
+class _DemandBar extends StatelessWidget {
+  final String label;
+  final int heads;
+  final int total;
+
+  const _DemandBar({
+    required this.label,
+    required this.heads,
+    required this.total,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final share = total <= 0 ? 0.0 : heads / total;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 116,
+            child: Text(label,
+                style: Theme.of(context).textTheme.bodySmall,
+                overflow: TextOverflow.ellipsis),
+          ),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(2),
+              child: LinearProgressIndicator(
+                value: share,
+                minHeight: 6,
+                backgroundColor: Theme.of(context)
+                    .colorScheme
+                    .onSurfaceVariant
+                    .withOpacity(0.15),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 46,
+            child: Text('$heads',
+                textAlign: TextAlign.end,
+                style: Theme.of(context).textTheme.bodySmall),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A multiplier, coloured by whether it helped or hurt.
+class _FactorRow extends StatelessWidget {
+  final String label;
+  final double factor;
+  final String note;
+
+  const _FactorRow({
+    required this.label,
+    required this.factor,
+    required this.note,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final good = factor >= 1.0;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 116,
+            child: Text(label, style: Theme.of(context).textTheme.bodySmall),
+          ),
+          Text(
+            '×${factor.toStringAsFixed(2)}',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: good ? scheme.primary : Colors.orange,
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              note,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MoneyRow extends StatelessWidget {
+  final String label;
+  final int amount;
+  final NumberFormat currency;
+  final bool bold;
+
+  const _MoneyRow({
+    required this.label,
+    required this.amount,
+    required this.currency,
+    this.bold = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final style = Theme.of(context).textTheme.bodySmall?.copyWith(
+          fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+          color: amount < 0 ? Colors.orange : null,
+        );
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Expanded(child: Text(label, style: style)),
+          Text(
+            '${amount < 0 ? '-' : ''}${currency.format(amount.abs())}',
+            style: style,
+          ),
+        ],
+      ),
+    );
+  }
 }

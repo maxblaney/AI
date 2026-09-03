@@ -25,7 +25,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   /// Games persist on every platform now (web included), so a schema
   /// change without a matching migration step here would silently break
@@ -145,6 +145,15 @@ class AppDatabase extends _$AppDatabase {
             // v8 adds fighter packs — shareable groups of fighters that
             // live outside any single save.
             await m.createTable(fighterPacks);
+          }
+          if (from < 9) {
+            // v9 stores how each night's crowd and money were arrived at,
+            // so the results page can show its working. Events that ran
+            // before this keep a null and simply don't show a breakdown —
+            // the numbers it explains came from fighters whose popularity
+            // has moved on since, so inventing one after the fact would
+            // be inventing, not recovering.
+            await m.addColumn(events, events.financeBreakdownJson);
           }
         },
       );

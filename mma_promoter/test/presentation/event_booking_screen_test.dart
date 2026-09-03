@@ -510,4 +510,95 @@ void main() {
 
     controller.dispose();
   });
+
+  testWidgets('auto-fill builds a card out of who is available',
+      (tester) async {
+    final controller = await controllerWith([
+      for (var i = 0; i < 12; i++)
+        _signed('f$i', 'Fighter ${String.fromCharCode(65 + i)}',
+            WeightClass.lightweight),
+    ]);
+    await tester.pumpWidget(wrap(controller));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No fights added yet.'), findsOneWidget);
+
+    await tester.tap(find.text('Auto-fill'));
+    await tester.pumpAndSettle();
+
+    await scrollToCard(tester);
+    final bouts = find
+        .textContaining(' vs ')
+        .evaluate()
+        .length;
+    expect(bouts, 6, reason: 'twelve fighters make six fights');
+    // A card needs a headliner, and the auto-filler picks one.
+    expect(find.textContaining('· Main Event'), findsOneWidget);
+    expect(find.textContaining('· Co-Main Event'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    controller.dispose();
+  });
+
+  testWidgets('auto-fill leaves fights you already made alone',
+      (tester) async {
+    final controller = await controllerWith([
+      for (var i = 0; i < 8; i++)
+        _signed('f$i', 'Fighter ${String.fromCharCode(65 + i)}',
+            WeightClass.lightweight),
+    ]);
+    await tester.pumpWidget(wrap(controller));
+    await tester.pumpAndSettle();
+
+    // One hand-made fight first.
+    await addFight(tester, 'Fighter A', 'Fighter B');
+    expect(find.text('Fighter A vs Fighter B'), findsOneWidget);
+
+    await tester.drag(find.byType(ListView).first, const Offset(0, 900));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Fill rest'));
+    await tester.pumpAndSettle();
+    await scrollToCard(tester);
+
+    // Still there, and its fighters weren't reused.
+    expect(find.text('Fighter A vs Fighter B'), findsOneWidget);
+    final tiles = tester
+        .widgetList<Text>(find.byType(Text))
+        .map((t) => t.data)
+        .whereType<String>()
+        .where((t) => t.contains(' vs '))
+        .toList();
+    final names = tiles.expand((t) => t.split(' vs ')).toList();
+    expect(names.toSet(), hasLength(names.length),
+        reason: 'nobody should be booked twice');
+
+    controller.dispose();
+  });
+
+  testWidgets('auto-fill is offered only when somebody is free',
+      (tester) async {
+    final controller = await controllerWith([
+      _signed('a', 'Fighter A', WeightClass.lightweight),
+      _signed('b', 'Fighter B', WeightClass.lightweight),
+    ]);
+    await tester.pumpWidget(wrap(controller));
+    await tester.pumpAndSettle();
+
+    await addFight(tester, 'Fighter A', 'Fighter B');
+    await tester.drag(find.byType(ListView).first, const Offset(0, 900));
+    await tester.pumpAndSettle();
+
+    // Both fighters are on the card, so there is nothing left to match.
+    // Asserting the behaviour rather than the button's enabled flag:
+    // TextButton.icon builds a private subclass that find.byType won't
+    // match, and "adds nothing" is the thing that actually matters.
+    await tester.tap(find.text('Fill rest'), warnIfMissed: false);
+    await tester.pumpAndSettle();
+    await scrollToCard(tester);
+
+    expect(find.textContaining(' vs '), findsOneWidget,
+        reason: 'there was nobody left, so no fight should have appeared');
+
+    controller.dispose();
+  });
 }

@@ -25,6 +25,7 @@ import '../../domain/packs/fighter_pack.dart';
 import '../../domain/simulation/fight_excitement.dart';
 import '../../domain/finance/event_finance_calculator.dart';
 import '../../domain/finance/pay_scale.dart';
+import '../../domain/finance/running_costs.dart';
 import '../../domain/history/recent_form.dart';
 import '../../domain/history/record_book.dart';
 import '../../domain/rankings/division_rankings.dart';
@@ -586,6 +587,15 @@ class GameController extends ChangeNotifier {
 
     final org = organization;
     if (org == null) return 'No active organization.';
+    if (RunningCosts.isOverextended(
+      tier: org.reputationTier,
+      cashBalance: org.cashBalance,
+    )) {
+      return 'The bank has cut you off — you are past '
+          '\$${-RunningCosts.debtCeilingFor(org.reputationTier)} in debt. '
+          'Run the events you have booked, or release fighters to cut '
+          'your weekly costs, before booking anything new.';
+    }
     if (GameCalendar.weekNumberFor(date) <= org.currentWeek) {
       return 'Event date must be in a future week.';
     }
@@ -824,6 +834,7 @@ class GameController extends ChangeNotifier {
       revenue: finance.revenue,
       expenses: finance.expenses,
       reputationChange: finance.reputationChange,
+      financeBreakdown: finance.breakdown,
     );
     await _eventRepo.saveEvent(completedEvent);
 
@@ -929,6 +940,7 @@ class GameController extends ChangeNotifier {
     }
 
     var updated = org.copyWith(currentWeek: org.currentWeek + 1);
+    updated = _applyWeeklyOverhead(updated);
     updated = _applyDebtInterest(updated);
     await _orgRepo.save(updated);
     organization = updated;
@@ -1003,6 +1015,41 @@ class GameController extends ChangeNotifier {
     }
   }
 
+  /// Charges a week of running the promotion: staff and premises, plus a
+  /// retainer for everyone under contract.
+  ///
+  /// This is what stops money being a scoreboard. Sitting still now costs
+  /// something, so a card has to be worth putting on, and a roster you
+  /// never book is a roster you are paying for.
+  Organization _applyWeeklyOverhead(Organization org) {
+    final cost = RunningCosts.weekly(
+      tier: org.reputationTier,
+      roster: signedRoster,
+    );
+    return org.copyWith(cashBalance: org.cashBalance - cost);
+  }
+
+  /// What a week currently costs, for the dashboard to show before the
+  /// player advances into it.
+  int get weeklyOverhead => organization == null
+      ? 0
+      : RunningCosts.weekly(
+          tier: organization!.reputationTier,
+          roster: signedRoster,
+        );
+
+  /// True when the bank has stopped the promotion booking anything new.
+  bool get isOverextended => organization != null &&
+      RunningCosts.isOverextended(
+        tier: organization!.reputationTier,
+        cashBalance: organization!.cashBalance,
+      );
+
+  /// The debt the promotion cannot go past.
+  int get debtCeiling => organization == null
+      ? 0
+      : RunningCosts.debtCeilingFor(organization!.reputationTier);
+
   /// Lifts suspensions that have run their term, and tells the player —
   /// a fighter coming off a six-month ban is bookable again, and that's
   /// news you'd otherwise have to go looking for.
@@ -1042,16 +1089,22 @@ class GameController extends ChangeNotifier {
     if (contract == null || !contract.isExpired || org == null) return fighter;
 
     if (!org.autoResignFighters) {
+      // They leave. An expired contract used to be a note in the mailbox
+      // and nothing else, which meant the whole contract system — pay
+      // scale, fight counts, the auto-re-sign setting — had no
+      // consequence attached to neglecting it. Now a deal you let run out
+      // costs you the fighter, and getting them back costs a signing
+      // bonus like anyone else in the pool.
       await _inboxRepo.save(_newInboxItem(
         org,
         InboxItemType.contract,
         fighterId: fighter.id,
-        title: "${fighter.name}'s contract is up",
-        body: '${fighter.name} has fought out their deal. They stay on the '
-            'roster for now, but nothing is holding them — re-sign them from '
-            'their profile before someone else does.',
+        title: '${fighter.name} has left',
+        body: '${fighter.name} fought out their deal and is now a free '
+            'agent. They are back in the talent pool — you can re-sign '
+            'them, but so can anyone, and it will cost a signing bonus.',
       ));
-      return fighter;
+      return fighter.copyWith(clearContract: true);
     }
 
     // Market rate, not the old rate: a fighter who went 3-0 on the last

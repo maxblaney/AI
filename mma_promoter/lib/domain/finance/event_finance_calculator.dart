@@ -3,6 +3,131 @@ import 'dart:math';
 import '../../data/models/models.dart';
 import 'pay_scale.dart';
 
+/// Where a night's attendance and money actually came from.
+///
+/// The calculator was a black box: four numbers out, no way for a player
+/// to tell whether they drew badly because the room was too big, the
+/// ticket too dear or the card too thin. Every term it already computes
+/// is reported here so the results page can show its working, and so the
+/// pricing and venue decisions become something you can learn rather
+/// than guess at.
+///
+/// The demand terms are in "expected heads" before the price response,
+/// the depth multiplier and the capacity of the room are applied — the
+/// multipliers are reported alongside so the arithmetic reads straight
+/// down.
+class EventFinanceBreakdown {
+  /// Heads from the promotion's own following.
+  final int fromFanbase;
+
+  /// Heads the headliners are worth.
+  final int fromMainEvent;
+
+  /// Heads the rest of the card is worth, including the flat value of
+  /// simply having another bout on it.
+  final int fromCard;
+
+  /// Heads bought with promotion spend.
+  final int fromPromotion;
+
+  /// Locals who turn up because there's a fight on, whoever is on it.
+  /// Additive, and the one term the room itself provides.
+  final int fromWalkUp;
+
+  /// How much of a full night's demand a card this long earns — a thin
+  /// card suppresses everything above it. 1.0 is a full show.
+  final double depthMultiplier;
+
+  /// What share of the reference-price crowd turned out at this ticket
+  /// price. Above 1 means the ticket was cheap for this market.
+  final double priceMultiplier;
+
+  /// The +/-15% roll on the night.
+  final double luckMultiplier;
+
+  /// What the model wanted before the building's capacity was applied.
+  final int uncappedAttendance;
+
+  /// True when the room sold out and turned people away.
+  final bool soldOut;
+
+  /// How many venue sizes bigger than it needed the show was staged in.
+  final int venueOvershoot;
+
+  final int ticketRevenue;
+  final int ppvRevenue;
+  final int venueCost;
+  final int purses;
+  final int promotionSpend;
+
+  const EventFinanceBreakdown({
+    required this.fromFanbase,
+    required this.fromMainEvent,
+    required this.fromCard,
+    required this.fromPromotion,
+    required this.fromWalkUp,
+    required this.depthMultiplier,
+    required this.priceMultiplier,
+    required this.luckMultiplier,
+    required this.uncappedAttendance,
+    required this.soldOut,
+    required this.venueOvershoot,
+    required this.ticketRevenue,
+    required this.ppvRevenue,
+    required this.venueCost,
+    required this.purses,
+    required this.promotionSpend,
+  });
+
+  /// The demand terms before any multiplier, which is what the shares
+  /// below are taken against.
+  int get rawDemand =>
+      fromFanbase + fromMainEvent + fromCard + fromPromotion + fromWalkUp;
+
+  Map<String, dynamic> toJson() => {
+        'fan': fromFanbase,
+        'me': fromMainEvent,
+        'card': fromCard,
+        'promo': fromPromotion,
+        'walk': fromWalkUp,
+        'depth': depthMultiplier,
+        'price': priceMultiplier,
+        'luck': luckMultiplier,
+        'uncapped': uncappedAttendance,
+        'soldOut': soldOut,
+        'overshoot': venueOvershoot,
+        'tickets': ticketRevenue,
+        'ppv': ppvRevenue,
+        'venue': venueCost,
+        'purses': purses,
+        'promoSpend': promotionSpend,
+      };
+
+  static EventFinanceBreakdown? fromJson(Map<String, dynamic> json) {
+    int i(String k) => (json[k] as num?)?.round() ?? 0;
+    double d(String k, double fallback) =>
+        (json[k] as num?)?.toDouble() ?? fallback;
+    return EventFinanceBreakdown(
+      fromFanbase: i('fan'),
+      fromMainEvent: i('me'),
+      fromCard: i('card'),
+      fromPromotion: i('promo'),
+      fromWalkUp: i('walk'),
+      depthMultiplier: d('depth', 1),
+      priceMultiplier: d('price', 1),
+      luckMultiplier: d('luck', 1),
+      uncappedAttendance: i('uncapped'),
+      soldOut: json['soldOut'] == true,
+      venueOvershoot: i('overshoot'),
+      ticketRevenue: i('tickets'),
+      ppvRevenue: i('ppv'),
+      venueCost: i('venue'),
+      purses: i('purses'),
+      promotionSpend: i('promoSpend'),
+    );
+  }
+}
+
 class EventFinanceResult {
   final int attendance;
   final int ppvBuys;
@@ -10,12 +135,16 @@ class EventFinanceResult {
   final int expenses;
   final int reputationChange;
 
+  /// Where all of the above came from.
+  final EventFinanceBreakdown breakdown;
+
   const EventFinanceResult({
     required this.attendance,
     required this.ppvBuys,
     required this.revenue,
     required this.expenses,
     required this.reputationChange,
+    required this.breakdown,
   });
 
   int get netProfit => revenue - expenses;
@@ -84,6 +213,25 @@ class EventFinanceCalculator {
     final x = ticketPrice / referencePriceFor(venue);
     return (1 + priceCeilingBonus) /
         (1 + priceCeilingBonus * pow(x, priceElasticity));
+  }
+
+  /// Roughly how many people turn up for *any* card this promotion puts
+  /// on at this room and price, before the card itself is considered.
+  ///
+  /// Only the terms that are knowable before a single fight is booked:
+  /// the promotion's own following and the venue's walk-up. Exists so
+  /// the matchmaker can work out what a night can afford to pay its
+  /// fighters — using the building's capacity instead would assume a
+  /// sellout, and a promotion drawing 1,600 into a 20,000-seat arena
+  /// would budget five times what it takes at the gate.
+  static int baselineAttendance({
+    required Organization organization,
+    required Venue venue,
+    required int ticketPrice,
+  }) {
+    final base = organization.fanbaseSize * 0.015 + venue.localWalkUp;
+    final turnout = turnoutAt(ticketPrice: ticketPrice, venue: venue);
+    return (base * turnout).round().clamp(0, venue.capacity);
   }
 
   /// How many venue sizes bigger than it needed a show was staged in.
@@ -173,10 +321,16 @@ class EventFinanceCalculator {
 
     final depth = cardDepthMultiplier(card.length);
 
-    final baseDemand = ((organization.fanbaseSize * 0.015) +
-            (mainEventPopularity * 9) +
-            (cardDraw * 1.6) +
-            promoEffect) *
+    // Each demand term kept separately rather than summed on the spot,
+    // so the results page can show where the crowd came from.
+    final fanbaseDemand = organization.fanbaseSize * 0.015;
+    final mainEventDemand = mainEventPopularity * 9;
+    final cardDemand = cardDraw * 1.6;
+
+    final baseDemand = (fanbaseDemand +
+                mainEventDemand +
+                cardDemand +
+                promoEffect) *
             depth +
         // Locals who come because there's a fight on, whoever is on it.
         // Additive: the room does not multiply your following.
@@ -184,9 +338,8 @@ class EventFinanceCalculator {
 
     // Price response, against what this market bears rather than against
     // whatever number the venue happens to suggest.
-    final demandScore =
-        baseDemand * turnoutAt(ticketPrice: ticketPrice, venue: venue);
-
+    final priceMultiplier = turnoutAt(ticketPrice: ticketPrice, venue: venue);
+    final demandScore = baseDemand * priceMultiplier;
     final noise = 0.85 + _random.nextDouble() * 0.3; // +/-15%
     final rawAttendance = (demandScore * noise).round();
     final attendance = rawAttendance.clamp(0, venue.capacity);
@@ -224,13 +377,14 @@ class EventFinanceCalculator {
           _purseFor(fighterLookup[fight.fighterBId], won: bWon);
     });
     final expenses = venue.baseCost + purses + promotionBudgetSpent;
+    final overshoot = venueOvershoot(venue: venue, attendance: attendance);
 
     final reputationChange = _reputationChange(
       card: card,
       netProfit: revenue - expenses,
       mainEventPopularity: mainEventPopularity,
       fillRate: fillRate,
-      overshoot: venueOvershoot(venue: venue, attendance: attendance),
+      overshoot: overshoot,
     );
 
     return EventFinanceResult(
@@ -239,6 +393,24 @@ class EventFinanceCalculator {
       revenue: revenue,
       expenses: expenses,
       reputationChange: reputationChange,
+      breakdown: EventFinanceBreakdown(
+        fromFanbase: fanbaseDemand.round(),
+        fromMainEvent: mainEventDemand.round(),
+        fromCard: cardDemand.round(),
+        fromPromotion: promoEffect.round(),
+        fromWalkUp: venue.localWalkUp.round(),
+        depthMultiplier: depth,
+        priceMultiplier: priceMultiplier,
+        luckMultiplier: noise,
+        uncappedAttendance: rawAttendance,
+        soldOut: rawAttendance > venue.capacity,
+        venueOvershoot: overshoot,
+        ticketRevenue: ticketRevenue,
+        ppvRevenue: ppvRevenue,
+        venueCost: venue.baseCost,
+        purses: purses,
+        promotionSpend: promotionBudgetSpent,
+      ),
     );
   }
 
