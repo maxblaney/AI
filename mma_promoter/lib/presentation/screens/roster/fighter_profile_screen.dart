@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/models/models.dart';
+import '../../../domain/finance/contract_negotiation.dart';
 import '../../../domain/finance/pay_scale.dart';
 import '../../../domain/finance/payroll_health.dart';
 import '../../state/game_controller.dart';
@@ -276,6 +277,15 @@ class FighterProfileScreen extends StatelessWidget {
                 _SigningWeight(
                   payroll: controller.payrollHealth,
                   perFight: suggested.total,
+                  currency: currency,
+                ),
+                // What he'll actually take. Shown live as the numbers are
+                // typed, so haggling is a negotiation rather than a
+                // guessing game ended by a snackbar.
+                _OfferVerdict(
+                  fighter: fighter,
+                  showController: showController,
+                  winController: winController,
                   currency: currency,
                 ),
                 const SizedBox(height: 12),
@@ -582,6 +592,71 @@ class _SigningWeight extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Whether this offer is one the fighter would take, updated as it is
+/// typed.
+class _OfferVerdict extends StatelessWidget {
+  final Fighter fighter;
+  final TextEditingController showController;
+  final TextEditingController winController;
+  final NumberFormat currency;
+
+  const _OfferVerdict({
+    required this.fighter,
+    required this.showController,
+    required this.winController,
+    required this.currency,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([showController, winController]),
+      builder: (context, _) {
+        final response = ContractNegotiation.consider(
+          overall: fighter.overall,
+          popularity: fighter.popularity,
+          showMoney: int.tryParse(showController.text) ?? 0,
+          winBonus: int.tryParse(winController.text) ?? 0,
+        );
+        final scheme = Theme.of(context).colorScheme;
+        final small = Theme.of(context).textTheme.bodySmall;
+
+        return Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                response.accepted ? Icons.check_circle_outline : Icons.block,
+                size: 15,
+                color: response.accepted ? Colors.lightGreenAccent : scheme.error,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  response.accepted
+                      ? "He'll take it — "
+                          '${(response.share * 100).round()}% of his market rate.'
+                      : "He won't take that. The least he'll sign for is "
+                          '${currency.format(response.wouldAccept)} a fight, '
+                          'show and win together.',
+                  style: small?.copyWith(
+                    color: response.accepted
+                        ? Colors.lightGreenAccent
+                        : scheme.error,
+                    fontWeight:
+                        response.accepted ? null : FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

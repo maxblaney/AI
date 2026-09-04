@@ -3,6 +3,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mma_promoter/data/db/database.dart';
 import 'package:mma_promoter/data/models/models.dart';
+import 'package:mma_promoter/domain/finance/pay_scale.dart';
 import 'package:mma_promoter/presentation/state/game_controller.dart';
 
 /// The sign flow had no direct coverage — it was only ever exercised by
@@ -20,10 +21,16 @@ void main() {
     }
 
     final target = controller.talentPool.first;
+    // At market rate: a fighter turns down a lowball now, so a fixed
+    // \$1,000 no longer signs anybody worth having.
+    final rate = PayScale.suggest(
+      overall: target.overall,
+      popularity: target.popularity,
+    );
     final error = await controller.signFighter(
       target,
-      showMoney: 1000,
-      winBonus: 1000,
+      showMoney: rate.showMoney,
+      winBonus: rate.winBonus,
       fightsInDeal: 3,
     );
     for (var i = 0; i < 10; i++) {

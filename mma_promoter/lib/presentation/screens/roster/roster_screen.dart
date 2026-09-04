@@ -375,8 +375,40 @@ class _RosterScreenState extends State<RosterScreen> {
                 ],
               ),
               const SizedBox(height: 8),
-              // The scouting filters, above the descriptive ones: they
-              // are the questions asked of a market, not of a person.
+              // Weight class first, because it is the filter people
+              // actually came here for. It used to sit under the scouting
+              // switches, which pushed it below the fold of a sheet that
+              // opens at 70% height — so picking Lightweight meant
+              // scrolling past three things to find it, and it read as
+              // the option having gone missing.
+              Text('Weight Class', style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: [
+                  ChoiceChip(
+                    label: const Text('All'),
+                    selected: _weightClassFilter == null,
+                    onSelected: (_) {
+                      setState(() => _weightClassFilter = null);
+                      setSheetState(() {});
+                    },
+                  ),
+                  for (final w in WeightClass.values)
+                    ChoiceChip(
+                      label: Text(w.label),
+                      selected: _weightClassFilter == w,
+                      onSelected: (_) {
+                        setState(() => _weightClassFilter = w);
+                        setSheetState(() {});
+                      },
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // Then the scouting filters: questions asked of a market
+              // rather than of a person.
               Text('Age', style: Theme.of(context).textTheme.titleSmall),
               const SizedBox(height: 8),
               Wrap(
@@ -422,33 +454,6 @@ class _RosterScreenState extends State<RosterScreen> {
                   setSheetState(() {});
                 },
               ),
-              const SizedBox(height: 8),
-              Text('Weight Class', style: Theme.of(context).textTheme.titleSmall),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 4,
-                children: [
-                  ChoiceChip(
-                    label: const Text('All'),
-                    selected: _weightClassFilter == null,
-                    onSelected: (_) {
-                      setState(() => _weightClassFilter = null);
-                      setSheetState(() {});
-                    },
-                  ),
-                  for (final w in WeightClass.values)
-                    ChoiceChip(
-                      label: Text(w.label),
-                      selected: _weightClassFilter == w,
-                      onSelected: (_) {
-                        setState(() => _weightClassFilter = w);
-                        setSheetState(() {});
-                      },
-                    ),
-                ],
-              ),
-              const SizedBox(height: 16),
               Text('Style', style: Theme.of(context).textTheme.titleSmall),
               const SizedBox(height: 8),
               Wrap(

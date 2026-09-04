@@ -738,3 +738,80 @@ class _Scorecards extends StatelessWidget {
     );
   }
 }
+
+/// A finished fight, read rather than watched: the result, the box score
+/// and the judges' cards.
+///
+/// The live playback only exists in the moment — momentum ticks and
+/// commentary are not persisted, so a fight reloaded from a save has
+/// nothing to replay. The statlines and scorecards *are* persisted, and
+/// until now there was no way back to them: you watched a fight once and
+/// the numbers were gone. This is where a fight on a finished card goes
+/// when you tap it.
+class FightStatsScreen extends StatelessWidget {
+  final Fight fight;
+  final Fighter fighterA;
+  final Fighter fighterB;
+
+  const FightStatsScreen({
+    super.key,
+    required this.fight,
+    required this.fighterA,
+    required this.fighterB,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final result = fight.result;
+    if (result == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Fight')),
+        body: const Center(child: Text('This fight has not been run yet.')),
+      );
+    }
+
+    final hasCards = result.scorecards.isNotEmpty;
+    return DefaultTabController(
+      length: hasCards ? 2 : 1,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            '${fighterA.name.split(' ').last} vs '
+            '${fighterB.name.split(' ').last}',
+          ),
+          bottom: TabBar(tabs: [
+            const Tab(text: 'Box Score'),
+            if (hasCards) const Tab(text: 'Scorecards'),
+          ]),
+        ),
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: _ResultBanner(
+                result: result,
+                fighterA: fighterA,
+                fighterB: fighterB,
+              ),
+            ),
+            Expanded(
+              child: TabBarView(children: [
+                _BoxScore(
+                  fighterA: fighterA,
+                  fighterB: fighterB,
+                  result: result,
+                ),
+                if (hasCards)
+                  _Scorecards(
+                    fighterA: fighterA,
+                    fighterB: fighterB,
+                    result: result,
+                  ),
+              ]),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

@@ -26,6 +26,7 @@ import '../../domain/packs/fighter_pack.dart';
 import '../../domain/growth/fanbase_growth.dart';
 import '../../domain/simulation/fight_excitement.dart';
 import '../../domain/finance/event_finance_calculator.dart';
+import '../../domain/finance/contract_negotiation.dart';
 import '../../domain/finance/pay_scale.dart';
 import '../../domain/finance/payroll_health.dart';
 import '../../domain/finance/running_costs.dart';
@@ -586,6 +587,21 @@ class GameController extends ChangeNotifier {
   }) async {
     final org = organization;
     if (org == null) return 'No active organization.';
+
+    // The fighter gets a say. Enforced here rather than in the dialog so
+    // no path into signing can skip it — a contract used to be whatever
+    // the player typed, which meant a 93-overall could be had for
+    // \$1,000 and every affordability decision in the game was optional.
+    final response = ContractNegotiation.consider(
+      overall: fighter.overall,
+      popularity: fighter.popularity,
+      showMoney: showMoney,
+      winBonus: winBonus,
+    );
+    if (!response.accepted) {
+      return '${fighter.name} turned it down. He wants at least '
+          '\$${response.wouldAccept} a fight, show and win together.';
+    }
 
     final contract = Contract(
       id: newId(),

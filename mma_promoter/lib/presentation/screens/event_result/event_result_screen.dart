@@ -8,6 +8,7 @@ import '../../../domain/finance/event_finance_calculator.dart';
 import '../../../domain/simulation/fight_excitement.dart';
 import '../../state/game_controller.dart';
 import '../event_booking/event_booking_screen.dart';
+import '../roster/fighter_profile_screen.dart';
 import 'fight_breakdown_screen.dart';
 
 /// Shows a booked card before it runs (with a "Run Event" action that
@@ -488,7 +489,18 @@ class _FightResultTile extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('${a.name} vs ${b.name}$tag'),
+            // Names go to profiles. Looking at a card and wondering who
+            // somebody is should not mean leaving for the roster screen
+            // and searching for them.
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                _ProfileLink(fighter: a),
+                const Text(' vs '),
+                _ProfileLink(fighter: b),
+                if (tag.isNotEmpty) Text(tag),
+              ],
+            ),
             const SizedBox(height: 2),
             Text(
               '${a.name.split(' ').last} ${odds.displayA}  ·  '
@@ -513,6 +525,25 @@ class _FightResultTile extends StatelessWidget {
                 excitement: FightExcitement.rate(
                   result: result,
                   scheduledRounds: fight.rounds,
+                ),
+              ),
+              // The box score survives a save; the live playback does
+              // not. Before this you watched a fight once and the
+              // numbers were gone.
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  icon: const Icon(Icons.bar_chart, size: 18),
+                  label: const Text('Fight stats'),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => FightStatsScreen(
+                        fight: fight,
+                        fighterA: a,
+                        fighterB: b,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ]
@@ -548,6 +579,38 @@ class _FightResultTile extends StatelessWidget {
                 ],
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A fighter's name on a card, as a link to their profile.
+///
+/// A widget rather than a TextSpan with a TapGestureRecognizer: a
+/// recognizer built inside `build` is created afresh on every rebuild and
+/// never disposed, which is a leak the framework will warn about and a
+/// tile on a results screen rebuilds plenty.
+class _ProfileLink extends StatelessWidget {
+  final Fighter fighter;
+
+  const _ProfileLink({required this.fighter});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => FighterProfileScreen(fighterId: fighter.id),
+        ),
+      ),
+      child: Text(
+        fighter.name,
+        style: TextStyle(
+          color: scheme.primary,
+          decoration: TextDecoration.underline,
+          decorationColor: scheme.primary.withOpacity(0.4),
         ),
       ),
     );
