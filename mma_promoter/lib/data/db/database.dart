@@ -36,6 +36,9 @@ class AppDatabase extends _$AppDatabase {
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) => m.createAll(),
+        beforeOpen: (details) async {
+          await _healSchemaDrift();
+        },
         onUpgrade: (m, from, to) async {
           if (from < 2) {
             // v2 introduced multiple saves. Everything that was game state
@@ -175,8 +178,13 @@ class AppDatabase extends _$AppDatabase {
             // retiring half of somebody's promotion the moment they
             // update would be a worse bug than the one being fixed.
             await m.addColumn(organizations, organizations.lastAgedWeek);
+            // COALESCE, because a very old save can carry a null
+            // current_week, and writing that into a NOT NULL column
+            // fails the whole migration — which is how a database ends
+            // up stamped as migrated with the column missing.
             await customStatement(
-              'UPDATE organizations SET last_aged_week = current_week',
+              'UPDATE organizations '
+              'SET last_aged_week = COALESCE(current_week, 1)',
             );
           }
           if (from < 12) {
@@ -188,6 +196,68 @@ class AppDatabase extends _$AppDatabase {
           }
         },
       );
+
+  /// Adds anything the declared schema has and the database on disk does
+  /// not, every time the app opens.
+  ///
+  /// A migration is supposed to make this impossible, and normally does.
+  /// It stopped being impossible the moment one could fail *partway*: a
+  /// step that adds a column and then writes to it will, if the write
+  /// throws, leave a database that is stamped with the new version but
+  /// missing the column. `onUpgrade` never runs again — the version says
+  /// there is nothing to do — and every read of that table then dies on
+  /// a null the generated mapper is entitled to assume cannot happen.
+  ///
+  /// Which is not a hypothetical: it shipped, and it looked like this to
+  /// the player —
+  ///
+  ///     Couldn't open your save
+  ///     Null check operator used on a null value
+  ///
+  /// — with no way back, because the thing that would repair the save is
+  /// the thing that won't run. Reconciling on open costs one PRAGMA per
+  /// table and makes that class of failure self-correcting rather than
+  /// terminal.
+  Future<void> _healSchemaDrift() async {
+    final m = createMigrator();
+    for (final table in allTables) {
+      final info =
+          await customSelect('PRAGMA table_info(${table.actualTableName})')
+              .get();
+      if (info.isEmpty) {
+        // The table itself is missing, which is a bigger gap than a
+        // column and is what createTable is for.
+        try {
+          await m.createTable(table);
+        } catch (_) {
+          // Same reasoning as below: never fail the open over this.
+        }
+        continue;
+      }
+      final present = {for (final row in info) row.read<String>('name')};
+      for (final column in table.$columns) {
+        if (present.contains(column.name)) continue;
+        // SQLite cannot ALTER in a NOT NULL column with no default —
+        // there is no value to give the rows already there. Skipping is
+        // right rather than a gap: a real database never reaches that
+        // state, because such columns only ever arrive with the table
+        // itself.
+        final fillable = column.$nullable ||
+            column.defaultValue != null ||
+            column.clientDefault != null;
+        if (!fillable) continue;
+        // And a column that refuses to be added must not take the open
+        // down with it, which is the failure this whole method exists to
+        // stop happening.
+        try {
+          await m.addColumn(table, column);
+        } catch (_) {
+          // Left for the next open, or for a migration that can do it
+          // properly. Better a missing column than an unopenable save.
+        }
+      }
+    }
+  }
 
   // ---- Fighter packs ------------------------------------------------
 
