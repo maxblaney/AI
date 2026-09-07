@@ -12,7 +12,13 @@ void main() {
 
       expect(controller.organization!.cashBalance, 10000);
 
-      final fighter = controller.talentPool.first;
+      // The cheapest man in the pool: fighters refuse lowballs now, and
+      // this test is about the bank allowing an overdraft, not about
+      // what a given fighter is worth. \$100,000 is comfortably over any
+      // journeyman's price and five times the org's cash either way.
+      final fighter = ([...controller.talentPool]
+            ..sort((a, b) => a.overall.compareTo(b.overall)))
+          .first;
       final error = await controller.signFighter(
         fighter,
         showMoney: 50000,
@@ -31,7 +37,11 @@ void main() {
       await controller.startNewGame(orgName: 'Debtors Inc', tier: ReputationTier.local);
       await pumpEventQueue();
 
-      final fighter = controller.talentPool.first;
+      // Cheapest man in the pool, for the same reason as above: this is
+      // about interest on an overdraft, not about who will sign.
+      final fighter = ([...controller.talentPool]
+            ..sort((a, b) => a.overall.compareTo(b.overall)))
+          .first;
       await controller.signFighter(
         fighter,
         showMoney: 50000,

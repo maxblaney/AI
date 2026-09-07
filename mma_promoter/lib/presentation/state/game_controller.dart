@@ -557,9 +557,20 @@ class GameController extends ChangeNotifier {
   /// only — a fighter's record elsewhere doesn't count toward these.
   Future<List<RecordCategory>> getRecordBook() async {
     final fights = await _eventRepo.getAllResolvedFights();
+    // Names come from the repository, not from [allFighters].
+    //
+    // [allFighters] is a stream cache, and the record book was built off
+    // it: on a cold start the events stream can deliver before the
+    // fighters stream, so the History screen would fetch the book while
+    // the roster cache was still empty and every row in it came out as
+    // "Unknown fighter" — then stayed that way, because the screen keys
+    // its refetch on the completed-event count, which doesn't change
+    // again. Reading the fighters here makes the book independent of
+    // which stream arrives first.
+    final fighters = await _fighterRepo.getAll();
     return RecordBook.build(
       fights: fights,
-      fighters: {for (final f in allFighters) f.id: f},
+      fighters: {for (final f in fighters) f.id: f},
       events: completedEvents,
     );
   }
