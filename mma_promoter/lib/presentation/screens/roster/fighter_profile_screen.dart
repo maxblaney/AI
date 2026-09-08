@@ -1,0 +1,662 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+
+import '../../../data/models/models.dart';
+import '../../../domain/finance/contract_negotiation.dart';
+import '../../../domain/finance/pay_scale.dart';
+import '../../../domain/finance/payroll_health.dart';
+import '../../state/game_controller.dart';
+import '../../widgets/fighter_avatar.dart';
+import 'fighter_editor_screen.dart';
+
+class FighterProfileScreen extends StatelessWidget {
+  final String fighterId;
+
+  const FighterProfileScreen({super.key, required this.fighterId});
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = context.watch<GameController>();
+    final fighter = controller.fighterById(fighterId);
+
+    if (fighter == null) {
+      return const Scaffold(body: Center(child: Text('Fighter not found.')));
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(fighter.name),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            tooltip: 'Edit fighter',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => FighterEditorScreen(existingFighter: fighter),
+              ),
+            ),
+          ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          if (fighter.retired)
+            Card(
+              color: Theme.of(context).colorScheme.errorContainer,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Icon(Icons.event_busy,
+                        color: Theme.of(context).colorScheme.onErrorContainer),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Retired${fighter.retirementReason != null ? ' — ${fighter.retirementReason}' : ''}',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onErrorContainer,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          if (fighter.retired) const SizedBox(height: 12),
+          Center(child: FighterAvatar(fighter: fighter, radius: 48)),
+          const SizedBox(height: 16),
+          Text(
+            '${fighter.weightClass.label} · ${fighter.nationality} · Age ${fighter.age}',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${fighter.heightDisplay} · ${fighter.weightLbs} lbs · ${fighter.reachDisplay} reach',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Record: ${fighter.record.display}   Streak: '
+            '${fighter.winStreak > 0 ? 'W${fighter.winStreak}' : fighter.lossStreak > 0 ? 'L${fighter.lossStreak}' : '-'}',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Style: ${fighter.style.label}',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Elo: ${fighter.eloRating}${fighter.isRanked ? ' (Ranked)' : ' (Unranked)'}',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          if (fighter.fightOfTheNightCount > 0 || fighter.performanceOfTheNightCount > 0) ...[
+            const SizedBox(height: 4),
+            Text(
+              [
+                if (fighter.fightOfTheNightCount > 0)
+                  'FOTN x${fighter.fightOfTheNightCount}',
+                if (fighter.performanceOfTheNightCount > 0)
+                  'POTN x${fighter.performanceOfTheNightCount}',
+              ].join(' · '),
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ],
+          const SizedBox(height: 24),
+          Text('Overview', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          _StatBar(label: 'Overall', value: fighter.overall.round()),
+          _StatBar(label: 'Potential', value: fighter.potential),
+          _StatBar(label: 'Striking', value: fighter.fightingStats.strikingAverage.round()),
+          _StatBar(label: 'Grappling', value: fighter.fightingStats.grapplingAverage.round()),
+          _StatBar(label: 'Physical', value: fighter.physicalStats.average.round()),
+          _StatBar(label: 'Mental', value: fighter.mentalStats.average.round()),
+          const SizedBox(height: 16),
+          ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            title: const Text('Striking'),
+            children: [
+              _StatBar(label: 'Punching', value: fighter.fightingStats.punching),
+              _StatBar(label: 'Kicking', value: fighter.fightingStats.kicking),
+              _StatBar(label: 'Power', value: fighter.fightingStats.power),
+              _StatBar(label: 'Speed', value: fighter.fightingStats.speed),
+              _StatBar(label: 'Accuracy', value: fighter.fightingStats.accuracy),
+              _StatBar(label: 'Defense', value: fighter.fightingStats.defense),
+              _StatBar(label: 'Head Movement', value: fighter.fightingStats.headMovement),
+              _StatBar(label: 'Blocking', value: fighter.fightingStats.blocking),
+              _StatBar(label: 'Footwork', value: fighter.fightingStats.footwork),
+            ],
+          ),
+          ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            title: const Text('Wrestling & Clinch'),
+            children: [
+              _StatBar(label: 'Takedowns', value: fighter.fightingStats.takedowns),
+              _StatBar(label: 'TD Defense', value: fighter.fightingStats.takedownDefense),
+              _StatBar(label: 'Wrestling', value: fighter.fightingStats.wrestling),
+              _StatBar(label: 'Clinch Striking', value: fighter.fightingStats.clinchStriking),
+              _StatBar(label: 'Clinch Control', value: fighter.fightingStats.clinchControl),
+              _StatBar(label: 'Clinch Defense', value: fighter.fightingStats.clinchDefense),
+            ],
+          ),
+          ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            title: const Text('Ground Game'),
+            children: [
+              _StatBar(label: 'Top Control', value: fighter.fightingStats.topControl),
+              _StatBar(label: 'Ground & Pound', value: fighter.fightingStats.groundAndPound),
+              _StatBar(label: 'Guard Retention', value: fighter.fightingStats.guardRetention),
+              _StatBar(label: 'Sweeps', value: fighter.fightingStats.sweeps),
+              _StatBar(label: 'Scrambling', value: fighter.fightingStats.scrambling),
+              _StatBar(label: 'Sub. Offense', value: fighter.fightingStats.submissionOffense),
+              _StatBar(label: 'Sub. Defense', value: fighter.fightingStats.submissionDefense),
+              _StatBar(label: 'Grappling', value: fighter.fightingStats.grappling),
+            ],
+          ),
+          ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            title: const Text('Physical Stats'),
+            children: [
+              _StatBar(label: 'Cardio', value: fighter.physicalStats.cardio),
+              _StatBar(label: 'Durability', value: fighter.physicalStats.durability),
+              _StatBar(label: 'Chin', value: fighter.physicalStats.chin),
+              _StatBar(label: 'Body Toughness', value: fighter.physicalStats.bodyToughness),
+              _StatBar(label: 'Leg Toughness', value: fighter.physicalStats.legToughness),
+              _StatBar(label: 'Strength', value: fighter.physicalStats.strength),
+              _StatBar(label: 'Athleticism', value: fighter.physicalStats.athleticism),
+              _StatBar(label: 'Recovery', value: fighter.physicalStats.recovery),
+              _StatBar(label: 'Explosiveness', value: fighter.physicalStats.explosiveness),
+              _StatBar(label: 'Flexibility', value: fighter.physicalStats.flexibility),
+              _StatBar(label: 'Grip Strength', value: fighter.physicalStats.gripStrength),
+            ],
+          ),
+          ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            title: const Text('Mental Stats'),
+            children: [
+              _StatBar(label: 'Fight IQ', value: fighter.mentalStats.fightIq),
+              _StatBar(label: 'Composure', value: fighter.mentalStats.composure),
+              _StatBar(label: 'Aggression', value: fighter.mentalStats.aggression),
+              _StatBar(label: 'Discipline', value: fighter.mentalStats.discipline),
+              _StatBar(label: 'Confidence', value: fighter.mentalStats.confidence),
+              _StatBar(label: 'Heart', value: fighter.mentalStats.heart),
+              _StatBar(label: 'Adaptability', value: fighter.mentalStats.adaptability),
+              _StatBar(label: 'Killer Instinct', value: fighter.mentalStats.killerInstinct),
+            ],
+          ),
+          ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            title: const Text('Tendencies'),
+            children: [
+              _StatBar(label: 'Striking Freq.', value: fighter.tendencies.strikingFrequency, max: 100),
+              _StatBar(label: 'Takedown Freq.', value: fighter.tendencies.takedownFrequency, max: 100),
+              _StatBar(label: 'Kick Freq.', value: fighter.tendencies.kickFrequency, max: 100),
+              _StatBar(label: 'Clinch Freq.', value: fighter.tendencies.clinchFrequency, max: 100),
+              _StatBar(label: 'Sub. Attempts', value: fighter.tendencies.submissionAttempts, max: 100),
+              _StatBar(label: 'Ground & Pound', value: fighter.tendencies.groundAndPound, max: 100),
+              _StatBar(label: 'Position Control', value: fighter.tendencies.positionControl, max: 100),
+              _StatBar(label: 'Stand-Up Preference', value: fighter.tendencies.standUpPreference, max: 100),
+              _StatBar(label: 'Wall Work', value: fighter.tendencies.wallWork, max: 100),
+              _StatBar(label: 'Aggression', value: fighter.tendencies.aggression, max: 100),
+              _StatBar(label: 'Counter Striking', value: fighter.tendencies.counterStriking, max: 100),
+              _StatBar(label: 'Head Hunting', value: fighter.tendencies.headHunting, max: 100),
+              _StatBar(label: 'Body Attacks', value: fighter.tendencies.bodyAttacks, max: 100),
+              _StatBar(label: 'Leg Attacks', value: fighter.tendencies.legAttacks, max: 100),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text('Condition', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          _StatBar(label: 'Morale', value: fighter.morale),
+          _StatBar(label: 'Popularity', value: fighter.popularity),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(
+              fighter.injuryStatus == InjuryStatus.healthy
+                  ? Icons.favorite
+                  : Icons.local_hospital,
+              color: fighter.injuryStatus == InjuryStatus.healthy
+                  ? Colors.green
+                  : Colors.orange,
+            ),
+            title: Text(fighter.injuryStatus.label),
+          ),
+          const SizedBox(height: 24),
+          if (fighter.retired)
+            const SizedBox.shrink()
+          else if (fighter.isSigned)
+            _ContractSection(fighter: fighter)
+          else
+            FilledButton.icon(
+              icon: const Icon(Icons.handshake),
+              label: const Text('Sign Fighter'),
+              onPressed: () => _showSignDialog(context, fighter),
+            ),
+          const SizedBox(height: 24),
+          _FightHistorySection(fighter: fighter),
+        ],
+      ),
+    );
+  }
+
+  void _showSignDialog(BuildContext context, Fighter fighter) {
+    final controller = context.read<GameController>();
+    final suggested = PayScale.suggest(
+      overall: fighter.overall,
+      popularity: fighter.popularity,
+    );
+    final showController = TextEditingController(text: '${suggested.showMoney}');
+    final winController = TextEditingController(text: '${suggested.winBonus}');
+    var fightsInDeal = 4;
+    final currency = NumberFormat.simpleCurrency();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setState) => AlertDialog(
+          title: Text('Sign ${fighter.name}'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Market rate for this fighter: ${currency.format(suggested.showMoney)} '
+                  'to show, ${currency.format(suggested.winBonus)} to win.',
+                  style: Theme.of(dialogContext).textTheme.bodySmall,
+                ),
+                // What this deal is against a night's takings. Pay rises
+                // geometrically with skill, so a roster's payroll is
+                // dominated by its best few and three good signings can
+                // multiply it while the average barely moves — which is
+                // precisely the mistake that is invisible one profile
+                // page at a time.
+                _SigningWeight(
+                  payroll: controller.payrollHealth,
+                  perFight: suggested.total,
+                  currency: currency,
+                ),
+                // What he'll actually take. Shown live as the numbers are
+                // typed, so haggling is a negotiation rather than a
+                // guessing game ended by a snackbar.
+                _OfferVerdict(
+                  fighter: fighter,
+                  showController: showController,
+                  winController: winController,
+                  currency: currency,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: showController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Show money (charged now as signing bonus)',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: winController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Win bonus (paid only when they win)',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text('Fights in deal: $fightsInDeal'),
+                Slider(
+                  value: fightsInDeal.toDouble(),
+                  min: 1,
+                  max: 8,
+                  divisions: 7,
+                  label: '$fightsInDeal',
+                  onChanged: (v) => setState(() => fightsInDeal = v.round()),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final show = int.tryParse(showController.text) ?? suggested.showMoney;
+                final win = int.tryParse(winController.text) ?? suggested.winBonus;
+                final error = await controller.signFighter(
+                  fighter,
+                  showMoney: show,
+                  winBonus: win,
+                  fightsInDeal: fightsInDeal,
+                );
+                if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+                if (!context.mounted) return;
+                if (error != null) {
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(SnackBar(content: Text(error)));
+                  return;
+                }
+                // Signing is the reason you opened this profile, so close
+                // it too — you land back on the talent pool ready to sign
+                // the next one, instead of on a page you're done with.
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('${fighter.name} signed.')),
+                );
+              },
+              child: const Text('Sign'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ContractSection extends StatelessWidget {
+  final Fighter fighter;
+
+  const _ContractSection({required this.fighter});
+
+  @override
+  Widget build(BuildContext context) {
+    final contract = fighter.contract!;
+    final currency = NumberFormat.simpleCurrency();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Contract', style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 8),
+        Text('Show money: ${currency.format(contract.showMoney)}'),
+        Text('Win bonus: ${currency.format(contract.winBonus)}'),
+        Text('Pay on a win: ${currency.format(contract.payOnWin)}'),
+        Text('Fights remaining: ${contract.fightsRemaining}'),
+        Text('Exclusive: ${contract.exclusive ? 'Yes' : 'No'}'),
+        const SizedBox(height: 16),
+        OutlinedButton.icon(
+          icon: const Icon(Icons.person_remove),
+          label: const Text('Release Fighter'),
+          onPressed: () => _confirmRelease(context),
+        ),
+      ],
+    );
+  }
+
+  void _confirmRelease(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Release ${fighter.name}?'),
+        content: const Text(
+          'They will return to the free-agent pool and can be re-signed by '
+          'you or a rival promotion later.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              context.read<GameController>().releaseFighter(fighter.id);
+              Navigator.of(dialogContext).pop();
+            },
+            child: const Text('Release'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FightHistorySection extends StatelessWidget {
+  final Fighter fighter;
+
+  const _FightHistorySection({required this.fighter});
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = context.read<GameController>();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Fight History', style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 8),
+        FutureBuilder<List<({Fight fight, MmaEvent? event})>>(
+          future: controller.getFightHistory(fighter.id),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: LinearProgressIndicator(),
+              );
+            }
+            final history = snapshot.data!;
+            if (history.isEmpty) {
+              return const Text('No fights yet.');
+            }
+            return Column(
+              children: [
+                for (final entry in history)
+                  _FightHistoryTile(
+                    fight: entry.fight,
+                    event: entry.event,
+                    fighterId: fighter.id,
+                    opponentName: _opponentName(controller, entry.fight, fighter.id),
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  String _opponentName(GameController controller, Fight fight, String fighterId) {
+    final opponentId =
+        fight.fighterAId == fighterId ? fight.fighterBId : fight.fighterAId;
+    return controller.fighterById(opponentId)?.name ?? 'Unknown Opponent';
+  }
+}
+
+class _FightHistoryTile extends StatelessWidget {
+  final Fight fight;
+  final MmaEvent? event;
+  final String fighterId;
+  final String opponentName;
+
+  const _FightHistoryTile({
+    required this.fight,
+    required this.event,
+    required this.fighterId,
+    required this.opponentName,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final result = fight.result!;
+    final outcome = result.isDraw
+        ? 'Draw'
+        : (result.winnerId == fighterId ? 'Win' : 'Loss');
+    final outcomeColor = switch (outcome) {
+      'Win' => Colors.green,
+      'Loss' => Colors.red,
+      _ => Colors.grey,
+    };
+
+    return Card(
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: outcomeColor,
+          child: Text(
+            outcome[0],
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+        ),
+        title: Text('vs $opponentName'),
+        subtitle: Text(
+          '${result.isDraw ? 'Draw' : '${result.method.label}, Round ${result.round}'}'
+          '${event != null ? ' · ${DateFormat.yMMMd().format(event!.date)}' : ''}',
+        ),
+      ),
+    );
+  }
+}
+
+class _StatBar extends StatelessWidget {
+  final String label;
+  final int value;
+  final int max;
+
+  const _StatBar({required this.label, required this.value, this.max = 100});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          SizedBox(width: 120, child: Text(label)),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: value / max,
+                minHeight: 8,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          SizedBox(width: 28, child: Text('$value', textAlign: TextAlign.right)),
+        ],
+      ),
+    );
+  }
+}
+
+/// What one contract weighs against what a show actually takes.
+class _SigningWeight extends StatelessWidget {
+  final PayrollHealth? payroll;
+
+  /// Show money plus win bonus — what this fighter costs on a night they
+  /// win, which is the number to plan against.
+  final int perFight;
+  final NumberFormat currency;
+
+  const _SigningWeight({
+    required this.payroll,
+    required this.perFight,
+    required this.currency,
+  });
+
+  /// A single fighter taking more than this much of a night's takings is
+  /// a headliner's wage, whoever they are.
+  static const double heavyShare = 0.15;
+
+  @override
+  Widget build(BuildContext context) {
+    final health = payroll;
+    if (health == null || health.revenuePerShow <= 0) {
+      return const SizedBox.shrink();
+    }
+
+    final share = health.shareOfOneShow(perFight);
+    final heavy = share >= heavyShare;
+    final scheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            heavy ? Icons.warning_amber : Icons.receipt_long_outlined,
+            size: 15,
+            color: heavy ? scheme.error : scheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              'Your last ${health.shows} shows took '
+              '${currency.format(health.revenuePerShow)} each, and paid '
+              '${health.sharePercent}% of it to fighters. This deal is '
+              '${(share * 100).round()}% of a night on its own.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: heavy ? scheme.error : scheme.onSurfaceVariant,
+                    fontWeight: heavy ? FontWeight.bold : null,
+                  ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Whether this offer is one the fighter would take, updated as it is
+/// typed.
+class _OfferVerdict extends StatelessWidget {
+  final Fighter fighter;
+  final TextEditingController showController;
+  final TextEditingController winController;
+  final NumberFormat currency;
+
+  const _OfferVerdict({
+    required this.fighter,
+    required this.showController,
+    required this.winController,
+    required this.currency,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([showController, winController]),
+      builder: (context, _) {
+        final response = ContractNegotiation.consider(
+          overall: fighter.overall,
+          popularity: fighter.popularity,
+          showMoney: int.tryParse(showController.text) ?? 0,
+          winBonus: int.tryParse(winController.text) ?? 0,
+        );
+        final scheme = Theme.of(context).colorScheme;
+        final small = Theme.of(context).textTheme.bodySmall;
+
+        return Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                response.accepted ? Icons.check_circle_outline : Icons.block,
+                size: 15,
+                color: response.accepted ? Colors.lightGreenAccent : scheme.error,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  response.accepted
+                      ? "He'll take it — "
+                          '${(response.share * 100).round()}% of his market rate.'
+                      : "He won't take that. The least he'll sign for is "
+                          '${currency.format(response.wouldAccept)} a fight, '
+                          'show and win together.',
+                  style: small?.copyWith(
+                    color: response.accepted
+                        ? Colors.lightGreenAccent
+                        : scheme.error,
+                    fontWeight:
+                        response.accepted ? null : FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
